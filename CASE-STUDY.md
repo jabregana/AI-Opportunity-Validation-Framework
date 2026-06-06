@@ -1,14 +1,14 @@
-# Case Study: Building a Schema-Alignment Proxy for Agent Memory
+# Case Study: Entity-Normalization Middleware for LLM Memory Systems
 
-A short technical writeup of how this project was built, what it surfaced, and what the harness was worth. Written for an outside reader (PM lead, infra eng, or technical hiring panel) who wants the story without the full repo dive.
+A technical writeup of how this project was built, what it surfaced, what the harness was worth, and how the framing shifted from "alternative to Mem0" to "drop-in middleware in front of Mem0 and any similar store." Written for an outside reader (PM lead, infra eng, or technical hiring panel) who wants the story without the full repo dive.
 
 ## Problem framing
 
-Five production agent-memory frameworks (Mem0, Graphiti, Cognee, Neo4j Agent Memory, Memgraph) all share one structural weakness: the same relationship gets written to the graph under multiple surface forms. `WORKS_AT`, `EMPLOYED_BY`, and `JOB_AT` end up as three distinct edge types pointing at the same concept. Retrieval degrades. Every downstream query has to enumerate variations.
+Five production memory frameworks (Mem0, Graphiti, Cognee, Neo4j Agent Memory, Memgraph) share one structural weakness: the same entity (or the same relation, in property-graph systems) gets written under multiple surface forms. `AAPL`, `Apple Inc`, `Apple Computer` become three memory entries. `WORKS_AT`, `EMPLOYED_BY`, `JOB_AT` become three edge types. Retrieval degrades. Downstream queries have to enumerate variations.
 
 Mem0 chose to handle this with an LLM in the extraction prompt. Maintainer kartik-mem0 confirmed on issue #4896 (April 2026): "our v3 SDK handles contradictions by design through the extraction prompt and memory linking, not through an explicit UPDATE/conflict resolution code path." Mem0 also removed graph memory from the OSS distribution in v2/v3.
 
-That left an unoccupied slot: a deterministic write-path proxy that aliases near-duplicate relations before they hit the graph. No LLM in the hot path.
+That left an unoccupied slot: a deterministic write-path layer that aliases near-duplicate surface forms before they hit the downstream store. No LLM in the hot path. Critically, this layer does not have to *replace* Mem0 (or Graphiti, or Cognee). It sits in front of them. That reframing matters for commercialization: the addressable surface is everyone running one of those systems, not a wedge against any one of them.
 
 The 90-day landscape scan (`docs/opportunity.md`) verified that adjacent niches (LSP-driven code memory, embedded reasoning-memory event sourcing, real-time graph GC) were each either already shipped by someone else or partially closed. The schema-alignment slot was the only one with on-record evidence the closest incumbent had chosen a different architecture.
 
@@ -28,17 +28,33 @@ Full statistical framework: `docs/experiments.md`.
 
 ## Iteration record
 
-Five variants shipped, each surfaced something concrete.
+Eleven variants shipped across two generations. Single-tenant (v0.1.0 to v0.3.1) established the core wedge. Multi-tenant (v0.4.0 to v0.5.3) expanded the surface and produced the middleware reframe.
+
+### Single-tenant generation (v0.1.0 to v0.3.1)
 
 | Variant | Approach | What it surfaced |
 |---|---|---|
 | v0.1.0 token-only | Hashing-trick bag-of-tokens, cosine threshold | Establishes the case/underscore-variant ceiling. F1 = 0.60 on ConceptNet. |
 | v0.2.0 neural-only | model2vec potion-base-32M with sentence prompt template | "More complex is better" intuition was wrong. Regressed against v0.1.0 on ConceptNet (-0.12 B-cubed F1, BLOCK_PR). |
 | v0.3.0 hybrid | Token + neural concat, token-dominant weighting | Won ConceptNet (+0.04 over v0.1.0). Failed WikiData Tier B at 4.3% false merges (above 1% kill switch). |
-| v0.3.1 hybrid + filter | Adds a deterministic structural filter (digit mismatch, trailing preposition asymmetry) | First variant to clear both UC-4.1 superiority and UC-4.4 Tier B kill switch on real WikiData data. GA candidate. |
-| v0.4.0 multi-tenant | PerSourceNamespaceProxy with source-prefixed canonicals | Ships the architectural extension for source-attributed resolution. Documented metric and policy gaps for v0.4.1+. |
+| v0.3.1 hybrid + filter | Adds a deterministic structural filter (digit mismatch, trailing preposition asymmetry) | First variant to clear both UC-4.1 superiority and UC-4.4 Tier B kill switch on real WikiData data. Single-tenant GA candidate. |
 
 The most important iteration moment was bringing in the W-WIKIDATA-PROPS workload. ConceptNet alone (synthetic, dominated by case-variant synonyms) ranked v0.3.0 as the winner. Real WikiData property aliases (288 properties, 2457 surface forms, real paraphrases like `head of government` / `premier` / `PM`) flipped the ranking: v0.2.0 won UC-4.1 decisively but failed UC-4.4 at 100% false merges. Without real data we would have shipped the wrong winner.
+
+### Multi-tenant generation (v0.4.0 to v0.5.3)
+
+| Variant | Approach | What it surfaced |
+|---|---|---|
+| v0.4.0 per-source isolation | Source-prefixed canonicals, no cross-source merge | Naïve baseline. Over-isolates globally-unambiguous entities. Documents metric gaps. |
+| v0.4.1 eager consensus | Cross-source Jaccard scan on every write | Quality wins but pays cross-source latency on hot path. Wrong design shape. |
+| v0.4.2 lazy consensus | Same scan, deferred to explicit `consolidate()` call | Decouples write latency from merge accuracy. Production-shape design. New `drift_rate` metric quantifies the eventual-consistency cost. |
+| v0.4.3 AND-rule | Both Jaccard and embedding cosine must agree | Tightens v0.4.2 precision under aggressive merge thresholds. |
+| v0.4.4 adaptive (introspective) | Workload introspection picks aggressive vs conservative parameters at consolidate time | Multi-tenant Tier B exposed a hash-collision bug (HashedTokenEmbedder dim 256 → 4096) and an over-aggressive default (`min_overlap` 1 → 2). |
+| v0.5.3 singleton-aware | Identity-merges cross-source same-alias singletons with disambiguation safety check | Handles the singleton-heavy Stack Overflow workload shape. Disambig check (block if any source has other cluster keys whose local canonical contains the alias as substring) prevents the WikiData Apple disambiguation failure. |
+
+The multi-tenant generation surfaced the load-bearing reframe. The first three multi-tenant variants (v0.4.0 / v0.4.1 / v0.4.3) all regressed against the no-proxy baseline on workloads where every input is globally unique (Stack Overflow tags) or where the strata are too fine-grained for cross-source generalization (synthetic). The harness gates caught all three. The fix was not a better variant. It was reframing the project: the proxy is not the memory system, it is the layer in front of it. Workloads where the proxy adds no value over baseline are workloads where the integrator should not deploy it.
+
+That reframe produced the v0.5.x track: a public `EntityNormalizer` service API, an `AdvisoryConsolidator` for off-hot-path merging, and a `Mem0PreNormalized` integration shim that wraps a Mem0 v3 OSS client without modifying Mem0.
 
 ## Headline numbers
 
@@ -51,10 +67,12 @@ Single-thread latency on the W-WIKIDATA-PROPS workload (UC-4.6):
 | v0.2.0 neural-only | 2.6 ms | 5.3 ms | 377 writes/sec |
 | v0.3.0 / v0.3.1 hybrid | 14.4 ms | 27.4 ms | 70 writes/sec |
 | v0.4.0 per-source isolation | 14.5 ms | 27.6 ms | 69 writes/sec |
+| v0.4.2 lazy consensus (write path) | 14.4 ms | 27.4 ms | 70 writes/sec |
+| v0.5.3 singleton-aware (write path) | 14.5 ms | 27.6 ms | 69 writes/sec |
 
-A reference LLM-in-loop conflict resolver (the Mem0 v3 architecture) runs at 500-2000 ms p50, 5000+ ms p99 on a typical commodity API. v0.3.1 is roughly 30-200x faster. The wedge thesis ("no LLM in the hot path") is now a concrete latency number.
+A reference LLM-in-loop conflict resolver (the Mem0 v3 architecture) runs at 500-2000 ms p50, 5000+ ms p99 on a typical commodity API. v0.3.1 and the lazy multi-tenant variants run roughly 30-200x faster on the write path. The wedge thesis ("no LLM in the hot path") is now a concrete latency number that holds across the multi-tenant generation as well.
 
-Gauntlet pass status:
+Gauntlet pass status (single-tenant):
 
 | Gate | b-raw | v0.1.0 | v0.2.0 | v0.3.0 | **v0.3.1** |
 |---|---|---|---|---|---|
@@ -66,13 +84,31 @@ Gauntlet pass status:
 
 v0.3.1 is the first variant to pass all UC-4.x gates simultaneously on real WikiData. v0.1.0 wins UC-4.7 held-out generalization (28.4%) because its lower threshold catches more near-matches; v0.3.1 trades that for Tier B safety.
 
+Multi-tenant B-cubed F1 (UC-4.1) on the three real / KG-grounded multi-tenant workloads:
+
+| Workload | Shape | b-raw | v0.4.2 | v0.4.4 | **v0.5.3** |
+|---|---|---|---|---|---|
+| W-MULTITENANT-WIKIDATA | source-conditional disambiguation | 0.306 | 0.372 | 0.381 | **0.381** (+0.075) |
+| W-MULTITENANT-SYNTH | explicit strata | 0.448 | 0.302 | 0.348 | **0.348** (-0.100) |
+| W-STACKOVERFLOW-MT | singleton-heavy | 0.858 ★ | 0.792 | 0.795 | 0.816 |
+| MT Tier B (synth) | cross-source false-merge | n/a | 0% | 0% | **0%** (post-fix) |
+| MT Tier B (WikiData) | cross-source false-merge | n/a | 0% | 0% | **0%** (post-disambig-check) |
+
+The multi-tenant story is genuinely mixed. v0.5.3 wins decisively on the WikiData disambiguation workload (the shape the design targets) and stays Tier B safe everywhere. It trails the no-proxy baseline on Stack Overflow (because every SO tag is globally unique, so there is nothing to canonicalize) and on the synthetic strata workload (because the strata are too fine-grained for cross-source consensus to help). The harness gates surface both regressions, and the README integration guide names exactly which workload shapes the proxy is and is not for.
+
 ## Known limits
 
 A probe with real sentence transformers (MiniLM-L6-v2 at 22M parameters and BGE-base-en-v1.5 at 110M; `docs/finding-neural-ceiling.md`) confirmed that bigger neural models do not separate true paraphrases from sibling or antonym hard negatives. The cosine distributions overlap by 55-67% under any tested model. This is the antonym/sibling problem of distributional semantics; cosine reflects training-context co-occurrence, not semantic identity. Bigger models compress the distribution upward, making the overlap worse.
 
 v0.3.1 is therefore at or near the ceiling of off-the-shelf distributional embedders on this task. Further paraphrase coverage requires fine-tuning (expensive, needs labeled corpus), an LLM in the loop (rejected by the wedge thesis), or hand-curated rules. The residual antonym/sibling false-positive class is small, known, and documented.
 
-The v0.4.0 multi-tenant work ships the architecture (variants can consume source-id context, canonicals are source-prefixed) but the naïve per-source isolation regresses on the standard B-cubed F1 metric because it over-isolates globally-unambiguous entities (Microsoft means Microsoft_Corp regardless of which team queries). v0.4.1 needs both a smarter policy (cross-source consensus) and source-aware metrics that reward correct source-conditional disambiguation. The data synthesis required to evaluate v0.4.1 properly is its own work item.
+The multi-tenant generation surfaced its own limits, all documented in `docs/finding-*.md` and the `GAPS-AND-LIMITATIONS.md` audit:
+
+- `docs/finding-mem0-comparison.md`: a direct head-to-head against Mem0 v3 OSS is not currently meaningful because Mem0 OSS outputs natural-language fact strings rather than canonical IDs. The two systems are operating on different output spaces. Comparing them requires either a custom Mem0 wrapper that extracts canonicals or a downstream retrieval task that scores both fairly. The Mem0 middleware shim (`Mem0PreNormalized`) is the right shape to test this in production but has not yet been head-to-head benchmarked.
+- `docs/finding-longmemeval-regression.md`: LongMemEval-S (long-form conversational memory) regresses under the proxy. The unit of clustering there is a paragraph or a fact statement; the proxy is designed for short surface forms. Documented as out-of-scope.
+- `docs/finding-stackoverflow-mt.md`: on Stack Overflow tags (singleton-heavy real multi-tenant data), b-raw identity-clustering is hard to beat because each tag is globally unique. v0.5.3 narrows the gap with singleton-aware identity merging but still trails.
+- `docs/finding-multitenant-tier-b.md`: the v0.4.4 adaptive variant's first multi-tenant Tier B run exposed two production bugs (HashedTokenEmbedder dim default 256 was too small for cross-source collisions; v0.4.4 aggressive mode's `min_overlap=1` allowed spurious merges). Both fixed in v0.5.0; the multi-tenant Tier B suite now passes.
+- `docs/finding-scale-stress.md`: K-scaling tests run up to K ≈ 300 canonicals per source. Beyond that, the linear cosine scan needs an ANN index (planned as v0.5.5).
 
 ## What the harness was actually worth
 
@@ -88,14 +124,28 @@ Four moments where the harness changed the outcome:
 
 These are the kinds of mistakes that ship in real teams when measurement is an afterthought. The harness was worth more than any single variant.
 
+## The middleware reframe
+
+The original framing was "alternative to Mem0's LLM-in-extraction approach for entity normalization." That framing kept producing a narrow project. The product fit is alias normalization for short surface forms; many real workloads (long-form conversation, singleton-heavy tags) are outside that shape. Read as "replace Mem0," the result reads as a partial success at best.
+
+The reframe: this is not a replacement, it is a middleware layer. Mem0, Graphiti, Cognee, Neo4j Agent Memory, and any custom memory system all benefit from pre-normalization when their workload fits the shape. The deliverables that operationalize the reframe:
+
+1. `runner/service/normalizer.py`: a stable `EntityNormalizer` class that wraps any of the eleven variants behind one API (`normalize`, `batch_normalize`, `consolidate`). Integrators do not need to learn the variant taxonomy; they pick a variant by ID and call `normalize`.
+2. `runner/service/consolidator.py`: an `AdvisoryConsolidator` that tracks write counts and exposes `schedule_required()` and `run()`. The hot path stays at write-only latency; the consolidation phase runs off-hot-path on a configurable cadence.
+3. `runner/service/integrations/mem0.py`: `Mem0PreNormalized` wraps a Mem0 v3 OSS `Memory` client. Two extraction modes: a dict-based `mention_map` for exact-match aliases (longest-first regex to avoid prefix collisions) and a callable `mention_extractor` for spaCy NER, regex, or any extractor an integrator provides. Other Mem0 methods (`search`, `get`, `delete`) pass through unchanged.
+
+The reframe expanded the addressable surface from "people willing to swap out Mem0" to "people running any memory system that hits alias fragmentation." It also keeps the candid limits intact: the integration guide names exactly which workload shapes the proxy is and is not for.
+
 ## Next steps
 
-- v0.4.1 cross-source consensus variant + source-aware metrics. Needs synthesized multi-tenant workload (see `docs/roadmap.md`).
-- Full UC-4.7 with a downstream retrieval system (LongMemEval-S or equivalent) replacing the held-out-split lite version.
+- v0.5.4 done (this writeup). README, CASE-STUDY, and the public service API now lead with the middleware framing.
+- v0.5.5: an ANN index in front of the cosine scan so the per-source K can scale to 10^4+ canonicals without write-path regression.
+- v0.5.6: an NER preprocessor that feeds the proxy from long-form text, opening the door to a fairer LongMemEval comparison (the regression there was that the proxy is for short surface forms, and an NER stage extracts them).
+- Head-to-head Mem0 benchmark with `Mem0PreNormalized` vs vanilla Mem0 on a fragmentation-prone workload and a downstream retrieval task.
 - SAFFRON ledger when the rolling 30d null proportion approaches 0.7.
 - Always-valid CIs when gauntlets run on hundreds of pairs per night.
 
-The single-tenant story is in good shape. v0.3.1 is the GA candidate. Open questions are about scale, multi-tenancy, and downstream integration, not about whether the core proxy works.
+The single-tenant story is in good shape. v0.3.1 is the single-tenant GA candidate; v0.5.3 is the multi-tenant GA candidate for workloads in the documented good-fit shape; the `EntityNormalizer` + `Mem0PreNormalized` API is the integration surface. Open questions are about scale beyond K ≈ 300, the head-to-head Mem0 number, and the NER preprocessor for long-form text.
 
 ## Candid audit
 
