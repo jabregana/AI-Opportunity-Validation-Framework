@@ -137,6 +137,8 @@ The harness uses an online FDR procedure (LORD++ at q=0.10) rather than vanilla 
 
 Picking a wedge in a moving competitive landscape is easy to get wrong. The opportunity scan and the harness are deliberate sequencing: first establish that the niche is real and unoccupied, then put the measurement infrastructure in place, then build the proxy. The first real candidate variant landed against the same gates as every later iteration, so progress (and the two genuine reversals when real data flipped synthetic results) is unambiguous.
 
+For a tighter narrative of the project (problem framing, decision sequencing, iteration record, honest limits, what the harness was actually worth), see [`CASE-STUDY.md`](CASE-STUDY.md).
+
 ## License
 
 [Functional Source License v1.1](LICENSE) with an Apache 2.0 future grant (FSL-1.1-ALv2). Source-available. Free for internal use, non-commercial education, non-commercial research, and professional services on top of the Software. Commercial use that competes with the Software is restricted until the second anniversary of each release, after which that release converts automatically to Apache 2.0.
