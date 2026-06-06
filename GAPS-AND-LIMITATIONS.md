@@ -72,8 +72,34 @@ After this audit was first written, items 1-5 were attempted in one session. Res
 
 - **Item 1 (Mem0 head-to-head):** Not possible as designed. Mem0 v3 OSS produces extracted natural-language facts ("User mentioned X as Y"), not canonical entity IDs. The two systems address different problems. See `docs/finding-mem0-comparison.md`.
 
-- **Item 2 (Real UC-4.7 with LongMemEval):** Adapted the dataset for clustering eval (question and answer as two entries that should cluster together). **All variants regressed against b-raw with statistical significance (p=1.0000, BLOCK_PR).** The proxies' algorithms (token overlap, short-text embedding) do not generalize to clustering long-form conversational text. See `docs/finding-longmemeval-regression.md`. This narrows the project's claim from "agent memory" broadly to specifically "schema alignment for entity and relation names in property graphs."
+- **Item 2 (Real UC-4.7 with LongMemEval):** Adapted the dataset for clustering eval. **All variants regressed against b-raw with statistical significance (p=1.0000, BLOCK_PR).** The proxies' algorithms (token overlap, short-text embedding) do not generalize to long-form conversational text. See `docs/finding-longmemeval-regression.md`.
 
-- **Items 3, 4, 5:** See following commits.
+- **Item 3 (Scale stress test):** Workload synthesized at 10k entries (100k running). Cadence invariance HOLDS at K=1616 (10k workload). Final F1, merges, query latency all identical between cadence=1 vs cadence=end. The earlier cadence-invariance finding generalizes from 138-516 entries to ~10k. Memory measurement is OS-dependent units (likely KB on macOS = ~1.8GB total program incl model2vec model).
 
-The LongMemEval regression is the most important new finding. It bounds the wedge thesis to short-text canonicalization rather than agent memory in general. The harness, the variants, and the workload findings within the narrowed scope are intact.
+- **Item 4 (Multi-tenant Tier B fixture):** Built mining tool + scorer. **Surfaced two real bugs in the variants.** Bug 1: `HashedTokenEmbedder(dim=256)` has hash collisions ("account"/"vendor" collide), causing 2.5% false merges in v0.4.1/v0.4.2/v0.4.3 on SYNTH MT Tier B. Bug 2: v0.4.4 aggressive mode (min_overlap=1) produces 100% false merges on SYNTH MT Tier B. v0.4.4's earlier UC-4.1 wins on SYNTH were essentially correct global-stratum merges WITH catastrophic cross-source false merges that B-cubed averaged out. See `docs/finding-multitenant-tier-b.md`.
+
+- **Item 5 (Stack Overflow real multi-tenant):** Built W-STACKOVERFLOW-MT (211 entries, 6 language sources, 145 oracle canonicals). **All variants regress against b-raw** (-0.04 to -0.13 B-cubed). The workload is dominated by singleton clusters; b-raw's identity-clustering trivially gets cross-source identity matches; proxies over-isolate. See `docs/finding-stackoverflow-mt.md`.
+
+## What the items 1-5 results tell us
+
+The wedge thesis claim needs SIGNIFICANT narrowing after running these:
+
+  Original: "deterministic schema-alignment proxy that out-competes Mem0's
+            LLM-in-extraction-prompt approach on agent memory graphs"
+  
+  After Items 1-5: "deterministic schema-alignment proxy for entity and
+                    relation name normalization in property graphs, when
+                    each entity has multiple alias surface forms within
+                    each source"
+
+Three workloads the proxies don't help on:
+- LongMemEval (long-form conversation text): proxies over-cluster on template similarity
+- Stack Overflow MT (singleton-heavy multi-tenant): proxies under-cluster on global stratum because the aggressive signal is absent
+- SYNTH MT Tier B (surface-form collisions across sources): v0.4.4 aggressive mode 100% false-merges; v0.4.1-v0.4.3 false-merge 2.5% via hash collision
+
+One workload the proxies DO help on:
+- WikiData-PROPS (single-tenant, multi-alias per entity): v0.3.1 statistically beats b-raw
+
+The harness, the statistical framework, the iteration record, and the variant-evolution narrative are intact. But the wedge ambition needs to be expressed precisely as "multi-alias entity normalization" rather than the broader "agent memory" framing.
+
+A v0.5.x track would need to address the singleton-heavy case (Stack Overflow style) and the bug fixes from Item 4 (hash collision dim, tighten v0.4.4 aggressive).

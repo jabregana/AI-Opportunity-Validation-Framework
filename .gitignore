@@ -8,8 +8,9 @@ dist/
 build/
 *.egg-info/
 
-# Large/derived data — never check in (except pinned WikiData caches)
+# Large/derived data — never check in (except pinned caches)
 fixtures/data/*
 !fixtures/data/wikidata_aliases.json
 !fixtures/data/wikidata_disambiguation.json
+!fixtures/data/stackoverflow_tags.json
 runs/

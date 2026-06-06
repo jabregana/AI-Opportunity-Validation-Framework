@@ -28,6 +28,7 @@ from . import (
     w_multitenant_demo,
     w_multitenant_synth,
     w_multitenant_wikidata,
+    w_stackoverflow_multitenant,
     w_wikidata_props,
 )
 
@@ -39,6 +40,7 @@ LOADERS: dict[str, Callable[[], list[WorkloadEntry]]] = {
     "W-MULTITENANT-SYNTH": w_multitenant_synth.load,
     "W-MULTITENANT-WIKIDATA": w_multitenant_wikidata.load,
     "W-LONGMEMEVAL-S": w_longmemeval_s.load,
+    "W-STACKOVERFLOW-MT": w_stackoverflow_multitenant.load,
 }
 
 
