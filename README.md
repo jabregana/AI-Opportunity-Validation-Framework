@@ -91,6 +91,11 @@ docs/
   opportunity.md                      wedge selection and 90-day landscape scan
   experiments.md                      test plan and statistical framework
   roadmap.md                          v0.4.0+ multi-tenant and other open work
+  finding-neural-ceiling.md           probe: MiniLM/BGE-base do not separate
+                                      paraphrases from hard negatives any better
+                                      than model2vec; the antonym/sibling overlap
+                                      is fundamental to distributional semantics
+  finding-neural-ceiling-probe.py     reproducer for the above
 ```
 
 ## Pilot run
