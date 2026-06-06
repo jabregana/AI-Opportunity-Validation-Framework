@@ -15,6 +15,7 @@ from .per_source import (
     IntrospectiveLazyConsensusProxy,
     LazyConsensusANDRuleProxy,
     LazyCrossSourceConsensusProxy,
+    MultiTenantANNSingletonAwareLazyProxy,
     PerSourceNamespaceProxy,
     SingletonAwareLazyProxy,
 )
@@ -35,6 +36,7 @@ FACTORIES: dict[str, Callable[[], Variant]] = {
     "embed-proxy-v0.4.4-adaptive": IntrospectiveLazyConsensusProxy,
     "embed-proxy-v0.5.3-singleton-aware": SingletonAwareLazyProxy,
     "embed-proxy-v0.5.5-ann": ANNSchemaProxy,
+    "embed-proxy-v0.5.7-mt-ann": MultiTenantANNSingletonAwareLazyProxy,
 }
 
 
