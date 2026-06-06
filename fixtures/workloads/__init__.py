@@ -24,6 +24,7 @@ class WorkloadEntry(NamedTuple):
 
 from . import (
     w_conceptnet_rel,
+    w_longmemeval_s,
     w_multitenant_demo,
     w_multitenant_synth,
     w_multitenant_wikidata,
@@ -37,6 +38,7 @@ LOADERS: dict[str, Callable[[], list[WorkloadEntry]]] = {
     "W-MULTITENANT-DEMO": w_multitenant_demo.load,
     "W-MULTITENANT-SYNTH": w_multitenant_synth.load,
     "W-MULTITENANT-WIKIDATA": w_multitenant_wikidata.load,
+    "W-LONGMEMEVAL-S": w_longmemeval_s.load,
 }
 
 

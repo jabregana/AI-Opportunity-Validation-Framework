@@ -65,3 +65,15 @@ In order of payoff per session of effort:
 5. **A second real multi-tenant dataset.** Not synthetic. Maybe Slack open-source data with channel as source_id, or Stack Overflow with tag as source_id. Removes the selection-effect concern.
 
 Items 1 and 2 alone would change the project's status from "well-instrumented prototype" to "defensible technical artifact."
+
+## Results from running items 1-5 (added 2026-06-06)
+
+After this audit was first written, items 1-5 were attempted in one session. Results updated the picture substantially:
+
+- **Item 1 (Mem0 head-to-head):** Not possible as designed. Mem0 v3 OSS produces extracted natural-language facts ("User mentioned X as Y"), not canonical entity IDs. The two systems address different problems. See `docs/finding-mem0-comparison.md`.
+
+- **Item 2 (Real UC-4.7 with LongMemEval):** Adapted the dataset for clustering eval (question and answer as two entries that should cluster together). **All variants regressed against b-raw with statistical significance (p=1.0000, BLOCK_PR).** The proxies' algorithms (token overlap, short-text embedding) do not generalize to clustering long-form conversational text. See `docs/finding-longmemeval-regression.md`. This narrows the project's claim from "agent memory" broadly to specifically "schema alignment for entity and relation names in property graphs."
+
+- **Items 3, 4, 5:** See following commits.
+
+The LongMemEval regression is the most important new finding. It bounds the wedge thesis to short-text canonicalization rather than agent memory in general. The harness, the variants, and the workload findings within the narrowed scope are intact.

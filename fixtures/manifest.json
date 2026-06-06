@@ -10,11 +10,12 @@
       "notes": "SHA is computed at load time via artifacts.workload_sha256() and recorded in each run artifact."
     },
     "W-LONGMEMEVAL-S": {
-      "loader": "fixtures.workloads.w_longmemeval_s:load (raises NotImplementedError)",
-      "version": "0.1.0-stub",
-      "description": "LongMemEval-S benchmark (Xu et al., 2024). Dataset is downloaded; loader is a stub pending NER + retrieval integration. See docs/longmemeval-integration-plan.md.",
-      "status": "characterized-but-not-loadable",
-      "dataset_path": "~/.cache/huggingface/hub/datasets--xiaowu0162--LongMemEval/snapshots/.../longmemeval_s",
+      "loader": "fixtures.workloads.w_longmemeval_s:load",
+      "version": "0.1.0-clustering-adapted",
+      "description": "LongMemEval-S benchmark (Xu et al., 2024) adapted for clustering eval. Each entry contributes (haystack, question, qid) and (answer, answer_text, qid); a working variant should cluster the question and answer together. 500 question entries -> 1000 workload entries. Two sources (haystack, answer). Real conversational data. See docs/longmemeval-integration-plan.md for the full retrieval integration plan.",
+      "oracle_cardinality": 500,
+      "n_sources": 2,
+      "requires_download": "huggingface_hub hf_hub_download xiaowu0162/LongMemEval",
       "raw_size_bytes": 278025796
     },
     "W-MEM0-EXP": {
