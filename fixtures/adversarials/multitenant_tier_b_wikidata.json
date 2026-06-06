@@ -1,0 +1,163 @@
+{
+  "schema_version": "1",
+  "generated_utc": "2026-06-06T18:01:36.629041+00:00",
+  "canonical_source": "W-MULTITENANT-WIKIDATA",
+  "n_pairs": 17,
+  "pairs": [
+    {
+      "source_a": "aerospace",
+      "source_b": "biology",
+      "input_a": "Falcon",
+      "input_b": "Falcon",
+      "shared_normalized": "falcon",
+      "oracle_in_source_a": "Falcon 9",
+      "oracle_in_source_b": "falcon"
+    },
+    {
+      "source_a": "automotive",
+      "source_b": "biology",
+      "input_a": "Beetle",
+      "input_b": "Beetle",
+      "shared_normalized": "beetle",
+      "oracle_in_source_a": "Volkswagen Beetle",
+      "oracle_in_source_b": "beetles"
+    },
+    {
+      "source_a": "automotive",
+      "source_b": "biology",
+      "input_a": "Mustang",
+      "input_b": "Mustang",
+      "shared_normalized": "mustang",
+      "oracle_in_source_a": "Ford Mustang",
+      "oracle_in_source_b": "mustang"
+    },
+    {
+      "source_a": "automotive",
+      "source_b": "fashion",
+      "input_a": "Mustang",
+      "input_b": "Mustang",
+      "shared_normalized": "mustang",
+      "oracle_in_source_a": "Ford Mustang",
+      "oracle_in_source_b": "Mustang Holding"
+    },
+    {
+      "source_a": "automotive",
+      "source_b": "military",
+      "input_a": "Mustang",
+      "input_b": "Mustang",
+      "shared_normalized": "mustang",
+      "oracle_in_source_a": "Ford Mustang",
+      "oracle_in_source_b": "North American P-51 Mustang"
+    },
+    {
+      "source_a": "biology",
+      "source_b": "fashion",
+      "input_a": "Mustang",
+      "input_b": "Mustang",
+      "shared_normalized": "mustang",
+      "oracle_in_source_a": "mustang",
+      "oracle_in_source_b": "Mustang Holding"
+    },
+    {
+      "source_a": "biology",
+      "source_b": "military",
+      "input_a": "Cobra",
+      "input_b": "Cobra",
+      "shared_normalized": "cobra",
+      "oracle_in_source_a": "cobra",
+      "oracle_in_source_b": "Bell AH-1 Cobra"
+    },
+    {
+      "source_a": "biology",
+      "source_b": "military",
+      "input_a": "Mustang",
+      "input_b": "Mustang",
+      "shared_normalized": "mustang",
+      "oracle_in_source_a": "mustang",
+      "oracle_in_source_b": "North American P-51 Mustang"
+    },
+    {
+      "source_a": "biology",
+      "source_b": "music",
+      "input_a": "Apple",
+      "input_b": "Apple",
+      "shared_normalized": "apple",
+      "oracle_in_source_a": "apple",
+      "oracle_in_source_b": "Apple Records"
+    },
+    {
+      "source_a": "biology",
+      "source_b": "sports",
+      "input_a": "Tiger",
+      "input_b": "Tiger",
+      "shared_normalized": "tiger",
+      "oracle_in_source_a": "tiger",
+      "oracle_in_source_b": "Tiger Woods"
+    },
+    {
+      "source_a": "biology",
+      "source_b": "tech_company",
+      "input_a": "Apple",
+      "input_b": "Apple",
+      "shared_normalized": "apple",
+      "oracle_in_source_a": "apple",
+      "oracle_in_source_b": "Apple Inc."
+    },
+    {
+      "source_a": "fashion",
+      "source_b": "military",
+      "input_a": "Mustang",
+      "input_b": "Mustang",
+      "shared_normalized": "mustang",
+      "oracle_in_source_a": "Mustang Holding",
+      "oracle_in_source_b": "North American P-51 Mustang"
+    },
+    {
+      "source_a": "history",
+      "source_b": "sports",
+      "input_a": "Polo",
+      "input_b": "Polo",
+      "shared_normalized": "polo",
+      "oracle_in_source_a": "Marco Polo",
+      "oracle_in_source_b": "polo"
+    },
+    {
+      "source_a": "music",
+      "source_b": "tech_company",
+      "input_a": "Apple",
+      "input_b": "Apple",
+      "shared_normalized": "apple",
+      "oracle_in_source_a": "Apple Records",
+      "oracle_in_source_b": "Apple Inc."
+    },
+    {
+      "source_a": "mythology",
+      "source_b": "tech_company",
+      "input_a": "Oracle",
+      "input_b": "Oracle",
+      "shared_normalized": "oracle",
+      "oracle_in_source_a": "oracle",
+      "oracle_in_source_b": "Oracle Corporation"
+    },
+    {
+      "source_a": "mythology",
+      "source_b": "tech_product",
+      "input_a": "Oracle",
+      "input_b": "Oracle",
+      "shared_normalized": "oracle",
+      "oracle_in_source_a": "oracle",
+      "oracle_in_source_b": "Oracle Database"
+    },
+    {
+      "source_a": "tech_company",
+      "source_b": "tech_product",
+      "input_a": "Oracle",
+      "input_b": "Oracle",
+      "shared_normalized": "oracle",
+      "oracle_in_source_a": "Oracle Corporation",
+      "oracle_in_source_b": "Oracle Database"
+    }
+  ],
+  "fixture_sha256": "sha256:258c98fbec615c12e781ef2d3bfbef4fee0b8fde5f7461d4abac236622b56efe",
+  "description": "Multi-tenant Tier B adversarials. Each pair is two entries across different sources that share a surface form but have different oracle canonicals. A correct multi-tenant variant must emit different predicted canonicals for the two entries."
+}

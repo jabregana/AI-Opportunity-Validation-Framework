@@ -1,0 +1,721 @@
+{
+  "schema_version": "1",
+  "generated_utc": "2026-06-06T18:01:36.662506+00:00",
+  "canonical_source": "W-MULTITENANT-SYNTH",
+  "n_pairs": 79,
+  "pairs": [
+    {
+      "source_a": "eng",
+      "source_b": "finance",
+      "input_a": "Account",
+      "input_b": "Account",
+      "shared_normalized": "account",
+      "oracle_in_source_a": "User_Account",
+      "oracle_in_source_b": "GL_Account"
+    },
+    {
+      "source_a": "eng",
+      "source_b": "finance",
+      "input_a": "Amazon",
+      "input_b": "Amazon",
+      "shared_normalized": "amazon",
+      "oracle_in_source_a": "Amazon_Web_Services",
+      "oracle_in_source_b": "Amazon_Inc"
+    },
+    {
+      "source_a": "eng",
+      "source_b": "finance",
+      "input_a": "Office",
+      "input_b": "Office",
+      "shared_normalized": "office",
+      "oracle_in_source_a": "Microsoft_Office_Suite",
+      "oracle_in_source_b": "Physical_Office_Space"
+    },
+    {
+      "source_a": "eng",
+      "source_b": "finance",
+      "input_a": "Oracle",
+      "input_b": "Oracle",
+      "shared_normalized": "oracle",
+      "oracle_in_source_a": "Oracle_Database",
+      "oracle_in_source_b": "Oracle_Corporation"
+    },
+    {
+      "source_a": "eng",
+      "source_b": "finance",
+      "input_a": "Outlook",
+      "input_b": "Outlook",
+      "shared_normalized": "outlook",
+      "oracle_in_source_a": "Microsoft_Outlook",
+      "oracle_in_source_b": "Sales_Outlook_Forecast"
+    },
+    {
+      "source_a": "eng",
+      "source_b": "finance",
+      "input_a": "Sun",
+      "input_b": "Sun",
+      "shared_normalized": "sun",
+      "oracle_in_source_a": "Sun_Microsystems",
+      "oracle_in_source_b": "Sun_Insurance_Co"
+    },
+    {
+      "source_a": "eng",
+      "source_b": "hr",
+      "input_a": "Account",
+      "input_b": "Account",
+      "shared_normalized": "account",
+      "oracle_in_source_a": "User_Account",
+      "oracle_in_source_b": "Employee_Account"
+    },
+    {
+      "source_a": "eng",
+      "source_b": "hr",
+      "input_a": "Excel",
+      "input_b": "Excel",
+      "shared_normalized": "excel",
+      "oracle_in_source_a": "Microsoft_Excel",
+      "oracle_in_source_b": "Excel_Performance_Rating"
+    },
+    {
+      "source_a": "eng",
+      "source_b": "legal",
+      "input_a": "Brand",
+      "input_b": "Brand",
+      "shared_normalized": "brand",
+      "oracle_in_source_a": "Brand_Color_Palette",
+      "oracle_in_source_b": "Trademark"
+    },
+    {
+      "source_a": "eng",
+      "source_b": "legal",
+      "input_a": "Oracle",
+      "input_b": "Oracle",
+      "shared_normalized": "oracle",
+      "oracle_in_source_a": "Oracle_Database",
+      "oracle_in_source_b": "Oracle_Corporation"
+    },
+    {
+      "source_a": "eng",
+      "source_b": "marketing",
+      "input_a": "Amazon",
+      "input_b": "Amazon",
+      "shared_normalized": "amazon",
+      "oracle_in_source_a": "Amazon_Web_Services",
+      "oracle_in_source_b": "Amazon_Inc"
+    },
+    {
+      "source_a": "eng",
+      "source_b": "marketing",
+      "input_a": "Brand",
+      "input_b": "Brand",
+      "shared_normalized": "brand",
+      "oracle_in_source_a": "Brand_Color_Palette",
+      "oracle_in_source_b": "Brand_Asset"
+    },
+    {
+      "source_a": "eng",
+      "source_b": "marketing",
+      "input_a": "Channel",
+      "input_b": "Channel",
+      "shared_normalized": "channel",
+      "oracle_in_source_a": "Slack_Channel",
+      "oracle_in_source_b": "Media_Channel"
+    },
+    {
+      "source_a": "eng",
+      "source_b": "marketing",
+      "input_a": "Java",
+      "input_b": "Java",
+      "shared_normalized": "java",
+      "oracle_in_source_a": "Java_Programming_Language",
+      "oracle_in_source_b": "Java_Coffee_Brand"
+    },
+    {
+      "source_a": "eng",
+      "source_b": "marketing",
+      "input_a": "Python",
+      "input_b": "Python",
+      "shared_normalized": "python",
+      "oracle_in_source_a": "Python_Programming_Language",
+      "oracle_in_source_b": "Python_Snake_Skin_Brand"
+    },
+    {
+      "source_a": "eng",
+      "source_b": "marketing",
+      "input_a": "Surface",
+      "input_b": "Surface",
+      "shared_normalized": "surface",
+      "oracle_in_source_a": "Microsoft_Surface_Device",
+      "oracle_in_source_b": "Brand_Surface_Area"
+    },
+    {
+      "source_a": "eng",
+      "source_b": "ops",
+      "input_a": "Amazon",
+      "input_b": "Amazon",
+      "shared_normalized": "amazon",
+      "oracle_in_source_a": "Amazon_Web_Services",
+      "oracle_in_source_b": "Amazon_Logistics_Partner"
+    },
+    {
+      "source_a": "eng",
+      "source_b": "ops",
+      "input_a": "Apple",
+      "input_b": "Apple",
+      "shared_normalized": "apple",
+      "oracle_in_source_a": "Apple_Inc",
+      "oracle_in_source_b": "Apple_Supplier_Inc"
+    },
+    {
+      "source_a": "eng",
+      "source_b": "ops",
+      "input_a": "Java",
+      "input_b": "Java",
+      "shared_normalized": "java",
+      "oracle_in_source_a": "Java_Programming_Language",
+      "oracle_in_source_b": "Java_Coffee_Brand"
+    },
+    {
+      "source_a": "eng",
+      "source_b": "ops",
+      "input_a": "Office",
+      "input_b": "Office",
+      "shared_normalized": "office",
+      "oracle_in_source_a": "Microsoft_Office_Suite",
+      "oracle_in_source_b": "Physical_Office_Space"
+    },
+    {
+      "source_a": "eng",
+      "source_b": "ops",
+      "input_a": "Order",
+      "input_b": "Order",
+      "shared_normalized": "order",
+      "oracle_in_source_a": "Sort_Order",
+      "oracle_in_source_b": "Purchase_Order"
+    },
+    {
+      "source_a": "eng",
+      "source_b": "ops",
+      "input_a": "Pipeline",
+      "input_b": "Pipeline",
+      "shared_normalized": "pipeline",
+      "oracle_in_source_a": "CI_Pipeline",
+      "oracle_in_source_b": "Oil_Pipeline_Infrastructure"
+    },
+    {
+      "source_a": "eng",
+      "source_b": "ops",
+      "input_a": "Region",
+      "input_b": "Region",
+      "shared_normalized": "region",
+      "oracle_in_source_a": "AWS_Region",
+      "oracle_in_source_b": "Warehouse_Region"
+    },
+    {
+      "source_a": "eng",
+      "source_b": "ops",
+      "input_a": "Service",
+      "input_b": "Service",
+      "shared_normalized": "service",
+      "oracle_in_source_a": "Microservice",
+      "oracle_in_source_b": "Delivery_Service"
+    },
+    {
+      "source_a": "eng",
+      "source_b": "ops",
+      "input_a": "Tier",
+      "input_b": "Tier",
+      "shared_normalized": "tier",
+      "oracle_in_source_a": "Cache_Tier",
+      "oracle_in_source_b": "Shipping_Tier"
+    },
+    {
+      "source_a": "eng",
+      "source_b": "sales",
+      "input_a": "Account",
+      "input_b": "Account",
+      "shared_normalized": "account",
+      "oracle_in_source_a": "User_Account",
+      "oracle_in_source_b": "CRM_Account"
+    },
+    {
+      "source_a": "eng",
+      "source_b": "sales",
+      "input_a": "Amazon",
+      "input_b": "Amazon",
+      "shared_normalized": "amazon",
+      "oracle_in_source_a": "Amazon_Web_Services",
+      "oracle_in_source_b": "Amazon_Inc"
+    },
+    {
+      "source_a": "eng",
+      "source_b": "sales",
+      "input_a": "Channel",
+      "input_b": "Channel",
+      "shared_normalized": "channel",
+      "oracle_in_source_a": "Slack_Channel",
+      "oracle_in_source_b": "Sales_Channel"
+    },
+    {
+      "source_a": "eng",
+      "source_b": "sales",
+      "input_a": "Oracle",
+      "input_b": "Oracle",
+      "shared_normalized": "oracle",
+      "oracle_in_source_a": "Oracle_Database",
+      "oracle_in_source_b": "Oracle_Corporation"
+    },
+    {
+      "source_a": "eng",
+      "source_b": "sales",
+      "input_a": "Order",
+      "input_b": "Order",
+      "shared_normalized": "order",
+      "oracle_in_source_a": "Sort_Order",
+      "oracle_in_source_b": "Sales_Order"
+    },
+    {
+      "source_a": "eng",
+      "source_b": "sales",
+      "input_a": "Outlook",
+      "input_b": "Outlook",
+      "shared_normalized": "outlook",
+      "oracle_in_source_a": "Microsoft_Outlook",
+      "oracle_in_source_b": "Sales_Outlook_Forecast"
+    },
+    {
+      "source_a": "eng",
+      "source_b": "sales",
+      "input_a": "Pipeline",
+      "input_b": "Pipeline",
+      "shared_normalized": "pipeline",
+      "oracle_in_source_a": "CI_Pipeline",
+      "oracle_in_source_b": "Sales_Pipeline"
+    },
+    {
+      "source_a": "eng",
+      "source_b": "sales",
+      "input_a": "Region",
+      "input_b": "Region",
+      "shared_normalized": "region",
+      "oracle_in_source_a": "AWS_Region",
+      "oracle_in_source_b": "Sales_Region"
+    },
+    {
+      "source_a": "eng",
+      "source_b": "sales",
+      "input_a": "Service",
+      "input_b": "Service",
+      "shared_normalized": "service",
+      "oracle_in_source_a": "Microservice",
+      "oracle_in_source_b": "Service_Offering"
+    },
+    {
+      "source_a": "eng",
+      "source_b": "sales",
+      "input_a": "Tier",
+      "input_b": "Tier",
+      "shared_normalized": "tier",
+      "oracle_in_source_a": "Cache_Tier",
+      "oracle_in_source_b": "Customer_Tier"
+    },
+    {
+      "source_a": "finance",
+      "source_b": "hr",
+      "input_a": "Account",
+      "input_b": "Account",
+      "shared_normalized": "account",
+      "oracle_in_source_a": "GL_Account",
+      "oracle_in_source_b": "Employee_Account"
+    },
+    {
+      "source_a": "finance",
+      "source_b": "hr",
+      "input_a": "Excel",
+      "input_b": "Excel",
+      "shared_normalized": "excel",
+      "oracle_in_source_a": "Microsoft_Excel",
+      "oracle_in_source_b": "Excel_Performance_Rating"
+    },
+    {
+      "source_a": "finance",
+      "source_b": "hr",
+      "input_a": "Office",
+      "input_b": "Office",
+      "shared_normalized": "office",
+      "oracle_in_source_a": "Physical_Office_Space",
+      "oracle_in_source_b": "Microsoft_Office_Suite"
+    },
+    {
+      "source_a": "finance",
+      "source_b": "hr",
+      "input_a": "Outlook",
+      "input_b": "Outlook",
+      "shared_normalized": "outlook",
+      "oracle_in_source_a": "Sales_Outlook_Forecast",
+      "oracle_in_source_b": "Microsoft_Outlook"
+    },
+    {
+      "source_a": "finance",
+      "source_b": "marketing",
+      "input_a": "Office",
+      "input_b": "Office",
+      "shared_normalized": "office",
+      "oracle_in_source_a": "Physical_Office_Space",
+      "oracle_in_source_b": "Microsoft_Office_Suite"
+    },
+    {
+      "source_a": "finance",
+      "source_b": "marketing",
+      "input_a": "Salesforce",
+      "input_b": "Salesforce",
+      "shared_normalized": "salesforce",
+      "oracle_in_source_a": "Salesforce_Inc",
+      "oracle_in_source_b": "Salesforce_CRM"
+    },
+    {
+      "source_a": "finance",
+      "source_b": "ops",
+      "input_a": "Acme",
+      "input_b": "Acme",
+      "shared_normalized": "acme",
+      "oracle_in_source_a": "Acme_Customer_Account",
+      "oracle_in_source_b": "Acme_Supplier"
+    },
+    {
+      "source_a": "finance",
+      "source_b": "ops",
+      "input_a": "Amazon",
+      "input_b": "Amazon",
+      "shared_normalized": "amazon",
+      "oracle_in_source_a": "Amazon_Inc",
+      "oracle_in_source_b": "Amazon_Logistics_Partner"
+    },
+    {
+      "source_a": "finance",
+      "source_b": "ops",
+      "input_a": "Apple",
+      "input_b": "Apple",
+      "shared_normalized": "apple",
+      "oracle_in_source_a": "Apple_Inc",
+      "oracle_in_source_b": "Apple_Supplier_Inc"
+    },
+    {
+      "source_a": "finance",
+      "source_b": "ops",
+      "input_a": "Mercury",
+      "input_b": "Mercury",
+      "shared_normalized": "mercury",
+      "oracle_in_source_a": "Mercury_Insurance",
+      "oracle_in_source_b": "Mercury_Cars"
+    },
+    {
+      "source_a": "finance",
+      "source_b": "ops",
+      "input_a": "Vendor",
+      "input_b": "Vendor",
+      "shared_normalized": "vendor",
+      "oracle_in_source_a": "AP_Vendor",
+      "oracle_in_source_b": "Supply_Vendor"
+    },
+    {
+      "source_a": "finance",
+      "source_b": "sales",
+      "input_a": "Account",
+      "input_b": "Account",
+      "shared_normalized": "account",
+      "oracle_in_source_a": "GL_Account",
+      "oracle_in_source_b": "CRM_Account"
+    },
+    {
+      "source_a": "finance",
+      "source_b": "sales",
+      "input_a": "Office",
+      "input_b": "Office",
+      "shared_normalized": "office",
+      "oracle_in_source_a": "Physical_Office_Space",
+      "oracle_in_source_b": "Microsoft_Office_Suite"
+    },
+    {
+      "source_a": "finance",
+      "source_b": "sales",
+      "input_a": "Salesforce",
+      "input_b": "Salesforce",
+      "shared_normalized": "salesforce",
+      "oracle_in_source_a": "Salesforce_Inc",
+      "oracle_in_source_b": "Salesforce_CRM"
+    },
+    {
+      "source_a": "finance",
+      "source_b": "sales",
+      "input_a": "Vendor",
+      "input_b": "Vendor",
+      "shared_normalized": "vendor",
+      "oracle_in_source_a": "AP_Vendor",
+      "oracle_in_source_b": "Vendor_Customer"
+    },
+    {
+      "source_a": "hr",
+      "source_b": "ops",
+      "input_a": "Office",
+      "input_b": "Office",
+      "shared_normalized": "office",
+      "oracle_in_source_a": "Microsoft_Office_Suite",
+      "oracle_in_source_b": "Physical_Office_Space"
+    },
+    {
+      "source_a": "hr",
+      "source_b": "sales",
+      "input_a": "Account",
+      "input_b": "Account",
+      "shared_normalized": "account",
+      "oracle_in_source_a": "Employee_Account",
+      "oracle_in_source_b": "CRM_Account"
+    },
+    {
+      "source_a": "hr",
+      "source_b": "sales",
+      "input_a": "Excel",
+      "input_b": "Excel",
+      "shared_normalized": "excel",
+      "oracle_in_source_a": "Excel_Performance_Rating",
+      "oracle_in_source_b": "Microsoft_Excel"
+    },
+    {
+      "source_a": "hr",
+      "source_b": "sales",
+      "input_a": "Outlook",
+      "input_b": "Outlook",
+      "shared_normalized": "outlook",
+      "oracle_in_source_a": "Microsoft_Outlook",
+      "oracle_in_source_b": "Sales_Outlook_Forecast"
+    },
+    {
+      "source_a": "legal",
+      "source_b": "marketing",
+      "input_a": "Brand",
+      "input_b": "Brand",
+      "shared_normalized": "brand",
+      "oracle_in_source_a": "Trademark",
+      "oracle_in_source_b": "Brand_Asset"
+    },
+    {
+      "source_a": "legal",
+      "source_b": "marketing",
+      "input_a": "Salesforce",
+      "input_b": "Salesforce",
+      "shared_normalized": "salesforce",
+      "oracle_in_source_a": "Salesforce_Inc",
+      "oracle_in_source_b": "Salesforce_CRM"
+    },
+    {
+      "source_a": "legal",
+      "source_b": "ops",
+      "input_a": "Apple",
+      "input_b": "Apple",
+      "shared_normalized": "apple",
+      "oracle_in_source_a": "Apple_Inc",
+      "oracle_in_source_b": "Apple_Supplier_Inc"
+    },
+    {
+      "source_a": "legal",
+      "source_b": "ops",
+      "input_a": "Mercury",
+      "input_b": "Mercury",
+      "shared_normalized": "mercury",
+      "oracle_in_source_a": "Mercury_Insurance",
+      "oracle_in_source_b": "Mercury_Cars"
+    },
+    {
+      "source_a": "legal",
+      "source_b": "sales",
+      "input_a": "Salesforce",
+      "input_b": "Salesforce",
+      "shared_normalized": "salesforce",
+      "oracle_in_source_a": "Salesforce_Inc",
+      "oracle_in_source_b": "Salesforce_CRM"
+    },
+    {
+      "source_a": "marketing",
+      "source_b": "ops",
+      "input_a": "Amazon",
+      "input_b": "Amazon",
+      "shared_normalized": "amazon",
+      "oracle_in_source_a": "Amazon_Inc",
+      "oracle_in_source_b": "Amazon_Logistics_Partner"
+    },
+    {
+      "source_a": "marketing",
+      "source_b": "ops",
+      "input_a": "Apple",
+      "input_b": "Apple",
+      "shared_normalized": "apple",
+      "oracle_in_source_a": "Apple_Inc",
+      "oracle_in_source_b": "Apple_Supplier_Inc"
+    },
+    {
+      "source_a": "marketing",
+      "source_b": "ops",
+      "input_a": "Lead",
+      "input_b": "Lead",
+      "shared_normalized": "lead",
+      "oracle_in_source_a": "Marketing_Qualified_Lead",
+      "oracle_in_source_b": "Lead_Time_Material"
+    },
+    {
+      "source_a": "marketing",
+      "source_b": "ops",
+      "input_a": "Office",
+      "input_b": "Office",
+      "shared_normalized": "office",
+      "oracle_in_source_a": "Microsoft_Office_Suite",
+      "oracle_in_source_b": "Physical_Office_Space"
+    },
+    {
+      "source_a": "marketing",
+      "source_b": "ops",
+      "input_a": "Saturn",
+      "input_b": "Saturn",
+      "shared_normalized": "saturn",
+      "oracle_in_source_a": "Saturn_Marketing_Campaign",
+      "oracle_in_source_b": "Saturn_Cars"
+    },
+    {
+      "source_a": "marketing",
+      "source_b": "sales",
+      "input_a": "Champion",
+      "input_b": "Champion",
+      "shared_normalized": "champion",
+      "oracle_in_source_a": "Champion_Brand_Apparel",
+      "oracle_in_source_b": "Champion_Account_Tier"
+    },
+    {
+      "source_a": "marketing",
+      "source_b": "sales",
+      "input_a": "Channel",
+      "input_b": "Channel",
+      "shared_normalized": "channel",
+      "oracle_in_source_a": "Media_Channel",
+      "oracle_in_source_b": "Sales_Channel"
+    },
+    {
+      "source_a": "marketing",
+      "source_b": "sales",
+      "input_a": "Lead",
+      "input_b": "Lead",
+      "shared_normalized": "lead",
+      "oracle_in_source_a": "Marketing_Qualified_Lead",
+      "oracle_in_source_b": "Sales_Lead"
+    },
+    {
+      "source_a": "marketing",
+      "source_b": "sales",
+      "input_a": "Surface",
+      "input_b": "Surface",
+      "shared_normalized": "surface",
+      "oracle_in_source_a": "Brand_Surface_Area",
+      "oracle_in_source_b": "Microsoft_Surface_Device"
+    },
+    {
+      "source_a": "ops",
+      "source_b": "sales",
+      "input_a": "Acme",
+      "input_b": "Acme",
+      "shared_normalized": "acme",
+      "oracle_in_source_a": "Acme_Supplier",
+      "oracle_in_source_b": "Acme_Customer_Account"
+    },
+    {
+      "source_a": "ops",
+      "source_b": "sales",
+      "input_a": "Amazon",
+      "input_b": "Amazon",
+      "shared_normalized": "amazon",
+      "oracle_in_source_a": "Amazon_Logistics_Partner",
+      "oracle_in_source_b": "Amazon_Inc"
+    },
+    {
+      "source_a": "ops",
+      "source_b": "sales",
+      "input_a": "Apple",
+      "input_b": "Apple",
+      "shared_normalized": "apple",
+      "oracle_in_source_a": "Apple_Supplier_Inc",
+      "oracle_in_source_b": "Apple_Inc"
+    },
+    {
+      "source_a": "ops",
+      "source_b": "sales",
+      "input_a": "Lead",
+      "input_b": "Lead",
+      "shared_normalized": "lead",
+      "oracle_in_source_a": "Lead_Time_Material",
+      "oracle_in_source_b": "Sales_Lead"
+    },
+    {
+      "source_a": "ops",
+      "source_b": "sales",
+      "input_a": "Office",
+      "input_b": "Office",
+      "shared_normalized": "office",
+      "oracle_in_source_a": "Physical_Office_Space",
+      "oracle_in_source_b": "Microsoft_Office_Suite"
+    },
+    {
+      "source_a": "ops",
+      "source_b": "sales",
+      "input_a": "Order",
+      "input_b": "Order",
+      "shared_normalized": "order",
+      "oracle_in_source_a": "Purchase_Order",
+      "oracle_in_source_b": "Sales_Order"
+    },
+    {
+      "source_a": "ops",
+      "source_b": "sales",
+      "input_a": "Pipeline",
+      "input_b": "Pipeline",
+      "shared_normalized": "pipeline",
+      "oracle_in_source_a": "Oil_Pipeline_Infrastructure",
+      "oracle_in_source_b": "Sales_Pipeline"
+    },
+    {
+      "source_a": "ops",
+      "source_b": "sales",
+      "input_a": "Region",
+      "input_b": "Region",
+      "shared_normalized": "region",
+      "oracle_in_source_a": "Warehouse_Region",
+      "oracle_in_source_b": "Sales_Region"
+    },
+    {
+      "source_a": "ops",
+      "source_b": "sales",
+      "input_a": "Service",
+      "input_b": "Service",
+      "shared_normalized": "service",
+      "oracle_in_source_a": "Delivery_Service",
+      "oracle_in_source_b": "Service_Offering"
+    },
+    {
+      "source_a": "ops",
+      "source_b": "sales",
+      "input_a": "Tier",
+      "input_b": "Tier",
+      "shared_normalized": "tier",
+      "oracle_in_source_a": "Shipping_Tier",
+      "oracle_in_source_b": "Customer_Tier"
+    },
+    {
+      "source_a": "ops",
+      "source_b": "sales",
+      "input_a": "Vendor",
+      "input_b": "Vendor",
+      "shared_normalized": "vendor",
+      "oracle_in_source_a": "Supply_Vendor",
+      "oracle_in_source_b": "Vendor_Customer"
+    }
+  ],
+  "fixture_sha256": "sha256:96ddafb3787c73dd1c6d1d7bdfddcf915d236314c29c35d2779dd5e8a6fc3cba",
+  "description": "Multi-tenant Tier B adversarials. Each pair is two entries across different sources that share a surface form but have different oracle canonicals. A correct multi-tenant variant must emit different predicted canonicals for the two entries."
+}
