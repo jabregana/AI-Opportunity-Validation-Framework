@@ -18,6 +18,8 @@ class BootstrapResult:
     ci_level: float
     n_resamples: int
     n: int
+    p_value_one_sided_gt: float  # P(resampled mean ≤ 0); reject H0: μ ≤ 0 when small
+    p_value_two_sided: float
 
 
 def paired_bootstrap(
@@ -26,10 +28,16 @@ def paired_bootstrap(
     ci_level: float = 0.95,
     seed: int = 0xC0FFEE,
 ) -> BootstrapResult:
-    """Percentile bootstrap CI on the mean of paired differences.
+    """Percentile bootstrap CI + p-values on the mean of paired differences.
 
     `diffs[i]` is variant_metric[i] - baseline_metric[i] for paired sample i.
-    Returns the observed mean diff and a (1 - alpha) percentile CI.
+
+    Returns:
+      - observed mean diff
+      - (1 - alpha) percentile CI
+      - one-sided p-value for H0: μ ≤ 0 vs H1: μ > 0
+        (fraction of resampled means ≤ 0)
+      - two-sided p-value: 2 × min(one-sided, 1 - one-sided)
 
     BCa will replace percentile when we move past pilot.
     """
@@ -45,6 +53,8 @@ def paired_bootstrap(
     alpha = 1.0 - ci_level
     lo_idx = int((alpha / 2) * n_resamples)
     hi_idx = int((1 - alpha / 2) * n_resamples) - 1
+    p_one_sided = sum(1 for m in resampled_means if m <= 0) / n_resamples
+    p_two_sided = 2 * min(p_one_sided, 1 - p_one_sided)
     return BootstrapResult(
         mean_diff=mean(diffs),
         ci_low=resampled_means[lo_idx],
@@ -52,6 +62,8 @@ def paired_bootstrap(
         ci_level=ci_level,
         n_resamples=n_resamples,
         n=n,
+        p_value_one_sided_gt=p_one_sided,
+        p_value_two_sided=p_two_sided,
     )
 
 

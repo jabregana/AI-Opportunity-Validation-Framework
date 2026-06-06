@@ -1,15 +1,18 @@
 """Harness entrypoint per experiments.md §6.
 
 Pilot scope: UC-4.1 only. Runs one variant + one baseline on a workload,
-computes paired pairwise-F1 and per-item correctness, bootstraps the CI
-on the variant - baseline difference, and writes a JSON artifact.
+computes paired pairwise-F1 + per-item correctness, bootstraps the CI +
+one-sided p-value on the variant - baseline difference, runs the result
+through a LORD++ ledger (single-test ledger in pilot), applies the §6.4
+INCONCLUSIVE-is-FAIL gate, and writes a §6.1 three-block artifact.
 
 Usage:
   python -m runner.runner \\
     --variant stub-random-bucket \\
     --baseline b-raw-identity \\
     --workload W-CONCEPTNET-REL \\
-    --use-case UC-4.1
+    --use-case UC-4.1 \\
+    --tier fast
 """
 from __future__ import annotations
 import argparse
@@ -18,7 +21,8 @@ import time
 from dataclasses import asdict
 
 from fixtures import workloads
-from runner import artifacts, variants
+from runner import artifacts, gates, variants
+from runner.fdr import LordPlusPlusLedger, run_ledger
 from runner.metrics import alignment, stats
 
 
@@ -32,13 +36,64 @@ def _run_variant(
     return preds, elapsed
 
 
+def _outcome_from_bootstrap(bs: stats.BootstrapResult, alpha_n: float) -> str:
+    """Map a bootstrap result + LORD++ alpha into the artifact `outcome` enum.
+
+    - CI excludes 0 on the positive side AND p ≤ α  → REJECT_NULL_SUPERIOR
+    - CI excludes 0 on the negative side             → REGRESSION_DETECTED
+    - CI brackets 0                                  → INCONCLUSIVE
+    - Else                                           → FAIL_TO_REJECT
+    """
+    if bs.ci_low > 0 and bs.p_value_one_sided_gt <= alpha_n:
+        return "REJECT_NULL_SUPERIOR"
+    if bs.ci_high < 0:
+        return "REGRESSION_DETECTED"
+    if bs.ci_low <= 0 <= bs.ci_high:
+        return "INCONCLUSIVE"
+    return "FAIL_TO_REJECT"
+
+
+def _pipeline_decision(
+    test_executions: list[dict], tier: str
+) -> tuple[str, list[str]]:
+    """Apply §6.4 gates and produce a final pipeline_decision.
+
+    Returns (decision, reasons[]).
+    """
+    reasons: list[str] = []
+    outcomes = [t["outcome"] for t in test_executions]
+
+    inconc_gate = gates.inconclusive_is_fail(outcomes, tier=tier)
+    if not inconc_gate.passed:
+        reasons.append(inconc_gate.reason)
+
+    has_regression = any(o == "REGRESSION_DETECTED" for o in outcomes)
+    if has_regression:
+        reasons.append("at least one test detected a regression")
+
+    has_failed_killswitch = any(
+        t.get("type") == "guardrail_kill_switch" and t["outcome"] == "FAIL"
+        for t in test_executions
+    )
+    if has_failed_killswitch:
+        reasons.append("kill-switch guardrail FAIL")
+
+    if not reasons:
+        return "PASS_AND_MERGE", []
+    if tier == "fast":
+        return "BLOCK_PR", reasons
+    return "SOFT_REGRESSION_OPENED", reasons
+
+
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(prog="amg-run")
-    p.add_argument("--variant", required=True, help="variant id from runner.variants.FACTORIES")
-    p.add_argument("--baseline", required=True, help="baseline variant id")
-    p.add_argument("--workload", required=True, help="workload id from fixtures.workloads.LOADERS")
-    p.add_argument("--use-case", required=True, help="UC label, e.g. UC-4.1")
+    p.add_argument("--variant", required=True)
+    p.add_argument("--baseline", required=True)
+    p.add_argument("--workload", required=True)
+    p.add_argument("--use-case", required=True, help="e.g. UC-4.1")
+    p.add_argument("--tier", default="fast", choices=["fast", "nightly"])
     p.add_argument("--bootstrap-resamples", type=int, default=10_000)
+    p.add_argument("--target-q", type=float, default=0.10)
     p.add_argument("--out-dir", default="runs")
     args = p.parse_args(argv)
 
@@ -57,50 +112,54 @@ def main(argv: list[str] | None = None) -> int:
     var_correct = alignment.per_item_correctness(var_preds, workload)
     base_correct = alignment.per_item_correctness(base_preds, workload)
     diffs = [float(v - b) for v, b in zip(var_correct, base_correct)]
-    # TODO: when a real variant lands non-trivial F1, switch this bootstrap
-    # to resample input indices and recompute pairwise F1 within each
-    # resample — per-item strict-cluster correctness is degenerate (all 0)
-    # at near-chance performance.
     bs = stats.paired_bootstrap(diffs, n_resamples=args.bootstrap_resamples)
     mc_b, mc_c = stats.mcnemar_discordant_counts(var_correct, base_correct)
 
-    metrics = {
-        args.use_case.lower().replace("-", "_").replace(".", "_"): {
-            "primary": {
-                "metric": "pairwise_f1",
-                "variant": asdict(var_f1),
-                "baseline": asdict(base_f1),
-                "paired_diff_mean_per_item_correct": bs.mean_diff,
-                "paired_diff_ci_95": [bs.ci_low, bs.ci_high],
-                "paired_diff_n": bs.n,
-                "bootstrap_resamples": bs.n_resamples,
-                "mcnemar_b_variant_wins": mc_b,
-                "mcnemar_c_baseline_wins": mc_c,
-            },
+    metric_id_suffix = args.use_case.lower().replace("-", "_").replace(".", "_")
+
+    # Build one test_execution per metric. For the pilot UC-4.1 we have one
+    # paired-bootstrap test on per-item strict-cluster correctness diff.
+    test_executions: list[dict] = [
+        {
+            "test_seq_id": 1,
+            "use_case": args.use_case,
+            "metric_id": f"{metric_id_suffix}_per_item_correct_diff",
+            "type": "superiority",
+            "statistical_test": "paired_bootstrap_percentile",
+            "n": bs.n,
+            "point_estimate": bs.mean_diff,
+            "always_valid_ci_lower": bs.ci_low,
+            "always_valid_ci_upper": bs.ci_high,
+            "ci_level": bs.ci_level,
+            "p_value": bs.p_value_one_sided_gt,
             "diagnostics": {
+                "variant_pairwise_f1": var_f1.f1,
+                "baseline_pairwise_f1": base_f1.f1,
                 "variant_seconds": var_elapsed,
                 "baseline_seconds": base_elapsed,
+                "mcnemar_b_variant_wins": mc_b,
+                "mcnemar_c_baseline_wins": mc_c,
                 "items": len(workload),
             },
         }
-    }
+    ]
 
-    # Pilot decision rule: CI excludes zero in the positive direction → variant wins.
-    if bs.ci_low > 0:
-        decision = "pass"
-    elif bs.ci_high < 0:
-        decision = "regress"
-    else:
-        decision = "inconclusive"
+    # Run through LORD++ ledger to populate alpha_allocated + outcome_rejected.
+    ordered, ledger = run_ledger(test_executions, target_q=args.target_q)
+    for t in ordered:
+        t["outcome"] = _outcome_from_bootstrap(bs, t["alpha_allocated"])
+
+    decision, reasons = _pipeline_decision(ordered, tier=args.tier)
 
     path = artifacts.emit(
-        variant=var.name,
-        baseline=base.name,
+        variant_name=var.name,
+        baseline_name=base.name,
         workload_id=args.workload,
         workload_sha=workload_sha,
-        use_case=args.use_case,
-        metrics=metrics,
-        decision=decision,
+        tier=args.tier,
+        test_executions=ordered,
+        ledger=ledger,
+        pipeline_decision=decision,
         out_dir=args.out_dir,
     )
     print(f"Wrote {path}")
@@ -108,10 +167,15 @@ def main(argv: list[str] | None = None) -> int:
     print(f"  baseline {base.name}: pairwise F1 = {base_f1.f1:.4f}")
     print(
         f"  paired per-item correctness diff: {bs.mean_diff:+.4f} "
-        f"(95% CI [{bs.ci_low:+.4f}, {bs.ci_high:+.4f}])"
+        f"(95% CI [{bs.ci_low:+.4f}, {bs.ci_high:+.4f}], "
+        f"one-sided p = {bs.p_value_one_sided_gt:.4f})"
     )
-    print(f"  McNemar discordants: variant-wins={mc_b}, baseline-wins={mc_c}")
-    print(f"  decision: {decision}")
+    print(f"  alpha allocated by LORD++ (n=1): {ordered[0]['alpha_allocated']:.4f}")
+    print(f"  outcome: {ordered[0]['outcome']}")
+    print(f"  pipeline_decision: {decision}")
+    if reasons:
+        for r in reasons:
+            print(f"    - {r}")
     return 0
 
 

@@ -56,7 +56,7 @@ def test_paired_bootstrap_handles_variance():
     assert bs.ci_low <= bs.mean_diff <= bs.ci_high
 
 
-def test_end_to_end_run_emits_artifact(tmp_path):
+def test_end_to_end_run_emits_three_block_artifact(tmp_path):
     rc = runner_main(
         [
             "--variant",
@@ -67,8 +67,10 @@ def test_end_to_end_run_emits_artifact(tmp_path):
             "W-CONCEPTNET-REL",
             "--use-case",
             "UC-4.1",
+            "--tier",
+            "fast",
             "--bootstrap-resamples",
-            "500",  # speed up the test
+            "500",
             "--out-dir",
             str(tmp_path),
         ]
@@ -77,8 +79,90 @@ def test_end_to_end_run_emits_artifact(tmp_path):
     artifacts_emitted = list(tmp_path.glob("run-*.json"))
     assert len(artifacts_emitted) == 1
     payload = json.loads(artifacts_emitted[0].read_text())
-    assert payload["use_case"] == "UC-4.1"
-    assert payload["workload_id"] == "W-CONCEPTNET-REL"
-    assert payload["workload_sha"].startswith("sha256:")
-    assert payload["decision"] in {"pass", "regress", "inconclusive"}
-    assert "uc_4_1" in payload["metrics"]
+
+    # Top-level three-block schema + pipeline_decision.
+    assert set(payload.keys()) == {
+        "artifact_metadata",
+        "sequential_fdr_ledger",
+        "test_executions",
+        "pipeline_decision",
+    }
+
+    # artifact_metadata
+    md = payload["artifact_metadata"]
+    assert md["workload_id"] == "W-CONCEPTNET-REL"
+    assert md["workload_sha"].startswith("sha256:")
+    assert md["tier"] == "fast"
+    assert md["variant"] == "stub-random-bucket-v0.0.1"
+    assert md["baseline"] == "b-raw-identity"
+    assert "run_id" in md
+    assert "timestamp_utc" in md
+
+    # sequential_fdr_ledger
+    led = payload["sequential_fdr_ledger"]
+    assert led["algorithm"] == "LORD++"
+    assert led["target_q"] == 0.10
+    assert "current_wealth" in led
+    assert isinstance(led["prior_rejections"], list)
+
+    # test_executions
+    tx = payload["test_executions"]
+    assert isinstance(tx, list) and len(tx) == 1
+    t0 = tx[0]
+    assert t0["test_seq_id"] == 1
+    assert t0["use_case"] == "UC-4.1"
+    assert 0.0 <= t0["alpha_allocated"] <= 0.10
+    assert t0["outcome"] in {
+        "REJECT_NULL_SUPERIOR",
+        "REJECT_NULL_NON_INFERIOR",
+        "FAIL_TO_REJECT",
+        "REGRESSION_DETECTED",
+        "INCONCLUSIVE",
+    }
+    assert "always_valid_ci_lower" in t0
+    assert "always_valid_ci_upper" in t0
+    assert "p_value" in t0
+
+    # pipeline_decision
+    assert payload["pipeline_decision"] in {
+        "PASS_AND_MERGE",
+        "BLOCK_PR",
+        "SOFT_REGRESSION_OPENED",
+    }
+
+
+def test_pilot_inconclusive_blocks_pr_on_fast_tier(tmp_path):
+    """The stub variants are both degenerate so UC-4.1 yields INCONCLUSIVE;
+    §6.4.1 says INCONCLUSIVE on fast tier must block the PR."""
+    runner_main(
+        [
+            "--variant", "stub-random-bucket",
+            "--baseline", "b-raw-identity",
+            "--workload", "W-CONCEPTNET-REL",
+            "--use-case", "UC-4.1",
+            "--tier", "fast",
+            "--bootstrap-resamples", "500",
+            "--out-dir", str(tmp_path),
+        ]
+    )
+    payload = json.loads(next(tmp_path.glob("run-*.json")).read_text())
+    assert payload["test_executions"][0]["outcome"] == "INCONCLUSIVE"
+    assert payload["pipeline_decision"] == "BLOCK_PR"
+
+
+def test_pilot_inconclusive_soft_regresses_on_nightly(tmp_path):
+    runner_main(
+        [
+            "--variant", "stub-random-bucket",
+            "--baseline", "b-raw-identity",
+            "--workload", "W-CONCEPTNET-REL",
+            "--use-case", "UC-4.1",
+            "--tier", "nightly",
+            "--bootstrap-resamples", "500",
+            "--out-dir", str(tmp_path),
+        ]
+    )
+    payload = json.loads(next(tmp_path.glob("run-*.json")).read_text())
+    # On nightly, INCONCLUSIVE alone is not a blocker per §6.4.1.
+    assert payload["test_executions"][0]["outcome"] == "INCONCLUSIVE"
+    assert payload["pipeline_decision"] == "PASS_AND_MERGE"
