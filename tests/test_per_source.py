@@ -574,27 +574,40 @@ def test_v043_min_overlap_invalid_raises():
 
 
 def test_v044_classifies_global_heavy_workload_aggressive():
-    """v0.4.4 should detect lots of overlap and switch to aggressive."""
+    """v0.4.4 should detect lots of strong overlap and switch to
+    aggressive mode. Uses an inner with a constant embedder so cosine
+    always passes; the only signal varying is alias-set Jaccard."""
 
-    class _SingleClusterInner(Variant):
+    class _ConstEmbedder:
+        dim = 4
+        _v = [0.5, 0.5, 0.5, 0.5]  # unit vector; cosine=1.0 always
+
+        def embed(self, text: str):
+            return list(self._v)
+
+    class _SingleClusterInner:
         name = "scl"
+        embedder = _ConstEmbedder()
 
         def align(self, input_relation: str) -> str:
             return "CLUSTER"
 
     p = IntrospectiveLazyConsensusProxy(
         inner_factory=_SingleClusterInner,
-        embedding_cosine_threshold=2.0,  # disable embedding; detection via Jaccard
+        embedding_cosine_threshold=0.5,  # easy to pass with const embedder
         strong_density_aggressive_threshold=0.01,
     )
-    # All sources see the same 3 aliases; should produce lots of overlap.
+    # 4 sources × 3 aliases each, all clustering to the same local canonical
+    # in each source.  Cross-source pairs share all 3 aliases (overlap=3,
+    # Jaccard=1.0, cosine=1.0) — strong matches.
     for source in ["s1", "s2", "s3", "s4"]:
         for inp in ["X", "Y", "Z"]:
             p.align_with_context(inp, {"source_id": source})
     summary = p.consolidate()
-    # With cosine disabled, the classifier sees overlap=3 + Jaccard=1.0
-    # but cosine fails. Density is 0; classified ambiguity_heavy.
-    # Use a no-op embedder to test the density path properly.
+    assert summary["adaptive_classification"] == "global_stratum_heavy"
+    assert summary["adaptive_min_aliases_chosen"] == 1
+    assert summary["adaptive_min_overlap_chosen"] == 1
+    assert summary["n_merge_edges"] >= 1
 
 
 def test_v044_classifies_ambiguity_heavy_workload_conservative():
