@@ -585,7 +585,13 @@ class IntrospectiveLazyConsensusProxy(LazyConsensusANDRuleProxy):
         conservative_min_aliases: int = 2,
         conservative_min_overlap: int = 2,
         aggressive_min_aliases: int = 1,
-        aggressive_min_overlap: int = 1,
+        # Bug-fix 2026-06-06: aggressive_min_overlap raised from 1 to 2.
+        # min_overlap=1 produced 100% false merges on SYNTH multi-tenant
+        # Tier B because any two cross-source clusters sharing their
+        # single common surface form (e.g. sales "Account" and finance
+        # "Account") would trigger a merge despite having different
+        # oracle canonicals. See docs/finding-multitenant-tier-b.md Bug 2.
+        aggressive_min_overlap: int = 2,
         strong_density_aggressive_threshold: float = 0.02,
     ):
         super().__init__(

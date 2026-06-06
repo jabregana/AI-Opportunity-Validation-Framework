@@ -606,7 +606,9 @@ def test_v044_classifies_global_heavy_workload_aggressive():
     summary = p.consolidate()
     assert summary["adaptive_classification"] == "global_stratum_heavy"
     assert summary["adaptive_min_aliases_chosen"] == 1
-    assert summary["adaptive_min_overlap_chosen"] == 1
+    # min_overlap default raised from 1 to 2 in v0.5.0 bug fix; see
+    # docs/finding-multitenant-tier-b.md Bug 2.
+    assert summary["adaptive_min_overlap_chosen"] == 2
     assert summary["n_merge_edges"] >= 1
 
 

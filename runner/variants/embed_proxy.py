@@ -75,7 +75,11 @@ class HashedTokenEmbedder:
         fine for vocabularies under a few thousand unique tokens.
     """
 
-    def __init__(self, dim: int = 256):
+    def __init__(self, dim: int = 4096):
+        # Default raised from 256 to 4096 after discovering token-pair
+        # hash collisions at dim=256 caused 1.0 false-positive cosine
+        # (e.g. account/vendor collide). See
+        # docs/finding-multitenant-tier-b.md Bug 1.
         if dim < 8:
             raise ValueError(f"dim must be >= 8, got {dim}")
         self._dim = dim
