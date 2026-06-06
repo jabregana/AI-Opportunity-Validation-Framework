@@ -805,6 +805,34 @@ class SingletonAwareLazyProxy(IntrospectiveLazyConsensusProxy):
         return parent_result
 
 
+class MultiTenantANNSingletonAwareLazyProxy(SingletonAwareLazyProxy):
+    """v0.5.7: SingletonAwareLazyProxy (v0.5.3) but every per-source
+    inner is an ANN-backed proxy (v0.5.5) instead of the linear-scan
+    v0.3.1.
+
+    This extends the v0.5.5 scaling fix to the multi-tenant generation.
+    Each source maintains its own inner variant; without ANN the
+    per-source inner does an O(K_source) linear cosine scan on every
+    write. At production K (per-source K > a few thousand) that
+    collapses throughput the same way the single-tenant v0.3.1 did
+    pre-v0.5.5.
+
+    The v0.5.7 inner is HNSW-backed (when hnswlib is installed); falls
+    back to numpy linear scan otherwise. All cross-source consensus,
+    singleton-aware identity merging, and disambig safety checks from
+    v0.5.3 are inherited unchanged.
+    """
+
+    name = "embed-proxy-v0.5.7-mt-ann"
+
+    def __init__(self, inner_factory=None, **kwargs):
+        if inner_factory is None:
+            from .embed_proxy import ANNSchemaProxy
+
+            inner_factory = ANNSchemaProxy
+        super().__init__(inner_factory=inner_factory, **kwargs)
+
+
 class PerSourceNamespaceProxy(Variant):
     """Maintain one inner variant per observed source_id.
 
