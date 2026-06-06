@@ -665,6 +665,146 @@ class IntrospectiveLazyConsensusProxy(LazyConsensusANDRuleProxy):
         return result
 
 
+class SingletonAwareLazyProxy(IntrospectiveLazyConsensusProxy):
+    """v0.5.x singleton-aware lazy consensus.
+
+    Addresses the Stack Overflow regression: on workloads where each
+    source's (source, local) clusters are mostly singletons (one alias
+    each), v0.4.4's strong-density check never fires and the variant
+    over-isolates cross-source identical surface forms.
+
+    Algorithm:
+      1. Phase 1 (this class adds): Detect singleton-dominant clusters.
+         If more than `singleton_density_threshold` (default 0.7) of
+         (source, local) keys have exactly one alias, treat the workload
+         as singleton-heavy.
+      2. For singleton-heavy workloads: do an EXACT IDENTITY merge pass.
+         Group all (source, local) keys whose single alias is the same
+         exact string into one merged canonical. This recovers b-raw's
+         identity-clustering wins while staying within the variant
+         framework (the merge map records which sources contributed).
+      3. Phase 2 (inherited): run the introspective adaptive consolidate
+         on the remaining multi-alias clusters using the parent's logic.
+
+    Tradeoffs:
+      - Identity merging is by-definition safe: same exact string is
+        the strongest possible signal of same entity.
+      - It does not help when sources use different surface forms for
+        the same entity (the multi-alias case). For those, the parent
+        class's introspective adaptive logic still runs.
+
+    Validation: should fix W-STACKOVERFLOW-MT regression while
+    preserving all v0.4.4 wins on workloads where it currently performs
+    well.
+    """
+
+    name = "embed-proxy-v0.5.3-singleton-aware"
+
+    def __init__(
+        self,
+        inner_factory=None,
+        alias_jaccard_threshold: float = 0.5,
+        embedding_cosine_threshold: float = 0.85,
+        conservative_min_aliases: int = 2,
+        conservative_min_overlap: int = 2,
+        aggressive_min_aliases: int = 1,
+        aggressive_min_overlap: int = 2,
+        strong_density_aggressive_threshold: float = 0.02,
+        singleton_density_threshold: float = 0.7,
+    ):
+        super().__init__(
+            inner_factory=inner_factory,
+            alias_jaccard_threshold=alias_jaccard_threshold,
+            embedding_cosine_threshold=embedding_cosine_threshold,
+            conservative_min_aliases=conservative_min_aliases,
+            conservative_min_overlap=conservative_min_overlap,
+            aggressive_min_aliases=aggressive_min_aliases,
+            aggressive_min_overlap=aggressive_min_overlap,
+            strong_density_aggressive_threshold=strong_density_aggressive_threshold,
+        )
+        if not 0 < singleton_density_threshold <= 1:
+            raise ValueError("singleton_density_threshold must be in (0, 1]")
+        self._singleton_density_threshold = singleton_density_threshold
+
+    def consolidate(self) -> dict:
+        keys = list(self._aliases.keys())
+        if not keys:
+            return super().consolidate()
+
+        # Detect singleton density UP FRONT (parent's consolidate doesn't
+        # touch _aliases, only _merged).
+        singleton_count = sum(1 for k in keys if len(self._aliases[k]) == 1)
+        singleton_density = singleton_count / len(keys)
+        is_singleton_heavy = singleton_density >= self._singleton_density_threshold
+
+        # Phase A: run the inherited adaptive consolidate first. It
+        # clears _merged and populates it for keys that win an AND-rule
+        # merge. Multi-alias clusters get their merge decisions made here.
+        parent_result = super().consolidate()
+
+        # Phase B: now add singleton-aware identity merges and
+        # promotions for keys the parent's consolidate did NOT already
+        # assign to a merge group.
+        identity_merges = 0
+        identity_promotions = 0
+        identity_blocked_by_disambig = 0
+        if is_singleton_heavy:
+            # Per-source map: which local canonicals exist? Used to detect
+            # whether a source has multiple related cluster keys for the
+            # same surface form (signal that the source disambiguates and
+            # we should NOT identity-merge).
+            per_source_locals: dict[str, list[str]] = {}
+            for src, local in keys:
+                per_source_locals.setdefault(src, []).append(local)
+
+            def _has_disambig_signal(source: str, alias: str) -> bool:
+                """Source has other cluster keys whose local canonical
+                shares a substring with the alias. Implies the source
+                distinguishes among variants of this surface."""
+                lower_alias = alias.lower()
+                for local in per_source_locals.get(source, []):
+                    if local == alias:
+                        continue
+                    lower_local = local.lower()
+                    if lower_alias in lower_local or lower_local in lower_alias:
+                        return True
+                return False
+
+            alias_to_keys: dict[str, list[tuple[str, str]]] = {}
+            for k in keys:
+                if k in self._merged:
+                    continue  # parent already decided this key's canonical
+                aliases = self._aliases[k]
+                if len(aliases) != 1:
+                    continue
+                only_alias = next(iter(aliases))
+                alias_to_keys.setdefault(only_alias, []).append(k)
+            for alias, member_keys in alias_to_keys.items():
+                # Disambig check: if ANY member's source has other
+                # cluster keys related to this alias, the singleton-
+                # identity merge is unsafe (the sources care about
+                # variants of this surface form).
+                if any(_has_disambig_signal(k[0], alias) for k in member_keys):
+                    identity_blocked_by_disambig += 1
+                    continue
+                if len(member_keys) >= 2:
+                    merged_name = f"merged-identity::{alias}"
+                    for k in member_keys:
+                        self._merged[k] = merged_name
+                    identity_merges += 1
+                else:
+                    k = member_keys[0]
+                    self._merged[k] = alias
+                    identity_promotions += 1
+
+        parent_result["singleton_density"] = singleton_density
+        parent_result["singleton_aware_active"] = is_singleton_heavy
+        parent_result["identity_merges"] = identity_merges
+        parent_result["identity_promotions"] = identity_promotions
+        parent_result["identity_blocked_by_disambig"] = identity_blocked_by_disambig
+        return parent_result
+
+
 class PerSourceNamespaceProxy(Variant):
     """Maintain one inner variant per observed source_id.
 
