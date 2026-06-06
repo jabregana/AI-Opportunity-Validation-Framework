@@ -30,6 +30,16 @@
       "sha_pinned": false,
       "notes": "Realistic paraphrase distribution (e.g., 'head of government' has 10 English aliases). Replaces the W-WIKIDATA-100K stub; 100K-scale fetch is multi-hour and unnecessary for current pilot statistical needs."
     },
+    "W-MULTITENANT-DEMO": {
+      "loader": "fixtures.workloads.w_multitenant_demo:load",
+      "version": "0.1.0",
+      "description": "Synthetic 33-entry multi-source workload with three sources (sales, ops, marketing). Same surface form (Apple, Amazon) has source-conditional oracle canonicals. Other surface forms (Microsoft, Google) are globally unambiguous. Toy fixture for v0.4.0 demo, not statistically substantial.",
+      "oracle_cardinality": 11,
+      "n_sources": 3,
+      "deterministic": true,
+      "sha_pinned": "static",
+      "notes": "Demonstrates the WorkloadEntry(source_id, input, oracle) schema. Real multi-tenant workload synthesis is v0.4.1+."
+    },
     "W-CHURN-30D": {
       "loader": "TODO",
       "version": null,

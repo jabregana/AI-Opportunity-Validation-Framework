@@ -29,21 +29,23 @@ def _ensure_cache() -> dict:
     return json.loads(_CACHE.read_text())
 
 
-def load() -> list[tuple[str, str]]:
+def load():
     """Return the deterministic workload stream.
 
-    Each (input_surface_form, canonical_label) pair is one write event.
-    The canonical label appears once paired with itself, then once per
-    alias paired with itself.
+    Each entry is one write event. Single-tenant workload, so source_id
+    is "default" for every entry. The canonical label appears once paired
+    with itself, then once per alias paired with the label.
     """
+    from . import WorkloadEntry
+
     data = _ensure_cache()
-    pairs: list[tuple[str, str]] = []
+    entries: list[WorkloadEntry] = []
     for prop in data["properties"]:
         label = prop["label"]
-        pairs.append((label, label))
+        entries.append(WorkloadEntry("default", label, label))
         for alias in prop["aliases"]:
-            pairs.append((alias, label))
-    return pairs
+            entries.append(WorkloadEntry("default", alias, label))
+    return entries
 
 
 def oracle_cardinality() -> int:

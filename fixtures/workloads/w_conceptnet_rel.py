@@ -49,16 +49,19 @@ _SYNONYMS: dict[str, list[str]] = {
 }
 
 
-def load() -> list[tuple[str, str]]:
+def load():
     """Return the deterministic workload stream.
 
-    Each (surface_form, canonical) pair is one write event the proxy sees.
+    Each entry is one write event. Single-tenant workload, so source_id
+    is "default" for every entry.
     """
-    pairs: list[tuple[str, str]] = []
+    from . import WorkloadEntry
+
+    entries: list[WorkloadEntry] = []
     for canonical, surface_forms in _SYNONYMS.items():
         for sf in surface_forms:
-            pairs.append((sf, canonical))
-    return pairs
+            entries.append(WorkloadEntry("default", sf, canonical))
+    return entries
 
 
 def oracle_cardinality() -> int:

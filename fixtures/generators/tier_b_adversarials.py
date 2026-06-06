@@ -90,9 +90,9 @@ def _canonicals_from_workload(workload_id: str) -> list[str]:
     """Extract unique oracle canonicals (preserving first-seen order)
     from a registered workload."""
     seen: dict[str, None] = {}
-    for _, oracle_label in workloads.load(workload_id):
-        if oracle_label not in seen:
-            seen[oracle_label] = None
+    for entry in workloads.load(workload_id):
+        if entry.oracle_canonical not in seen:
+            seen[entry.oracle_canonical] = None
     return list(seen.keys())
 
 

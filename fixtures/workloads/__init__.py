@@ -1,16 +1,38 @@
+"""Workload registry.
+
+Each workload returns a list of WorkloadEntry records.
+
+  source_id        — identifier for the source of this write (team, user,
+                     tenant). Single-tenant workloads use "default".
+  input_relation   — the surface form the agent is writing.
+  oracle_canonical — the ground-truth canonical for this write.
+
+Three-tuple shape replaces the older two-tuple to support source-
+attributed resolution (v0.4.0+, per docs/roadmap.md). NamedTuple
+inheritance from tuple preserves index access where it matters; tests
+should use named attributes (entry.input, entry.oracle_canonical).
+"""
 from __future__ import annotations
-from typing import Callable
+from typing import Callable, NamedTuple
 
-from . import w_conceptnet_rel, w_wikidata_props
 
-# Registry: workload_id -> loader callable returning list[(input_relation, oracle_canonical)]
-LOADERS: dict[str, Callable[[], list[tuple[str, str]]]] = {
+class WorkloadEntry(NamedTuple):
+    source_id: str
+    input: str
+    oracle_canonical: str
+
+
+from . import w_conceptnet_rel, w_multitenant_demo, w_wikidata_props
+
+# Registry: workload_id -> loader callable returning list[WorkloadEntry]
+LOADERS: dict[str, Callable[[], list[WorkloadEntry]]] = {
     "W-CONCEPTNET-REL": w_conceptnet_rel.load,
     "W-WIKIDATA-PROPS": w_wikidata_props.load,
+    "W-MULTITENANT-DEMO": w_multitenant_demo.load,
 }
 
 
-def load(workload_id: str) -> list[tuple[str, str]]:
+def load(workload_id: str) -> list[WorkloadEntry]:
     if workload_id not in LOADERS:
         raise KeyError(
             f"Unknown workload {workload_id!r}. Known: {sorted(LOADERS)}"

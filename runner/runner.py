@@ -31,12 +31,18 @@ from runner.fdr import LordPlusPlusLedger, run_ledger
 from runner.metrics import alignment, stats
 
 
-def _run_variant(
-    variant: variants.Variant, workload: list[tuple[str, str]]
-) -> tuple[list[tuple[str, str]], float]:
-    """Apply variant to workload, return predictions and wall-clock time (s)."""
+def _run_variant(variant, workload):
+    """Apply variant to workload entries, return predictions and wall-clock seconds.
+
+    Calls align_with_context so multi-tenant variants get source_id;
+    single-tenant variants ignore context per the base-class default.
+    """
     t0 = time.perf_counter()
-    preds = [(inp, variant.align(inp)) for inp, _ in workload]
+    preds = []
+    for entry in workload:
+        ctx = {"source_id": entry.source_id}
+        canonical = variant.align_with_context(entry.input, ctx)
+        preds.append((entry.input, canonical))
     elapsed = time.perf_counter() - t0
     return preds, elapsed
 
@@ -218,7 +224,10 @@ def main(argv: list[str] | None = None) -> int:
         return 2
 
     workload = workloads.load(args.workload)
-    workload_sha = artifacts.workload_sha256(workload)
+    # Metrics and artifact helpers operate on (input, label) tuples;
+    # extract the (input, oracle_canonical) view from the entries once.
+    oracle_view = [(entry.input, entry.oracle_canonical) for entry in workload]
+    workload_sha = artifacts.workload_sha256(oracle_view)
 
     var = variants.build(args.variant)
     base = variants.build(args.baseline)
@@ -226,11 +235,11 @@ def main(argv: list[str] | None = None) -> int:
     var_preds, var_elapsed = _run_variant(var, workload)
     base_preds, base_elapsed = _run_variant(base, workload)
 
-    var_f1 = alignment.pairwise_f1(var_preds, workload)
-    base_f1 = alignment.pairwise_f1(base_preds, workload)
+    var_f1 = alignment.pairwise_f1(var_preds, oracle_view)
+    base_f1 = alignment.pairwise_f1(base_preds, oracle_view)
 
-    var_correct = alignment.per_item_correctness(var_preds, workload)
-    base_correct = alignment.per_item_correctness(base_preds, workload)
+    var_correct = alignment.per_item_correctness(var_preds, oracle_view)
+    base_correct = alignment.per_item_correctness(base_preds, oracle_view)
     mc_b, mc_c = stats.mcnemar_discordant_counts(var_correct, base_correct)
 
     # Primary signal: per-item B-cubed F1. Each item gets a continuous
@@ -239,8 +248,8 @@ def main(argv: list[str] | None = None) -> int:
     # degenerate at sub-perfect F1, and (b) an earlier attempt at
     # index-resampled pairwise F1 bootstrap, which suffers from
     # bootstrap-duplicate-pair pathology on pair-level metrics.
-    var_bcubed = alignment.per_item_bcubed_f1(var_preds, workload)
-    base_bcubed = alignment.per_item_bcubed_f1(base_preds, workload)
+    var_bcubed = alignment.per_item_bcubed_f1(var_preds, oracle_view)
+    base_bcubed = alignment.per_item_bcubed_f1(base_preds, oracle_view)
     bcubed_diffs = [v - b for v, b in zip(var_bcubed, base_bcubed)]
     bs = stats.paired_bootstrap(
         bcubed_diffs, n_resamples=args.bootstrap_resamples

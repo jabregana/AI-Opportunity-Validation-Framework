@@ -20,17 +20,21 @@ def test_workload_loads_and_is_deterministic():
     b = workloads.load("W-CONCEPTNET-REL")
     assert a == b
     assert len(a) > 100  # enough items for the pilot
-    # Every item is (str, str)
-    assert all(isinstance(x, str) and isinstance(y, str) for x, y in a)
+    # Every entry has source_id, input, oracle_canonical as strings
+    for entry in a:
+        assert isinstance(entry.source_id, str)
+        assert isinstance(entry.input, str)
+        assert isinstance(entry.oracle_canonical, str)
 
 
 def test_b_raw_identity_is_lossless():
     v = variants.build("b-raw-identity")
     workload = workloads.load("W-CONCEPTNET-REL")
+    oracle_view = [(e.input, e.oracle_canonical) for e in workload]
     # B-RAW assigns each surface form to its own bucket -> two surface forms
     # of the same canonical end up in different clusters -> low recall.
-    preds = [(inp, v.align(inp)) for inp, _ in workload]
-    r = alignment.pairwise_f1(preds, workload)
+    preds = [(e.input, v.align(e.input)) for e in workload]
+    r = alignment.pairwise_f1(preds, oracle_view)
     assert r.precision == 0.0 or r.tp == 0  # no merges happened
     assert r.recall == 0.0  # therefore recall is zero
 
