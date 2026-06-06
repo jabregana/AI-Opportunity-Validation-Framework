@@ -84,6 +84,24 @@ Gauntlet pass status (single-tenant):
 
 v0.3.1 is the first variant to pass all UC-4.x gates simultaneously on real WikiData. v0.1.0 wins UC-4.7 held-out generalization (28.4%) because its lower threshold catches more near-matches; v0.3.1 trades that for Tier B safety.
 
+### Downstream LLM quality lift across model sizes (the flagship commercialization number)
+
+Synthetic workload: 6 oracle entities × 5 aliases each = 30 utterances. Each utterance is a short sentence ("Bought AAPL today.", "Microsoft Corporation reported earnings."). Each model is asked to extract the main entity. With the proxy in front (Mem0PreNormalized `mention_map` pattern), aliases are canonicalized BEFORE the LLM sees the text. B-cubed F1 measures how coherent the LLM's extracted entities are vs the oracle.
+
+| Model | no proxy | with proxy | Δ B-cubed | unique outputs (no proxy / with proxy / ideal=6) | per-call latency (no proxy → with proxy) |
+|---|---|---|---|---|---|
+| llama3.2:1b (1.2B) | 0.6448 | 0.8724 | +0.2275 | 16 / 9 | 83 ms → 83 ms |
+| llama3.2:3b (3.2B) | 0.4921 | 0.9464 | +0.4544 | 20 / 7 | 153 ms → 104 ms |
+| qwen2.5:14b (14.8B) | **0.3968** | 0.9464 | **+0.5496** | 26 / 7 | 572 ms → **200 ms** |
+
+Two findings, both counter to the original intuition. (1) The BIGGEST model is the WORST baseline. Larger LLMs faithfully echo the literal surface form back; 26 unique outputs from 30 utterances spanning 6 entities is near-full fragmentation. Smaller LLMs are sloppier in a way that incidentally canonicalizes more (lazy token shortcuts). (2) The absolute quality lift therefore GROWS with model size, not shrinks. With the proxy in front, all three sizes converge to ~0.95 B-cubed.
+
+Practical implications: a 3B model with the proxy in front (0.9464) beats a 14B model without it (0.3968). The proxy compensates for model size on the entity-coherence axis. At the 14B tier the proxy is also 2.86x faster per call because the LLM has less to reason about. Determinism comes for free; the canonical is locked in upstream so retry / temperature noise does not refragment downstream memory.
+
+See `docs/finding-small-llm-quality.md` for the full result and the bench script at `experiments/small_llm_quality_bench.py`.
+
+### Multi-tenant B-cubed F1
+
 Multi-tenant B-cubed F1 (UC-4.1) on the three real / KG-grounded multi-tenant workloads:
 
 | Workload | Shape | b-raw | v0.4.2 | v0.4.4 | **v0.5.3** |
