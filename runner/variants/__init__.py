@@ -4,6 +4,7 @@ from typing import Callable
 from .base import Variant
 from .b_raw import BRawIdentity
 from .embed_proxy import (
+    ANNSchemaProxy,
     EmbeddingSchemaProxy,
     HybridSchemaProxy,
     NeuralEmbeddingSchemaProxy,
@@ -33,6 +34,7 @@ FACTORIES: dict[str, Callable[[], Variant]] = {
     "embed-proxy-v0.4.3-and-rule": LazyConsensusANDRuleProxy,
     "embed-proxy-v0.4.4-adaptive": IntrospectiveLazyConsensusProxy,
     "embed-proxy-v0.5.3-singleton-aware": SingletonAwareLazyProxy,
+    "embed-proxy-v0.5.5-ann": ANNSchemaProxy,
 }
 
 
