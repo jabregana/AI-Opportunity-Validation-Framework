@@ -11,8 +11,11 @@ import pytest
 
 from runner.variants.base import Variant
 from runner.variants.b_raw import BRawIdentity
+import random
+
 from runner.variants.per_source import (
     CrossSourceConsensusProxy,
+    LazyCrossSourceConsensusProxy,
     PerSourceNamespaceProxy,
 )
 
@@ -274,6 +277,184 @@ def test_consensus_proxy_synth_partial_stratum_aliases_now_differ():
     # And there should be plenty of source-specific aliases
     assert len(sales_apple_aliases - ops_apple_aliases) >= 2
     assert len(ops_apple_aliases - sales_apple_aliases) >= 2
+
+
+def test_lazy_proxy_writes_dont_merge_until_consolidate():
+    """v0.4.2 write path is pure per-source isolation; merges only
+    appear after consolidate() runs."""
+
+    def inner_factory():
+        from runner.variants.embed_proxy import HashedTokenEmbedder
+
+        # Use v0.1.0-like inner to avoid neural download in tests
+        from runner.variants.embed_proxy import EmbeddingSchemaProxy
+
+        return EmbeddingSchemaProxy(
+            embedder=HashedTokenEmbedder(),
+            similarity_threshold=0.5,
+        )
+
+    p = LazyCrossSourceConsensusProxy(
+        inner_factory=inner_factory,
+        alias_jaccard_threshold=0.5,
+        embedding_cosine_threshold=0.95,
+    )
+    # Sales and ops both write Microsoft with same aliases.
+    for inp in ["Microsoft", "MSFT Corp", "Microsoft Corporation"]:
+        p.align_with_context(inp, {"source_id": "sales"})
+    for inp in ["Microsoft", "MSFT Corp", "Microsoft Corporation"]:
+        p.align_with_context(inp, {"source_id": "ops"})
+    # Before consolidate: source-prefixed
+    pre_sales = p.align_with_context("Microsoft", {"source_id": "sales"})
+    pre_ops = p.align_with_context("Microsoft", {"source_id": "ops"})
+    assert pre_sales.startswith("sales::")
+    assert pre_ops.startswith("ops::")
+    assert pre_sales != pre_ops
+
+    # Run consolidation
+    summary = p.consolidate()
+    assert summary["n_merge_edges"] >= 1
+
+    # After consolidate: merged
+    post_sales = p.align_with_context("Microsoft", {"source_id": "sales"})
+    post_ops = p.align_with_context("Microsoft", {"source_id": "ops"})
+    assert post_sales == post_ops, f"should merge after consolidate: {post_sales!r} vs {post_ops!r}"
+    assert post_sales.startswith("merged::")
+
+
+def test_lazy_proxy_consolidate_uses_embedding_or_jaccard():
+    """Consolidate fires merge when EITHER Jaccard OR cosine threshold
+    is met. Verify with a case where Jaccard is low but embedding
+    cosine is high."""
+
+    class _FixedEmbedder:
+        dim = 4
+
+        def embed(self, text):
+            # All inputs produce the same vector -> cosine = 1.0 always
+            return [1.0, 0.0, 0.0, 0.0]
+
+    class _InnerWithEmbedder:
+        name = "test"
+        embedder = _FixedEmbedder()
+
+        def __init__(self):
+            self._next_id = 0
+
+        def align(self, input_relation):
+            # Each input gets its own canonical (no aliasing inside source)
+            self._next_id += 1
+            return f"C{self._next_id}"
+
+    p = LazyCrossSourceConsensusProxy(
+        inner_factory=_InnerWithEmbedder,
+        alias_jaccard_threshold=0.99,  # impossibly high
+        embedding_cosine_threshold=0.5,
+        min_aliases_for_merge=1,
+    )
+    # Sales: "X". Ops: "Y". Different inputs (Jaccard = 0).
+    p.align_with_context("X", {"source_id": "sales"})
+    p.align_with_context("Y", {"source_id": "ops"})
+    summary = p.consolidate()
+    # Should still merge because embedding cosine = 1.0 >= 0.5
+    assert summary["n_merge_edges"] == 1
+    assert summary["merge_reasons"]["cosine_only"] == 1
+    assert summary["merge_reasons"]["jaccard_only"] == 0
+
+
+def test_lazy_proxy_order_invariance():
+    """Type C drift check: same workload in different orders should
+    produce the same consolidation partition. Uses BRawIdentity as the
+    inner so each input is its own cluster within a source. This
+    isolates the consolidate() logic from inner-variant order
+    sensitivity at threshold boundaries.
+
+    The inner variant's behavior near similarity thresholds IS
+    order-sensitive in general (witness: when threshold sits between
+    two pairs' cosines, one ordering clusters them, another doesn't).
+    That is a property of the inner, not the consolidation. To test the
+    consolidation in isolation we deliberately remove the inner's
+    contribution to order-sensitivity.
+    """
+
+    def make_proxy():
+        return LazyCrossSourceConsensusProxy(
+            inner_factory=BRawIdentity,
+            alias_jaccard_threshold=0.5,
+            embedding_cosine_threshold=0.99,
+            min_aliases_for_merge=1,
+        )
+
+    # Each source has 3 unique inputs. With BRawIdentity each becomes
+    # its own local canonical. Cross-source merge will fire wherever the
+    # alias sets across sources overlap (Jaccard >= 0.5, here = 1.0 for
+    # any pair of sources that wrote the same input).
+    base_workload = []
+    for source in ["s1", "s2", "s3", "s4", "s5"]:
+        for alias in ["Microsoft", "Google", "Apple"]:
+            base_workload.append((source, alias))
+
+    def run_shuffled(seed):
+        rng = random.Random(seed)
+        wl = list(base_workload)
+        rng.shuffle(wl)
+        p = make_proxy()
+        for source, alias in wl:
+            p.align_with_context(alias, {"source_id": source})
+        p.consolidate()
+        # Build equivalence-class signature: source -> merged canonical
+        sig = {}
+        for source, alias in base_workload:
+            sig[(source, alias)] = p.align_with_context(
+                alias, {"source_id": source}
+            )
+        return sig
+
+    sig_a = run_shuffled(1)
+    sig_b = run_shuffled(2)
+
+    # Compute Adjusted Rand Index between the two partitions
+    def adjusted_rand_index(sig1, sig2):
+        items = list(sig1.keys())
+        if len(items) < 2:
+            return 1.0
+        # Build cluster label -> int index for each
+        def labels(sig):
+            unique = {}
+            out = []
+            for it in items:
+                lbl = sig[it]
+                if lbl not in unique:
+                    unique[lbl] = len(unique)
+                out.append(unique[lbl])
+            return out
+
+        l1 = labels(sig1)
+        l2 = labels(sig2)
+        from math import comb
+
+        n = len(items)
+        # Build contingency
+        cont = {}
+        for a, b in zip(l1, l2):
+            cont[(a, b)] = cont.get((a, b), 0) + 1
+        a_sums = {}
+        b_sums = {}
+        for (a, b), c in cont.items():
+            a_sums[a] = a_sums.get(a, 0) + c
+            b_sums[b] = b_sums.get(b, 0) + c
+        sum_cont = sum(comb(c, 2) for c in cont.values())
+        sum_a = sum(comb(c, 2) for c in a_sums.values())
+        sum_b = sum(comb(c, 2) for c in b_sums.values())
+        total = comb(n, 2)
+        expected = sum_a * sum_b / total if total else 0
+        max_index = (sum_a + sum_b) / 2
+        if max_index == expected:
+            return 1.0
+        return (sum_cont - expected) / (max_index - expected)
+
+    ari = adjusted_rand_index(sig_a, sig_b)
+    assert ari >= 0.9, f"low order-invariance: ARI = {ari:.3f}"
 
 
 def test_wikidata_disambiguation_workload_loads():

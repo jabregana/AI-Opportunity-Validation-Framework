@@ -7,6 +7,27 @@ Operationalized test plan for the proxy/middleware wedges identified in [opportu
 
 Both compete against the same incumbent stance: LLM-in-extraction-prompt (Mem0 v3) or no middleware at all (raw Neo4j or Memgraph). The experiments below are designed to do two things. First, prove the wedge with statistically defensible effect sizes. Second, gate every version N+1 release behind a regression gauntlet, so that progress is unambiguous.
 
+## 0. Design priority: write latency vs merge accuracy
+
+Two distinct concerns the proxy decouples on purpose.
+
+**Write latency is a hot-path constraint** with a hard p99 kill switch at 100 ms (UC-4.6). Every ingestion pays the inner variant's cost: deterministic embedding plus cosine search. Across the variants currently shipped, p99 sits around 27-28 ms regardless of multi-tenant layering. No LLM in the hot path. No cross-source consensus computation on the write itself.
+
+**Cross-source merge accuracy is a consolidation concern** that runs separately from writes. Multi-tenant variants (v0.4.0 through v0.4.2) accumulate cross-source intelligence through a `consolidate()` step. In production this step is a periodic background job: every 100 writes, every shift, every night, whatever cadence matches the operational tolerance for eventual consistency.
+
+The harness implements consolidation between pass 1 (ingest) and pass 2 (re-query). A `drift_rate` metric records the fraction of writes whose pre-consolidation canonical differs from the post-consolidation canonical. This is the visibility tax of lazy consolidation; high drift means the system's view changed substantially during the consolidation.
+
+Three drift types worth measuring (added or planned in the harness):
+
+| Type | What it means | Where it surfaces |
+|---|---|---|
+| A. Pre/post consolidation prediction drift | Same write returns different canonical before vs after consolidation | UC-4.1 `drift_rate` diagnostic |
+| B. Bad-write contamination | A wrong write tilts a merge decision; the bad merge propagates | Future UC: noise-injection workload |
+| C. Order-dependence | Same writes in different orders produce different merges | Unit test (Adjusted Rand Index ≥ 0.9) |
+| D. Consolidation cadence sensitivity | Different cadences produce different effective canonical spaces | Future analysis: parameter sweep |
+
+This separation is the deliberate trade-off vs LLM-in-the-loop designs (Mem0 v3) that pay 500-2000 ms per write for what we accumulate offline.
+
 ## 1. Purpose, Scope, Non-Goals
 
 **Purpose.** Establish a measurement harness so each prototype version produces an artifact (`runs/run-<uuid>.json`) that can be compared to all prior versions and to all baselines, with confidence intervals and pre-registered hypotheses.

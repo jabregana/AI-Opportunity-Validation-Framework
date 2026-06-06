@@ -9,7 +9,11 @@ from .embed_proxy import (
     NeuralEmbeddingSchemaProxy,
     StructurallyFilteredHybridSchemaProxy,
 )
-from .per_source import CrossSourceConsensusProxy, PerSourceNamespaceProxy
+from .per_source import (
+    CrossSourceConsensusProxy,
+    LazyCrossSourceConsensusProxy,
+    PerSourceNamespaceProxy,
+)
 from .stub_proxy import StubRandomBucketProxy
 
 # Registry: variant_id -> factory (no-arg or default-arg)
@@ -22,6 +26,7 @@ FACTORIES: dict[str, Callable[[], Variant]] = {
     "embed-proxy-v0.3.1": StructurallyFilteredHybridSchemaProxy,
     "embed-proxy-v0.4.0-per-source": PerSourceNamespaceProxy,
     "embed-proxy-v0.4.1-consensus": CrossSourceConsensusProxy,
+    "embed-proxy-v0.4.2-lazy-consensus": LazyCrossSourceConsensusProxy,
 }
 
 

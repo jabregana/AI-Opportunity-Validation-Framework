@@ -33,26 +33,42 @@ from runner.metrics import alignment, stats
 
 
 def _run_variant(variant, workload, two_pass: bool = True):
-    """Apply variant to workload entries, return predictions and wall-clock seconds.
+    """Apply variant to workload entries with optional consolidation.
 
-    Calls align_with_context so multi-tenant variants get source_id;
-    single-tenant variants ignore context per the base-class default.
+    Returns (post_preds, pre_preds, consolidation_summary, elapsed_seconds).
 
-    Two-pass execution: stateful variants (like v0.4.1
-    CrossSourceConsensusProxy) can accumulate merge decisions over time,
-    so early writes get a temporary canonical that may be updated later.
-    Pass 1 builds the state. Pass 2 re-queries each entry to capture the
-    FINAL canonical regardless of write order. Single-tenant variants
-    (v0.1.0 - v0.3.1) are idempotent on the second call thanks to their
-    per-input caches, so two-pass is a no-op for them except for the
-    doubled wall-clock time. UC-4.6 (latency) explicitly passes
-    two_pass=False to keep its measurement honest.
+      post_preds              : list[(input, canonical)] from the FINAL state
+                                (after consolidation if applicable).
+      pre_preds               : list[(input, canonical)] from pass 1, BEFORE
+                                consolidation. Identical to post_preds for
+                                eager variants; may differ for v0.4.2 lazy.
+      consolidation_summary   : dict returned by variant.consolidate() if the
+                                variant exposes it; None otherwise.
+      elapsed_seconds         : wall clock for the whole two-pass cycle.
+
+    Three execution paths:
+      - Single-pass variants (v0.1.0 - v0.4.1): align_with_context is idempotent;
+        second pass returns same canonicals as first.
+      - Lazy variants (v0.4.2): pass 1 returns source-prefixed canonicals;
+        consolidate() runs the cross-source merge; pass 2 returns merged
+        canonicals. The diff between pass 1 and pass 2 is the drift_rate.
+      - UC-4.6 latency benchmark uses _run_variant_single_pass instead
+        to keep timing honest.
     """
     t0 = time.perf_counter()
-    # Pass 1: ingestion (build state)
+    # Pass 1: ingestion. Capture pre-consolidation predictions for the
+    # drift_rate metric.
+    pre_preds = []
     for entry in workload:
         ctx = {"source_id": entry.source_id}
-        variant.align_with_context(entry.input, ctx)
+        canonical = variant.align_with_context(entry.input, ctx)
+        pre_preds.append((entry.input, canonical))
+
+    # Optional consolidation step (lazy variants only)
+    consolidation_summary = None
+    if hasattr(variant, "consolidate"):
+        consolidation_summary = variant.consolidate()
+
     if two_pass:
         # Pass 2: re-query to capture final canonicals
         preds = []
@@ -61,15 +77,12 @@ def _run_variant(variant, workload, two_pass: bool = True):
             canonical = variant.align_with_context(entry.input, ctx)
             preds.append((entry.input, canonical))
     else:
-        # Single-pass: caller wants timing-honest one-pass results.
-        # Re-run with fresh variant? No, we already polluted state. The
-        # caller must construct a fresh variant for this path.
         raise RuntimeError(
-            "single-pass requested but state is already polluted; "
-            "build a fresh variant and call this with two_pass=False from the start"
+            "single-pass via _run_variant is no longer supported; "
+            "use _run_variant_single_pass for latency-honest measurement"
         )
     elapsed = time.perf_counter() - t0
-    return preds, elapsed
+    return preds, pre_preds, consolidation_summary, elapsed
 
 
 def _run_variant_single_pass(variant, workload):
@@ -555,8 +568,17 @@ def main(argv: list[str] | None = None) -> int:
     var = variants.build(args.variant)
     base = variants.build(args.baseline)
 
-    var_preds, var_elapsed = _run_variant(var, workload)
-    base_preds, base_elapsed = _run_variant(base, workload)
+    var_preds, var_pre_preds, var_consolidation, var_elapsed = _run_variant(var, workload)
+    base_preds, base_pre_preds, base_consolidation, base_elapsed = _run_variant(base, workload)
+
+    # drift_rate: fraction of entries where pre-consolidation prediction
+    # differs from post-consolidation. Non-zero only for lazy variants.
+    var_drift_rate = sum(
+        1 for pre, post in zip(var_pre_preds, var_preds) if pre != post
+    ) / len(var_preds) if var_preds else 0.0
+    base_drift_rate = sum(
+        1 for pre, post in zip(base_pre_preds, base_preds) if pre != post
+    ) / len(base_preds) if base_preds else 0.0
 
     var_f1 = alignment.pairwise_f1(var_preds, oracle_view)
     base_f1 = alignment.pairwise_f1(base_preds, oracle_view)
@@ -608,6 +630,10 @@ def main(argv: list[str] | None = None) -> int:
                 "per_item_strict_correct_mcnemar_b": mc_b,
                 "per_item_strict_correct_mcnemar_c": mc_c,
                 "items": len(workload),
+                "variant_drift_rate": var_drift_rate,
+                "baseline_drift_rate": base_drift_rate,
+                "variant_consolidation": var_consolidation,
+                "baseline_consolidation": base_consolidation,
             },
         }
     ]

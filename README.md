@@ -133,6 +133,26 @@ python -m pytest tests/
 
 The harness uses an online FDR procedure (LORD++ at q=0.10) rather than vanilla Benjamini-Hochberg, so that sequential peeking during development does not inflate the type-I error rate. Each candidate proxy version is compared against the previous green commit using non-inferiority testing with a tightened margin (0.25 of MDE for nightly, 0.5 of MDE for fast PR gates). CUPED variance reduction lets the harness afford the tighter margin without quadrupling sample size. Three operational guardrails (INCONCLUSIVE-is-FAIL on the fast tier, SAFFRON hot-swap at high null proportion, 14-day cap on stale baselines) protect the gate from common automation failures. Full spec in [docs/experiments.md](docs/experiments.md).
 
+## Design priority: write latency vs merge accuracy
+
+The proxy separates two concerns that prior agent-memory frameworks couple together.
+
+**Write latency is a hot-path constraint.** Every ingestion pays the inner variant's cost (deterministic embedding plus cosine search): roughly 27 ms p99 today across all variants v0.3.1 through v0.4.2, with a hard 100 ms p99 kill switch. No LLM in the hot path. No cross-source consensus computation on the write itself.
+
+**Cross-source merge accuracy is a consolidation concern.** Cross-source intelligence (recognizing that sales' "Microsoft" and ops' "Microsoft" mean the same entity) accumulates in a separate consolidation phase. Run it every 100 writes, every shift, every night. Whatever cadence matches operational tolerance for eventual consistency.
+
+This separation is the wedge against LLM-in-the-loop designs (Mem0 v3): they pay 500-2000 ms per write for what we accumulate offline. The trade-off we accept is that two writes minutes apart may see different merge states until the next consolidation runs. For agent memory the trade is correct. Write velocity matters; instant cross-source unification does not.
+
+Concretely, the variants implement this:
+
+| Variant | Write path | Merge timing |
+|---|---|---|
+| v0.4.0 per-source | inner variant only | never (no merge) |
+| v0.4.1 consensus (eager) | inner + O(K) Jaccard scan | every write |
+| **v0.4.2 lazy consensus** | **inner only** | **explicit `consolidate()` call** |
+
+v0.4.2 is the production-shape design: write path serves online traffic at v0.3.1 latency; `consolidate()` runs as a background job on a configurable cadence. The harness implements this by running `consolidate()` between pass 1 (ingest) and pass 2 (re-query). A `drift_rate` metric reports the fraction of writes whose pre-consolidation canonical differs from the post-consolidation canonical, so the operational cost of lazy consolidation is always visible.
+
 ## Why this exists before the proxy does
 
 Picking a wedge in a moving competitive landscape is easy to get wrong. The opportunity scan and the harness are deliberate sequencing: first establish that the niche is real and unoccupied, then put the measurement infrastructure in place, then build the proxy. The first real candidate variant landed against the same gates as every later iteration, so progress (and the two genuine reversals when real data flipped synthetic results) is unambiguous.
