@@ -74,7 +74,9 @@ After this audit was first written, items 1-5 were attempted in one session. Res
 
 - **Item 2 (Real UC-4.7 with LongMemEval):** Adapted the dataset for clustering eval. **All variants regressed against b-raw with statistical significance (p=1.0000, BLOCK_PR).** The proxies' algorithms (token overlap, short-text embedding) do not generalize to long-form conversational text. See `docs/finding-longmemeval-regression.md`.
 
-- **Item 3 (Scale stress test):** Workload synthesized at 10k entries (100k running). Cadence invariance HOLDS at K=1616 (10k workload). Final F1, merges, query latency all identical between cadence=1 vs cadence=end. The earlier cadence-invariance finding generalizes from 138-516 entries to ~10k. Memory measurement is OS-dependent units (likely KB on macOS = ~1.8GB total program incl model2vec model).
+- **Item 3 (Scale stress test):** Tested at 10k and 100k entries.
+  - At 10k workload (K=1616 canonicals): cadence invariance HOLDS, 139 writes/sec, 1.8s final consolidate, F1=0.717.
+  - At 100k workload (K=16262 canonicals): **ingestion throughput collapses from 139 writes/sec to 16 writes/sec.** Total ingestion took 1h 43min. Final consolidate 120s. F1=0.746. **The inner variant's O(K) cosine search becomes the bottleneck at scale.** The UC-4.6 latency claim ("p99 27ms") is only valid at the K under which it was measured (~300). Production scale needs an approximate nearest neighbor index (FAISS/Annoy/ScaNN) cutting O(K) to O(log K) or O(sqrt K). See `docs/finding-scale-stress.md`.
 
 - **Item 4 (Multi-tenant Tier B fixture):** Built mining tool + scorer. **Surfaced two real bugs in the variants.** Bug 1: `HashedTokenEmbedder(dim=256)` has hash collisions ("account"/"vendor" collide), causing 2.5% false merges in v0.4.1/v0.4.2/v0.4.3 on SYNTH MT Tier B. Bug 2: v0.4.4 aggressive mode (min_overlap=1) produces 100% false merges on SYNTH MT Tier B. v0.4.4's earlier UC-4.1 wins on SYNTH were essentially correct global-stratum merges WITH catastrophic cross-source false merges that B-cubed averaged out. See `docs/finding-multitenant-tier-b.md`.
 
