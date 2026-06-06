@@ -70,4 +70,4 @@ Picking a wedge in a moving competitive landscape is easy to get wrong. The oppo
 
 ## License
 
-Apache 2.0. See [LICENSE](LICENSE).
+[Functional Source License v1.1](LICENSE) with an Apache 2.0 future grant (FSL-1.1-ALv2). Source-available. Free for internal use, non-commercial education, non-commercial research, and professional services on top of the Software. Commercial use that competes with the Software is restricted until the second anniversary of each release, after which that release converts automatically to Apache 2.0.
