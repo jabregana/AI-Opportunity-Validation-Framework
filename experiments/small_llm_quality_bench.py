@@ -65,9 +65,17 @@ TEMPLATES = [
     "{alias} is up 5 percent.",
 ]
 
-# Three LLM sizes spanning the spectrum the explorations summary
-# described: 1B (small), 3B (small/medium), 14B (medium/large).
-MODELS = ["llama3.2:1b", "llama3.2:3b", "qwen2.5:14b"]
+# Five LLM sizes spanning a 1B → 32B ladder (all local Ollama).
+# Original three (1B/3B/14B) plus llama3.1:8b for the mid-tier and
+# qwen2.5vl:32b for the very large end. To restrict to a subset for
+# faster runs, pass --models on the CLI.
+MODELS = [
+    "llama3.2:1b",
+    "llama3.2:3b",
+    "llama3.1:8b",
+    "qwen2.5:14b",
+    "qwen2.5vl:32b",
+]
 
 OLLAMA_URL = "http://localhost:11434/api/generate"
 
@@ -148,7 +156,12 @@ def run_condition(model: str, utterances: list[str], with_proxy: bool,
     return extracted, time.perf_counter() - t0
 
 
-def main():
+def main(argv=None):
+    parser_args = argv or sys.argv[1:]
+    models = MODELS
+    if "--models" in parser_args:
+        i = parser_args.index("--models")
+        models = parser_args[i + 1].split(",")
     print("Building workload...")
     workload = build_workload()
     print(f"  {len(workload)} utterances across {len(ENTITIES)} oracle entities")
@@ -159,7 +172,7 @@ def main():
     oracle = [(u, canonical) for u, canonical, _ in workload]
 
     all_results = []
-    for model in MODELS:
+    for model in models:
         print(f"\n=== Model: {model} ===")
         for with_proxy, label in [(False, "no proxy"), (True, "with proxy")]:
             print(f"  Running {label}...")
@@ -191,7 +204,7 @@ def main():
     by_model: dict[str, dict[bool, dict]] = {}
     for r in all_results:
         by_model.setdefault(r["model"], {})[r["with_proxy"]] = r
-    for model in MODELS:
+    for model in models:
         no_p = by_model[model][False]
         yes_p = by_model[model][True]
         d_bc = yes_p["bcubed_f1"] - no_p["bcubed_f1"]
@@ -208,7 +221,7 @@ def main():
         "timestamp_utc": datetime.now(timezone.utc).isoformat(),
         "n_utterances": len(workload),
         "n_oracle_entities": len(ENTITIES),
-        "models": MODELS,
+        "models": models,
         "alias_map_size": len(alias_map),
         "results": all_results,
     }, indent=2))

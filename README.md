@@ -58,9 +58,11 @@ Across a 1.2B → 3.2B → 14.8B model ladder (Ollama), pre-normalizing entity a
 |---|---|---|---|---|
 | 1.2B (llama3.2:1b) | 0.6448 | 0.8724 | +0.2275 | 83 ms → 83 ms |
 | 3.2B (llama3.2:3b) | 0.4921 | 0.9464 | +0.4544 | 153 ms → 104 ms |
-| 14.8B (qwen2.5:14b) | 0.3968 | 0.9464 | **+0.5496** | 572 ms → **200 ms** (2.86x) |
+| 8.0B (llama3.1:8b) | 0.4067 | **1.0000** | +0.5933 | 206 ms → 145 ms |
+| 14.8B (qwen2.5:14b) | 0.3968 | 0.9464 | +0.5496 | 572 ms → 200 ms |
+| 33.5B (qwen2.5vl:32b) | 0.4550 | **1.0000** | +0.5450 | 764 ms → **382 ms** |
 
-A 3B model with the proxy beats a 14B model without it. At the 14B tier the proxy is also nearly 3x faster per call because the LLM has less to reason about. See [`docs/finding-small-llm-quality.md`](docs/finding-small-llm-quality.md).
+A 3B model with the proxy beats a 14B model without it. The 8B and 32B both reach PERFECT 1.0 coherence with the proxy. At the largest tier the proxy is also 2x faster per call. A multi-turn conversational variant ([`docs/finding-conversational-llm.md`](docs/finding-conversational-llm.md)) confirms the pattern holds in dialogue too, with smaller magnitude (+0.04 to +0.18 macro-F1) because co-reference is the LLM's job. See [`docs/finding-small-llm-quality.md`](docs/finding-small-llm-quality.md).
 
 ### When to use this middleware
 
