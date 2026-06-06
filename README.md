@@ -25,7 +25,10 @@ m.add("Bought AAPL last week and watching MSFT", user_id="trader1")
 Two ways to integrate:
 
 1. `EntityNormalizer` service API: wrap any of the bundled variants behind a stable `normalize(surface, context) -> canonical` interface. Drop into your own write path or query rewriter.
-2. `Mem0PreNormalized` wrapper: drop-in middleware over a Mem0 v3 OSS client. Pre-normalizes entity mentions in input text before forwarding to Mem0. Reduces store fragmentation without changing Mem0 itself. Other integration shims (Graphiti, Cognee) follow the same pattern; see `runner/service/integrations/`.
+2. `Mem0PreNormalized` wrapper: drop-in middleware over a Mem0 v3 OSS client. Pre-normalizes entity mentions in input text before forwarding to Mem0. Reduces store fragmentation without changing Mem0 itself.
+3. `GraphitiPreNormalized` wrapper (v0.6.0): same pattern over a Graphiti graph-memory client. Preserves the async `add_episode` / `add_episode_bulk` contract.
+
+Cognee and other memory frameworks can be added behind the same `mention_map` / `mention_extractor` contract; see `runner/service/integrations/` for the wrapper template.
 
 ## What problem this addresses
 
