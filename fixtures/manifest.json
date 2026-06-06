@@ -1,0 +1,43 @@
+{
+  "workloads": {
+    "W-CONCEPTNET-REL": {
+      "loader": "fixtures.workloads.w_conceptnet_rel:load",
+      "version": "0.0.1",
+      "description": "Synthetic ConceptNet 5.7 relation paraphrase set — 34 canonical relations with 4-7 surface forms each.",
+      "oracle_cardinality": 34,
+      "deterministic": true,
+      "sha_pinned": false,
+      "notes": "SHA is computed at load time via artifacts.workload_sha256() and recorded in each run artifact."
+    },
+    "W-LME-S": {
+      "loader": "TODO",
+      "version": null,
+      "description": "LongMemEval-S subset (Xu et al., 2024). Not yet implemented.",
+      "status": "stub"
+    },
+    "W-MEM0-EXP": {
+      "loader": "TODO",
+      "version": null,
+      "description": "Synthetic Mem0 v3 export. Not yet implemented.",
+      "status": "stub"
+    },
+    "W-WIKIDATA-100K": {
+      "loader": "TODO",
+      "version": null,
+      "description": "WikiData property-alias dump (~100k pairs). Not yet implemented.",
+      "status": "stub"
+    },
+    "W-CHURN-30D": {
+      "loader": "TODO",
+      "version": null,
+      "description": "Synthetic 30-day churn workload with planted regime change. Not yet implemented.",
+      "status": "stub"
+    },
+    "W-LATENCY-ZIPF": {
+      "loader": "TODO",
+      "version": null,
+      "description": "Zipfian-distributed relation write stream for latency/throughput testing. Not yet implemented.",
+      "status": "stub"
+    }
+  }
+}

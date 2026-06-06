@@ -1,0 +1,23 @@
+from __future__ import annotations
+from typing import Callable
+
+from .base import Variant
+from .b_raw import BRawIdentity
+from .stub_proxy import StubRandomBucketProxy
+
+# Registry: variant_id -> factory (no-arg or default-arg)
+FACTORIES: dict[str, Callable[[], Variant]] = {
+    "b-raw-identity": BRawIdentity,
+    "stub-random-bucket": StubRandomBucketProxy,
+}
+
+
+def build(variant_id: str) -> Variant:
+    if variant_id not in FACTORIES:
+        raise KeyError(
+            f"Unknown variant {variant_id!r}. Known: {sorted(FACTORIES)}"
+        )
+    return FACTORIES[variant_id]()
+
+
+__all__ = ["Variant", "build", "FACTORIES"]

@@ -1,0 +1,19 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "agent-memory-gaps"
+version = "0.0.1"
+description = "Experimental harness for the agent-memory-gaps proxy/middleware wedges"
+requires-python = ">=3.11"
+dependencies = []
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0"]
+
+[project.scripts]
+amg-run = "runner.runner:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["runner", "fixtures"]
