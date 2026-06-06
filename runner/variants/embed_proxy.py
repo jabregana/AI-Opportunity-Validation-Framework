@@ -161,6 +161,46 @@ class EmbeddingSchemaProxy(Variant):
         return chosen
 
 
+class HybridConcatEmbedder:
+    """Concatenate two or more sub-embedder outputs with optional weights,
+    then L2-renormalize the result.
+
+    Each sub-embedder is expected to return its own L2-normalized vector.
+    The weighted concatenation has norm sqrt(sum(w_i^2)). After
+    renormalization, the cosine between two hybrid vectors becomes:
+
+        cos_hybrid(a, b) = sum_i w_i^2 * cos_i(a, b) / sum_i w_i^2
+
+    So equal weights give the plain average of component cosines. Setting
+    a sub-embedder's weight to zero drops it from the hybrid entirely.
+    """
+
+    def __init__(self, embedders_with_weights: list[tuple[Embedder, float]]):
+        if not embedders_with_weights:
+            raise ValueError("need at least one embedder")
+        if any(w < 0 for _, w in embedders_with_weights):
+            raise ValueError("weights must be non-negative")
+        if sum(w for _, w in embedders_with_weights) <= 0:
+            raise ValueError("at least one weight must be positive")
+        self._parts = embedders_with_weights
+        self._dim = sum(e.dim for e, _ in embedders_with_weights)
+
+    @property
+    def dim(self) -> int:
+        return self._dim
+
+    def embed(self, text: str) -> list[float]:
+        out: list[float] = []
+        for emb, w in self._parts:
+            v = emb.embed(text)
+            out.extend(x * w for x in v)
+        norm_sq = sum(x * x for x in out)
+        if norm_sq <= 0:
+            return out
+        inv = 1.0 / (norm_sq**0.5)
+        return [x * inv for x in out]
+
+
 class NeuralEmbeddingSchemaProxy(EmbeddingSchemaProxy):
     """v0.2.0 proxy: same algorithm as v0.1.0 but with a neural embedder.
 
@@ -187,4 +227,56 @@ class NeuralEmbeddingSchemaProxy(EmbeddingSchemaProxy):
         super().__init__(
             embedder=Model2VecEmbedder(model_name, template=template),
             similarity_threshold=similarity_threshold,
+        )
+
+
+class HybridSchemaProxy(EmbeddingSchemaProxy):
+    """v0.3.0 proxy: hybrid token + neural embedder.
+
+    Concatenates HashedTokenEmbedder and Model2VecEmbedder vectors with
+    configurable weights, then L2-renormalizes. Effective cosine is the
+    weighted average of component cosines (with weights squared in the
+    averaging).
+
+    Goal: keep v0.1.0's perfect case/underscore signal (token cosine = 1.0
+    on surface variants of the same canonical) AND add paraphrase signal
+    from the neural embedder where it is strong enough to clear the
+    threshold.
+
+    Default config: token_weight=2.0, neural_weight=1.0, threshold=0.8.
+    Quadratic weighting puts 80% of the cosine on the token component and
+    20% on the neural. A parameter sweep over W-CONCEPTNET-REL showed
+    this beats v0.1.0 by ~0.04 on B-cubed F1; equal-weight concat
+    regresses by 0.08 because the neural cosine acts as a veto on case
+    variants where it is weak.
+
+    Known limitation: the neural embedder gives HIGHER cosine on hard
+    negatives (MadeOf <-> PartOf: 0.925) than on true paraphrases
+    (IsA <-> INSTANCE_OF: 0.71). No threshold cleanly separates the two
+    classes. The default config does NOT attempt to catch most
+    paraphrases; it preserves v0.1.0's case-variant strength and picks
+    up a small amount of additional signal from neural where token is
+    nearly-but-not-quite at threshold. UC-4.4 Tier B is the explicit
+    gate for measuring the false-positive cost of any threshold drop.
+    """
+
+    name = "embed-proxy-v0.3.0"
+
+    def __init__(
+        self,
+        token_weight: float = 2.0,
+        neural_weight: float = 1.0,
+        similarity_threshold: float = 0.8,
+        model_name: str = "minishlab/potion-base-32M",
+        template: str | None = "the relation type called {}",
+    ):
+        from .neural_embedder import Model2VecEmbedder
+
+        token_emb = HashedTokenEmbedder()
+        neural_emb = Model2VecEmbedder(model_name, template=template)
+        hybrid = HybridConcatEmbedder(
+            [(token_emb, token_weight), (neural_emb, neural_weight)]
+        )
+        super().__init__(
+            embedder=hybrid, similarity_threshold=similarity_threshold
         )
