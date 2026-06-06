@@ -15,11 +15,13 @@ The proxy's quality lift is LARGEST at the biggest model and smallest at the tin
 
 | Model | no proxy | with proxy | Δ B-cubed F1 | unique outputs (no proxy / with proxy / ideal) |
 |---|---|---|---|---|
-| llama3.2:1b | 0.6448 | 0.8724 | +0.2275 | 16 / 9 / 6 |
-| llama3.2:3b | 0.4921 | 0.9464 | +0.4544 | 20 / 7 / 6 |
-| qwen2.5:14b | **0.3968** | 0.9464 | **+0.5496** | **26** / 7 / 6 |
+| llama3.2:1b (1.2B) | 0.6448 | 0.8724 | +0.2275 | 16 / 9 / 6 |
+| llama3.2:3b (3.2B) | 0.4921 | 0.9464 | +0.4544 | 20 / 7 / 6 |
+| llama3.1:8b (8.0B) | 0.4067 | **1.0000** | **+0.5933** | 26 / 6 / 6 |
+| qwen2.5:14b (14.8B) | **0.3968** | 0.9464 | +0.5496 | **26** / 7 / 6 |
+| qwen2.5vl:32b (33.5B) | 0.4550 | **1.0000** | +0.5450 | 24 / 6 / 6 |
 
-With the proxy in front, all three model sizes converge to roughly 0.95 B-cubed F1 (7 unique outputs vs the ideal 6, with 30 inputs across 6 entities). Without the proxy, the BIGGEST model is the WORST baseline.
+With the proxy in front, all five model sizes converge to ~0.95-1.00 B-cubed F1. The 8B and 32B models hit a perfect 1.0 (exactly 6 unique outputs for 6 oracle entities). Without the proxy, the BIGGEST model is the WORST baseline by a wide margin.
 
 ## Why the hypothesis was wrong
 
@@ -33,9 +35,11 @@ Not predicted, but real. With the proxy in front, the 14B model ran almost 3x fa
 
 | Model | no proxy | with proxy | Speedup |
 |---|---|---|---|
-| llama3.2:1b | 83 ms/call | 83 ms/call | 1.0x |
-| llama3.2:3b | 153 ms/call | 104 ms/call | 1.47x |
-| qwen2.5:14b | 572 ms/call | 200 ms/call | **2.86x** |
+| llama3.2:1b (1.2B) | 83 ms/call | 83 ms/call | 1.0x |
+| llama3.2:3b (3.2B) | 153 ms/call | 104 ms/call | 1.47x |
+| llama3.1:8b (8.0B) | 206 ms/call | 145 ms/call | 1.42x |
+| qwen2.5:14b (14.8B) | 572 ms/call | 200 ms/call | 2.86x |
+| qwen2.5vl:32b (33.5B) | 764 ms/call | 382 ms/call | **2.00x** |
 
 The proxy gives the LLM less to reason about. The canonical is already locked in; the LLM just echoes it. Bigger LLMs benefit more because they were doing more reasoning per call without the proxy.
 
@@ -56,7 +60,9 @@ Proves: pre-normalizing entity aliases before an LLM extraction call produces a 
 
 Does not prove: that the same lift holds on real conversational text where entities are mentioned obliquely, in pronouns, or across multi-turn context. The benchmark uses short single-sentence utterances with one entity each. A multi-turn co-referential benchmark is the natural next experiment.
 
-Does not prove: that the lift survives at very large LLMs (70B+, GPT-4 class). At that scale the LLM might be sophisticated enough to canonicalize internally on its own. Adding a Llama-3-70B or Claude Haiku tier to the ladder would close the question.
+Does not prove: that the lift survives at very large LLMs (70B+, GPT-4 class). The 32B run confirms the pattern through the medium-large tier; the very-large tier (70B-200B+ frontier models) remains untested. Adding a Llama-3-70B or Claude Haiku tier to the ladder would close the question.
+
+Does not prove: that the lift survives on real multi-turn conversational text with sparse alias coverage. A 10-conversation multi-turn benchmark (`docs/finding-conversational-llm.md`) confirms the pattern with smaller magnitude (+0.04 to +0.18 macro-F1 across the same 1B/3B/14B models) — the lift is smaller because co-reference resolution is the LLM's job and the proxy does not help with it. Real conversational data with sparse alias coverage is the next experiment.
 
 ## What to add to CASE-STUDY / README
 
