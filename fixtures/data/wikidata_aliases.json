@@ -1,0 +1,3907 @@
+{
+  "schema_version": "1",
+  "source": "wikidata wbgetentities REST API",
+  "endpoint": "https://www.wikidata.org/w/api.php",
+  "max_pid": 500,
+  "n_properties": 288,
+  "n_workload_pairs": 2457,
+  "properties": [
+    {
+      "id": "P6",
+      "label": "head of government",
+      "aliases": [
+        "mayor",
+        "prime minister",
+        "premier",
+        "first minister",
+        "head of national government",
+        "chancellor",
+        "governor",
+        "government headed by",
+        "executive power headed by",
+        "president"
+      ]
+    },
+    {
+      "id": "P10",
+      "label": "video",
+      "aliases": [
+        "media",
+        "animation",
+        "trailer",
+        "vid",
+        "visual media",
+        "audiovisual media",
+        "video file"
+      ]
+    },
+    {
+      "id": "P14",
+      "label": "traffic sign",
+      "aliases": [
+        "motorway sign",
+        "shield",
+        "highway shield",
+        "road marker",
+        "route marker",
+        "highway marker",
+        "trail blazer",
+        "road sign",
+        "route shield"
+      ]
+    },
+    {
+      "id": "P15",
+      "label": "route map",
+      "aliases": [
+        "street map",
+        "road atlas",
+        "highway map",
+        "schema",
+        "road map",
+        "railway map",
+        "railroad map",
+        "map of route",
+        "metro map",
+        "subway map",
+        "underground map",
+        "transit map",
+        "watercourse map"
+      ]
+    },
+    {
+      "id": "P16",
+      "label": "transport network",
+      "aliases": [
+        "system of routes",
+        "transport network",
+        "routes system",
+        "part of network",
+        "road type",
+        "network",
+        "highway system",
+        "trail system",
+        "transit network",
+        "subway system",
+        "metro system",
+        "tram network",
+        "light rail system",
+        "railway network",
+        "transportation network",
+        "rail network",
+        "subway network",
+        "route network"
+      ]
+    },
+    {
+      "id": "P17",
+      "label": "country",
+      "aliases": [
+        "sovereign state",
+        "state",
+        "land",
+        "host country"
+      ]
+    },
+    {
+      "id": "P18",
+      "label": "image",
+      "aliases": [
+        "portrait",
+        "illustration",
+        "picture",
+        "drawing",
+        "photo",
+        "img",
+        "Commons image",
+        "screenshot",
+        "still",
+        "screen capture",
+        "image capture",
+        "graph",
+        "image of subject",
+        "File:",
+        "infobox image",
+        "photograph",
+        "graphic",
+        "still capture",
+        "camera picture",
+        "album cover",
+        "album artwork",
+        "artwork",
+        "image on Commons",
+        "image on Wikimedia Commons",
+        "Wikimedia Commons image",
+        "images"
+      ]
+    },
+    {
+      "id": "P19",
+      "label": "place of birth",
+      "aliases": [
+        "birthplace",
+        "born in",
+        "POB",
+        "birth place",
+        "location born",
+        "born at",
+        "birth location",
+        "location of birth",
+        "birth city",
+        "born"
+      ]
+    },
+    {
+      "id": "P20",
+      "label": "place of death",
+      "aliases": [
+        "deathplace",
+        "died in",
+        "death place",
+        "POD",
+        "location of death",
+        "death location",
+        "killed in",
+        "died"
+      ]
+    },
+    {
+      "id": "P21",
+      "label": "sex or gender",
+      "aliases": [
+        "biological sex",
+        "sex",
+        "gender or sex",
+        "gender identity",
+        "gender expression",
+        "gender"
+      ]
+    },
+    {
+      "id": "P22",
+      "label": "father",
+      "aliases": [
+        "dad",
+        "daddy",
+        "has father",
+        "parent",
+        "is son of",
+        "is daughter of",
+        "is child of",
+        "son of",
+        "daughter of",
+        "child of",
+        "sire"
+      ]
+    },
+    {
+      "id": "P25",
+      "label": "mother",
+      "aliases": [
+        "mum",
+        "mom",
+        "mam",
+        "has mother",
+        "parent",
+        "is son of",
+        "is daughter of",
+        "is child of",
+        "son of",
+        "daughter of",
+        "child of",
+        "mummy",
+        "mommy",
+        "dam"
+      ]
+    },
+    {
+      "id": "P26",
+      "label": "spouse",
+      "aliases": [
+        "wife",
+        "married to",
+        "marry",
+        "marriage partner",
+        "married",
+        "wedded to",
+        "wed",
+        "wives",
+        "husbands",
+        "spouses",
+        "husband",
+        "marital partner",
+        "married partner",
+        "common-law spouse",
+        "common-law wife",
+        "common-law husband",
+        "partner"
+      ]
+    },
+    {
+      "id": "P27",
+      "label": "country of citizenship",
+      "aliases": [
+        "subject of (country)",
+        "citizenship",
+        "citizen of",
+        "nation of citizenship",
+        "national of",
+        "(legal) nationality",
+        "nationality",
+        "country",
+        "nation"
+      ]
+    },
+    {
+      "id": "P31",
+      "label": "instance of",
+      "aliases": [
+        "is a",
+        "is an",
+        "is a[n]",
+        "unique individual of",
+        "unitary element of class",
+        "type",
+        "example of",
+        "is of type",
+        "has type",
+        "item of type",
+        "was a[n]",
+        "will be a[n] (use 'nature of statement' = 'expected')"
+      ]
+    },
+    {
+      "id": "P35",
+      "label": "head of state",
+      "aliases": [
+        "president",
+        "king",
+        "queen",
+        "emperor",
+        "monarch",
+        "state headed by",
+        "governor",
+        "leader",
+        "chief of state"
+      ]
+    },
+    {
+      "id": "P36",
+      "label": "capital",
+      "aliases": [
+        "capital city",
+        "capital town",
+        "chef-lieu",
+        "principal place",
+        "county seat",
+        "administrative centre",
+        "administrative headquarters",
+        "has capital",
+        "court residence",
+        "seat",
+        "administrative seat",
+        "seat of government",
+        "administrative capital",
+        "government capital",
+        "county town",
+        "government seat",
+        "administrative center",
+        "location of capital"
+      ]
+    },
+    {
+      "id": "P37",
+      "label": "official language",
+      "aliases": [
+        "language official",
+        "spoken in",
+        "speaking",
+        "language spoken"
+      ]
+    },
+    {
+      "id": "P38",
+      "label": "currency",
+      "aliases": [
+        "base currency",
+        "used money"
+      ]
+    },
+    {
+      "id": "P39",
+      "label": "position held",
+      "aliases": [
+        "political office held",
+        "political seat",
+        "public office",
+        "office held",
+        "position occupied",
+        "holds position",
+        "function",
+        "held position",
+        "job"
+      ]
+    },
+    {
+      "id": "P40",
+      "label": "child",
+      "aliases": [
+        "son",
+        "daughter",
+        "kid",
+        "has child",
+        "children",
+        "sons",
+        "daughters",
+        "kids",
+        "has children",
+        "has son",
+        "has sons",
+        "has daughter",
+        "has daughters",
+        "has kid",
+        "has kids",
+        "offspring",
+        "progeny",
+        "issue",
+        "parent of",
+        "descendants",
+        "father of",
+        "mother of"
+      ]
+    },
+    {
+      "id": "P41",
+      "label": "flag image",
+      "aliases": [
+        "image flag",
+        "image of flag"
+      ]
+    },
+    {
+      "id": "P47",
+      "label": "shares border with",
+      "aliases": [
+        "bordered by",
+        "adjacent to",
+        "next to",
+        "border",
+        "borders clockwise",
+        "shares borders with"
+      ]
+    },
+    {
+      "id": "P50",
+      "label": "author",
+      "aliases": [
+        "written by",
+        "writer",
+        "creator",
+        "playwright",
+        "poet",
+        "maker"
+      ]
+    },
+    {
+      "id": "P51",
+      "label": "audio",
+      "aliases": [
+        "song",
+        "recording",
+        "audio file",
+        "audio recording",
+        "sound recording",
+        "audio sample"
+      ]
+    },
+    {
+      "id": "P53",
+      "label": "family",
+      "aliases": [
+        "house",
+        "royal house",
+        "dynasty",
+        "noble family",
+        "member of family"
+      ]
+    },
+    {
+      "id": "P54",
+      "label": "member of sports team",
+      "aliases": [
+        "member of team",
+        "team",
+        "played for",
+        "teams played for",
+        "of team",
+        "club played for",
+        "player of",
+        "part of team",
+        "team played for",
+        "plays for",
+        "sport team"
+      ]
+    },
+    {
+      "id": "P57",
+      "label": "director",
+      "aliases": [
+        "directed by",
+        "film director",
+        "movie director",
+        "game director"
+      ]
+    },
+    {
+      "id": "P58",
+      "label": "screenwriter",
+      "aliases": [
+        "scriptwriter",
+        "screenplay by",
+        "teleplay by",
+        "writer (of screenplays)",
+        "film script by",
+        "written by",
+        "writing credits",
+        "scenarist",
+        "story by",
+        "video game writer",
+        "game writer",
+        "script writer"
+      ]
+    },
+    {
+      "id": "P59",
+      "label": "constellation",
+      "aliases": [
+        "part of constellation"
+      ]
+    },
+    {
+      "id": "P61",
+      "label": "discoverer or inventor",
+      "aliases": [
+        "inventor",
+        "discoverer",
+        "inventor or discoverer",
+        "developer",
+        "first described",
+        "invented by",
+        "created by",
+        "invented",
+        "discovered by",
+        "developed by",
+        "introduced by",
+        "devised by",
+        "first studied by"
+      ]
+    },
+    {
+      "id": "P65",
+      "label": "site of astronomical discovery",
+      "aliases": [
+        "astronomical discovery site",
+        "discovered at observatory",
+        "observatory of discovery",
+        "observatory site of discovery"
+      ]
+    },
+    {
+      "id": "P66",
+      "label": "ancestral home",
+      "aliases": [
+        "native place",
+        "native village",
+        "ancestral village",
+        "ancestral place",
+        "ancestral homeplace",
+        "ancestral home place",
+        "ancestral land",
+        "ancestral homeland"
+      ]
+    },
+    {
+      "id": "P69",
+      "label": "educated at",
+      "aliases": [
+        "alma mater",
+        "education",
+        "alumni of",
+        "alumna of",
+        "college attended",
+        "school attended",
+        "studied at",
+        "graduate of",
+        "graduated from",
+        "faculty",
+        "place of education",
+        "alumnus of",
+        "attended",
+        "went to school at",
+        "schooled at",
+        "attended school at",
+        "schooling place",
+        "education place",
+        "student of",
+        "student at",
+        "university attended"
+      ]
+    },
+    {
+      "id": "P78",
+      "label": "top-level Internet domain",
+      "aliases": [
+        "TLD",
+        "top level domain",
+        "domain",
+        "internet domain",
+        "gTLD",
+        "ccTLD"
+      ]
+    },
+    {
+      "id": "P81",
+      "label": "connecting line",
+      "aliases": [
+        "railway line",
+        "line connected to",
+        "rail line connected to",
+        "is on"
+      ]
+    },
+    {
+      "id": "P84",
+      "label": "architect",
+      "aliases": [
+        "architecture firm"
+      ]
+    },
+    {
+      "id": "P85",
+      "label": "anthem",
+      "aliases": [
+        "national anthem",
+        "march",
+        "official song",
+        "official hymn",
+        "team anthem",
+        "club anthem"
+      ]
+    },
+    {
+      "id": "P86",
+      "label": "composer",
+      "aliases": [
+        "songwriter",
+        "composed by",
+        "musical score by",
+        "music by",
+        "written by",
+        "film score by",
+        "soundtrack by",
+        "original music composer"
+      ]
+    },
+    {
+      "id": "P87",
+      "label": "librettist",
+      "aliases": [
+        "libretto by",
+        "book by"
+      ]
+    },
+    {
+      "id": "P88",
+      "label": "commissioned by",
+      "aliases": [
+        "client",
+        "commissioner",
+        "made for",
+        "built for",
+        "developer",
+        "orderer"
+      ]
+    },
+    {
+      "id": "P91",
+      "label": "sexual orientation",
+      "aliases": [
+        "sexuality"
+      ]
+    },
+    {
+      "id": "P92",
+      "label": "main regulatory text",
+      "aliases": [
+        "legally established by",
+        "governing text",
+        "governing document",
+        "bylaws",
+        "by-laws",
+        "legal basis",
+        "regulated by",
+        "statutory authorization",
+        "statutory authority",
+        "key document",
+        "authorizing legislation",
+        "applicable law",
+        "governing law",
+        "authorizing law"
+      ]
+    },
+    {
+      "id": "P94",
+      "label": "coat of arms image",
+      "aliases": [
+        "symbol",
+        "arms",
+        "CoA image",
+        "image of coat of arms",
+        "representation (heraldic)",
+        "emblem, heraldic"
+      ]
+    },
+    {
+      "id": "P97",
+      "label": "noble title",
+      "aliases": [
+        "peerage",
+        "title (hereditary)",
+        "hereditary title",
+        "royal title",
+        "royal and noble ranks",
+        "title of nobility",
+        "nobility title"
+      ]
+    },
+    {
+      "id": "P98",
+      "label": "editor",
+      "aliases": [
+        "edited by",
+        "associate editor",
+        "eds.",
+        "ed.",
+        "series editor",
+        "editorial director",
+        "compiled by",
+        "publication director"
+      ]
+    },
+    {
+      "id": "P101",
+      "label": "field of work",
+      "aliases": [
+        "field of study",
+        "fields",
+        "discipline",
+        "subject",
+        "area",
+        "specialism",
+        "domain",
+        "academic discipline",
+        "scientific discipline",
+        "academic area",
+        "scientific area",
+        "FOW",
+        "studies",
+        "responsible for",
+        "conduct research about",
+        "be researcher in",
+        "research on",
+        "speciality",
+        "activity",
+        "domain of activity",
+        "activity domain",
+        "academic subject",
+        "trade",
+        "area of work",
+        "specialty",
+        "research",
+        "field of research",
+        "research fields",
+        "research field",
+        "purpose",
+        "work field",
+        "work area",
+        "field of activity",
+        "area of research"
+      ]
+    },
+    {
+      "id": "P102",
+      "label": "member of political party",
+      "aliases": [
+        "party",
+        "member of",
+        "member of party",
+        "party membership",
+        "political party member",
+        "political party"
+      ]
+    },
+    {
+      "id": "P103",
+      "label": "native language",
+      "aliases": [
+        "first language",
+        "mother tongue",
+        "language native",
+        "L1 speaker of"
+      ]
+    },
+    {
+      "id": "P105",
+      "label": "taxon rank",
+      "aliases": [
+        "taxonomic rank",
+        "rank",
+        "type of taxon"
+      ]
+    },
+    {
+      "id": "P106",
+      "label": "occupation",
+      "aliases": [
+        "profession",
+        "job",
+        "work",
+        "career",
+        "employment",
+        "craft",
+        "employ",
+        "vocation",
+        "avocation"
+      ]
+    },
+    {
+      "id": "P108",
+      "label": "employer",
+      "aliases": [
+        "employed by",
+        "works at",
+        "working for",
+        "worked for",
+        "works for",
+        "worked at",
+        "working place",
+        "working at",
+        "organization",
+        "organisation",
+        "of employer"
+      ]
+    },
+    {
+      "id": "P109",
+      "label": "signature",
+      "aliases": [
+        "autograph",
+        "facsimiles",
+        "signature image",
+        "image of signature"
+      ]
+    },
+    {
+      "id": "P110",
+      "label": "illustrator",
+      "aliases": [
+        "illustration by",
+        "illustrated by",
+        "drawing by",
+        "drawings by",
+        "drawn by",
+        "draftsperson",
+        "artist"
+      ]
+    },
+    {
+      "id": "P111",
+      "label": "measured physical quantity",
+      "aliases": [
+        "measure of",
+        "quantity",
+        "physical quantity",
+        "measures"
+      ]
+    },
+    {
+      "id": "P112",
+      "label": "founder",
+      "aliases": [
+        "co-founder",
+        "founders",
+        "established by",
+        "co-founded by",
+        "founder",
+        "started by",
+        "cofounder",
+        "cofounded by",
+        "institutor",
+        "instituted by",
+        "created by",
+        "creator",
+        "establisher",
+        "starter",
+        "begun by"
+      ]
+    },
+    {
+      "id": "P113",
+      "label": "airline hub",
+      "aliases": [
+        "hub",
+        "hub airport"
+      ]
+    },
+    {
+      "id": "P115",
+      "label": "home venue",
+      "aliases": [
+        "ground",
+        "home field",
+        "arena",
+        "home ground",
+        "stadium",
+        "ballpark",
+        "home water",
+        "venue",
+        "plays at",
+        "played at",
+        "performs at",
+        "performed at",
+        "based at"
+      ]
+    },
+    {
+      "id": "P117",
+      "label": "chemical structure",
+      "aliases": [
+        "crystallographic structure",
+        "structural formula",
+        "image of chemical structure"
+      ]
+    },
+    {
+      "id": "P118",
+      "label": "league or competition",
+      "aliases": [
+        "division",
+        "sports league",
+        "cup",
+        "tournament",
+        "competition"
+      ]
+    },
+    {
+      "id": "P119",
+      "label": "place of burial",
+      "aliases": [
+        "burial place",
+        "resting place",
+        "place of grave",
+        "buried in",
+        "grave at",
+        "location of burial",
+        "tomb",
+        "interment",
+        "place of interment",
+        "buried at",
+        "burial location",
+        "interment place",
+        "interment location",
+        "entombed at",
+        "interred at",
+        "ashes scattered at",
+        "remains at",
+        "cemetery"
+      ]
+    },
+    {
+      "id": "P121",
+      "label": "item operated",
+      "aliases": [
+        "fleet",
+        "aircraft in fleet",
+        "aircraft operated",
+        "equipment operated",
+        "facility operated",
+        "service operated",
+        "operator of",
+        "operated",
+        "operates",
+        "eq",
+        "acop",
+        "aircraft carried",
+        "item used",
+        "uses item",
+        "runs",
+        "controls",
+        "item maintained"
+      ]
+    },
+    {
+      "id": "P122",
+      "label": "basic form of government",
+      "aliases": [
+        "type of government",
+        "form of government",
+        "government"
+      ]
+    },
+    {
+      "id": "P123",
+      "label": "publisher",
+      "aliases": [
+        "book publisher",
+        "video game publisher",
+        "software publisher",
+        "publishing house",
+        "published by",
+        "board game publisher",
+        "comic publisher",
+        "comic book publisher",
+        "music publisher",
+        "printed music publisher",
+        "sheet music publisher"
+      ]
+    },
+    {
+      "id": "P126",
+      "label": "maintained by",
+      "aliases": [
+        "maintenance",
+        "administered by",
+        "maintainer",
+        "custodian",
+        "administrator",
+        "held by",
+        "managed by"
+      ]
+    },
+    {
+      "id": "P127",
+      "label": "owned by",
+      "aliases": [
+        "is owned by",
+        "owner",
+        "belongs to",
+        "shareholder",
+        "stockholder",
+        "shareholders",
+        "stockholders",
+        "owners",
+        "provenance",
+        "belonged to",
+        "proprietor"
+      ]
+    },
+    {
+      "id": "P129",
+      "label": "physically interacts with",
+      "aliases": [
+        "interact with",
+        "interact"
+      ]
+    },
+    {
+      "id": "P131",
+      "label": "located in the administrative territorial entity",
+      "aliases": [
+        "located in the administrative unit",
+        "located in administrative unit",
+        "is in administrative unit",
+        "is located in",
+        "is in the state of",
+        "is in the province of",
+        "is in the county of",
+        "is in the district of",
+        "is in the department of",
+        "is in the region of",
+        "is in the borough of",
+        "is in the city of",
+        "is in the town of",
+        "is in the village of",
+        "is in the municipality of",
+        "is in the territory of",
+        "is in the prefecture of",
+        "is in the voivodeship of",
+        "is in the Indian reservation of",
+        "is in the Indian reserve of",
+        "is in the ward of",
+        "is in the administrative region of",
+        "is in the settlement of",
+        "is in the local government area of",
+        "is in the rural city of",
+        "is in the shire of",
+        "happens in",
+        "is in the commune of",
+        "in administrative unit",
+        "in",
+        "is in the administrative unit",
+        "administrative territorial entity",
+        "city",
+        "town",
+        "state",
+        "Indian reservation",
+        "in the administrative unit",
+        "locality",
+        "is in the parish of",
+        "location (administrative territorial entity)",
+        "is in the principal area of",
+        "located in the territorial entity",
+        "region",
+        "is in the arrondissement of",
+        "administrative territory",
+        "territory"
+      ]
+    },
+    {
+      "id": "P135",
+      "label": "movement",
+      "aliases": [
+        "subculture",
+        "school",
+        "trend",
+        "music scene",
+        "artistic movement",
+        "philosophical movement",
+        "scientific movement",
+        "literary movement",
+        "artistic school",
+        "art movement",
+        "art style"
+      ]
+    },
+    {
+      "id": "P136",
+      "label": "genre",
+      "aliases": [
+        "music genre",
+        "film genre",
+        "artistic genre",
+        "literary genre",
+        "kind of music",
+        "type of film",
+        "genre of music",
+        "type of music",
+        "art style",
+        "genres",
+        "genre of literature",
+        "map genre",
+        "atlas genre"
+      ]
+    },
+    {
+      "id": "P137",
+      "label": "operator",
+      "aliases": [
+        "service operator",
+        "facility operator",
+        "operated by",
+        "managed by",
+        "administrator",
+        "item operator",
+        "user",
+        "webmaster",
+        "manager",
+        "maintainer",
+        "run by",
+        "offered by",
+        "provided by",
+        "service provider",
+        "website operator",
+        "in use by",
+        "controlled by",
+        "secretariat"
+      ]
+    },
+    {
+      "id": "P138",
+      "label": "named after",
+      "aliases": [
+        "eponym",
+        "named for",
+        "namesake",
+        "etymology",
+        "toponym",
+        "name after",
+        "named in honor of",
+        "name origin"
+      ]
+    },
+    {
+      "id": "P140",
+      "label": "religion or worldview",
+      "aliases": [
+        "religious affiliation",
+        "faith",
+        "life stance",
+        "denomination",
+        "follower of religion",
+        "follows religion",
+        "has religion",
+        "religion or world view",
+        "pantheon",
+        "belief system",
+        "religion",
+        "worldview",
+        "believes",
+        "devotee of"
+      ]
+    },
+    {
+      "id": "P141",
+      "label": "IUCN conservation status",
+      "aliases": [
+        "conservation status"
+      ]
+    },
+    {
+      "id": "P143",
+      "label": "imported from Wikimedia project",
+      "aliases": [
+        "imported from",
+        "imported from WM project",
+        "import from Wikimedia project",
+        "import from WM project",
+        "Wikimedia project",
+        "imported from Wikipedia project",
+        "Wikipedia project",
+        "from Wikimedia project",
+        "imported from wiki"
+      ]
+    },
+    {
+      "id": "P144",
+      "label": "based on",
+      "aliases": [
+        "adaptation of",
+        "adapted from",
+        "based on work",
+        "based upon",
+        "copy of",
+        "cover of",
+        "derivative of",
+        "derivative work of",
+        "derived from",
+        "extended from",
+        "fork of",
+        "has parts from",
+        "inherits from",
+        "inspired by",
+        "modeled after",
+        "modelled after",
+        "parody of",
+        "remake of",
+        "replica of",
+        "source work",
+        "theme",
+        "themed after",
+        "continuation of",
+        "expansion of",
+        "continues",
+        "follows",
+        "remix of",
+        "iteration of",
+        "reboot of",
+        "input",
+        "extends",
+        "expands"
+      ]
+    },
+    {
+      "id": "P149",
+      "label": "architectural style",
+      "aliases": [
+        "style of architecture",
+        "architecture"
+      ]
+    },
+    {
+      "id": "P150",
+      "label": "contains the administrative territorial entity",
+      "aliases": [
+        "contains",
+        "divides into",
+        "divided into",
+        "has towns",
+        "has shires",
+        "has cities",
+        "has rural cities",
+        "has municipalities",
+        "has wards",
+        "has local government areas",
+        "has districts",
+        "has boroughs",
+        "subdivided into",
+        "has counties",
+        "has administrative divisions",
+        "has arrondissements",
+        "has villages",
+        "has regions",
+        "has states",
+        "has members",
+        "has countries",
+        "contains administrative territorial entity",
+        "includes the administrative territorial entity"
+      ]
+    },
+    {
+      "id": "P154",
+      "label": "logo image",
+      "aliases": [
+        "marque",
+        "logomark",
+        "insignia",
+        "sign",
+        "wordmark",
+        "mark",
+        "logo",
+        "trademark",
+        "masthead",
+        "trade mark"
+      ]
+    },
+    {
+      "id": "P155",
+      "label": "follows",
+      "aliases": [
+        "succeeds to",
+        "previous is",
+        "before was",
+        "predecessor",
+        "preceded by",
+        "prequel is",
+        "sequel of",
+        "split from",
+        "comes after",
+        "successor to",
+        "succeeds",
+        "prev",
+        "previous element",
+        "is after",
+        "successor of"
+      ]
+    },
+    {
+      "id": "P156",
+      "label": "followed by",
+      "aliases": [
+        "continued as",
+        "prequel of",
+        "next is",
+        "precedes",
+        "sequel is",
+        "successor",
+        "comes before",
+        "next",
+        "next element",
+        "then",
+        "succeeded by"
+      ]
+    },
+    {
+      "id": "P157",
+      "label": "killed by",
+      "aliases": [
+        "killer",
+        "assassin",
+        "murderer",
+        "murdered by",
+        "executioner",
+        "assassinated by",
+        "slain by",
+        "mortally wounded by",
+        "executed by",
+        "slaughtered by",
+        "shot dead by",
+        "lynched by",
+        "slaughterer"
+      ]
+    },
+    {
+      "id": "P158",
+      "label": "seal image",
+      "aliases": [
+        "emblem",
+        "emblem image",
+        "seal",
+        "insignia"
+      ]
+    },
+    {
+      "id": "P159",
+      "label": "headquarters location",
+      "aliases": [
+        "head office location",
+        "HQ",
+        "garrison",
+        "admin HQ",
+        "seat",
+        "headquarters",
+        "head quarters",
+        "HQ location",
+        "based in",
+        "location of headquarters",
+        "principal office",
+        "headquarters city",
+        "headquarters town",
+        "headquarters locality"
+      ]
+    },
+    {
+      "id": "P161",
+      "label": "cast member",
+      "aliases": [
+        "starring",
+        "film starring",
+        "actor",
+        "actress",
+        "contestant of a play",
+        "starring (film/play)",
+        "feat."
+      ]
+    },
+    {
+      "id": "P162",
+      "label": "producer",
+      "aliases": [
+        "record producer",
+        "film producer",
+        "produced by",
+        "music producer",
+        "musical producer",
+        "creative producer"
+      ]
+    },
+    {
+      "id": "P163",
+      "label": "flag",
+      "aliases": [
+        "flag description"
+      ]
+    },
+    {
+      "id": "P166",
+      "label": "award received",
+      "aliases": [
+        "prize received",
+        "awards",
+        "honorary title",
+        "recognition title",
+        "award",
+        "honours",
+        "honors",
+        "medals",
+        "awarded",
+        "award won",
+        "prize awarded",
+        "awards received",
+        "win",
+        "winner of",
+        "received award"
+      ]
+    },
+    {
+      "id": "P167",
+      "label": "structure replaced by",
+      "aliases": [
+        "replaced by (structure)",
+        "succeeded by (structure)",
+        "building replaced by"
+      ]
+    },
+    {
+      "id": "P169",
+      "label": "chief executive officer",
+      "aliases": [
+        "CEO",
+        "chief executive",
+        "executive director"
+      ]
+    },
+    {
+      "id": "P170",
+      "label": "creator",
+      "aliases": [
+        "artist (non-musical)",
+        "created by",
+        "painter",
+        "sculptor",
+        "made by",
+        "painted by",
+        "sculpted by",
+        "visual artist",
+        "art by",
+        "artwork by",
+        "art work by",
+        "realized by",
+        "realised by",
+        "drawer",
+        "drawn by",
+        "by",
+        "original author",
+        "photographer"
+      ]
+    },
+    {
+      "id": "P171",
+      "label": "parent taxon",
+      "aliases": [
+        "taxon parent",
+        "higher taxon"
+      ]
+    },
+    {
+      "id": "P172",
+      "label": "ethnic group",
+      "aliases": [
+        "ethnicity",
+        "culture",
+        "people",
+        "(cultural) nationality",
+        "race",
+        "ethnic or cultural origin",
+        "tribal affiliation"
+      ]
+    },
+    {
+      "id": "P175",
+      "label": "performer",
+      "aliases": [
+        "artist",
+        "musician",
+        "played by",
+        "portrayed by",
+        "recorded by",
+        "recording by",
+        "dancer",
+        "actor",
+        "musical artist",
+        "performed by",
+        "actress",
+        "sung by",
+        "singer"
+      ]
+    },
+    {
+      "id": "P176",
+      "label": "manufacturer",
+      "aliases": [
+        "manufactured by",
+        "maker",
+        "built by",
+        "builder",
+        "made by",
+        "product of",
+        "provider",
+        "provided by",
+        "assembler",
+        "assembled by",
+        "producer",
+        "mfr",
+        "produced by",
+        "brewer",
+        "brewed by"
+      ]
+    },
+    {
+      "id": "P177",
+      "label": "crosses",
+      "aliases": [
+        "bridge over",
+        "tunnel under",
+        "over",
+        "under",
+        "through",
+        "spanning",
+        "spans"
+      ]
+    },
+    {
+      "id": "P178",
+      "label": "developer",
+      "aliases": [
+        "developed by",
+        "written by",
+        "created by",
+        "game developer",
+        "game dev",
+        "dev",
+        "video game developer",
+        "video game dev"
+      ]
+    },
+    {
+      "id": "P179",
+      "label": "part of the series",
+      "aliases": [
+        "part of series",
+        "series",
+        "listed in",
+        "collection",
+        "issue of",
+        "episode of",
+        "subseries",
+        "video game series",
+        "in series"
+      ]
+    },
+    {
+      "id": "P180",
+      "label": "depicts",
+      "aliases": [
+        "depicting",
+        "pictures",
+        "shows",
+        "show of",
+        "plot",
+        "resembles",
+        "displays",
+        "presents",
+        "depiction of",
+        "painting of",
+        "motif",
+        "portrait of",
+        "landscape of",
+        "represents",
+        "portrays",
+        "subject",
+        "conveys",
+        "reproduces",
+        "sounds like",
+        "features",
+        "preserves",
+        "quotes",
+        "includes"
+      ]
+    },
+    {
+      "id": "P181",
+      "label": "taxon range map image",
+      "aliases": [
+        "spread map",
+        "distribution map (taxa)",
+        "range map",
+        "occurrence data map"
+      ]
+    },
+    {
+      "id": "P183",
+      "label": "endemic to",
+      "aliases": [
+        "endemic in",
+        "native to",
+        "native in"
+      ]
+    },
+    {
+      "id": "P184",
+      "label": "doctoral advisor",
+      "aliases": [
+        "advisor",
+        "doctoral supervisor",
+        "supervisor",
+        "PhD advisor",
+        "promotor",
+        "PhD supervisor",
+        "thesis advisor"
+      ]
+    },
+    {
+      "id": "P185",
+      "label": "doctoral student",
+      "aliases": [
+        "doctoral candidate",
+        "supervisee",
+        "supervised doctoral student",
+        "Ph.D. student"
+      ]
+    },
+    {
+      "id": "P186",
+      "label": "made from material",
+      "aliases": [
+        "medium",
+        "made from",
+        "constructed from",
+        "constructed out of",
+        "construction material",
+        "media",
+        "built from",
+        "built out of",
+        "manufactured from",
+        "manufactured out of",
+        "crafted from",
+        "crafted out of",
+        "formed from",
+        "formed out of",
+        "made of",
+        "ore",
+        "source material",
+        "raw material",
+        "feedstock",
+        "reactant",
+        "ingredient",
+        "ingredients",
+        "made in",
+        "be made in",
+        "material used",
+        "made of material"
+      ]
+    },
+    {
+      "id": "P189",
+      "label": "location of discovery",
+      "aliases": [
+        "findspot",
+        "location of discovered object",
+        "discovery place",
+        "place of discovery",
+        "discovered at:",
+        "find location",
+        "find spot",
+        "found in",
+        "site of discovery",
+        "found at",
+        "type site",
+        "source"
+      ]
+    },
+    {
+      "id": "P190",
+      "label": "twinned administrative body",
+      "aliases": [
+        "twin town",
+        "sister town",
+        "twin cities",
+        "twin city",
+        "partner city",
+        "partner town",
+        "sister city"
+      ]
+    },
+    {
+      "id": "P193",
+      "label": "main building contractor",
+      "aliases": [
+        "building contractor",
+        "built by",
+        "constructed by",
+        "builder",
+        "main contractor",
+        "general contractor",
+        "prime contractor",
+        "contractor"
+      ]
+    },
+    {
+      "id": "P194",
+      "label": "legislative body",
+      "aliases": [
+        "representative body",
+        "parliament",
+        "council",
+        "assembly",
+        "diet",
+        "rural council",
+        "district council",
+        "municipal council",
+        "aboriginal council",
+        "indigenous council",
+        "city council",
+        "local government area",
+        "LGA",
+        "District",
+        "Tehsil",
+        "Zila",
+        "Jila",
+        "legislature"
+      ]
+    },
+    {
+      "id": "P195",
+      "label": "collection",
+      "aliases": [
+        "art collection",
+        "museum collection",
+        "archives",
+        "archival holdings",
+        "GLAM",
+        "bibliographic collection",
+        "editorial collection",
+        "series",
+        "book series",
+        "book collection",
+        "repository",
+        "held by"
+      ]
+    },
+    {
+      "id": "P196",
+      "label": "minor planet group",
+      "aliases": [
+        "asteroid group"
+      ]
+    },
+    {
+      "id": "P197",
+      "label": "adjacent station",
+      "aliases": [
+        "next station",
+        "previous station",
+        "next stop",
+        "neighbouring station"
+      ]
+    },
+    {
+      "id": "P199",
+      "label": "organizational division",
+      "aliases": [
+        "divisions",
+        "has division",
+        "has business division",
+        "business division",
+        "organizational divisions",
+        "has organizational division",
+        "department",
+        "has department",
+        "branch",
+        "has branch",
+        "faculty",
+        "has faculty",
+        "unit",
+        "has unit"
+      ]
+    },
+    {
+      "id": "P200",
+      "label": "inflows",
+      "aliases": [
+        "inflow",
+        "lake inflow",
+        "river inflows"
+      ]
+    },
+    {
+      "id": "P201",
+      "label": "outflows",
+      "aliases": [
+        "outflow",
+        "lake outflow"
+      ]
+    },
+    {
+      "id": "P205",
+      "label": "basin country",
+      "aliases": [
+        "basin countries"
+      ]
+    },
+    {
+      "id": "P206",
+      "label": "located in or next to body of water",
+      "aliases": [
+        "on lake",
+        "next to lake",
+        "located on body of water",
+        "on bay",
+        "on harbour",
+        "on shore of",
+        "on the shore of",
+        "on the coast of",
+        "on coast of",
+        "on river",
+        "ocean",
+        "sea",
+        "lake",
+        "bay",
+        "located next to body of water",
+        "loc (water)",
+        "body of water",
+        "borders body of water",
+        "water next to the subject",
+        "along river",
+        "located in water",
+        "located on water",
+        "adjacent water body",
+        "in body of water"
+      ]
+    },
+    {
+      "id": "P207",
+      "label": "bathymetry image",
+      "aliases": [
+        "bathymetric chart",
+        "bathymetric map",
+        "file bathymetry"
+      ]
+    },
+    {
+      "id": "P208",
+      "label": "executive body",
+      "aliases": [
+        "executive branch"
+      ]
+    },
+    {
+      "id": "P209",
+      "label": "highest judicial authority",
+      "aliases": [
+        "supreme court",
+        "has supreme court",
+        "highest court",
+        "judiciary",
+        "judicial branch",
+        "court"
+      ]
+    },
+    {
+      "id": "P210",
+      "label": "party chief representative",
+      "aliases": [
+        "party chief",
+        "communist party chief",
+        "party secretary",
+        "Communist Party Secretary"
+      ]
+    },
+    {
+      "id": "P213",
+      "label": "ISNI",
+      "aliases": [
+        "International Standard Name Identifier",
+        "ISO 27729"
+      ]
+    },
+    {
+      "id": "P214",
+      "label": "VIAF cluster ID",
+      "aliases": [
+        "VIAF identifier",
+        "Virtual International Authority File",
+        "viaf.org ID",
+        "VIAF",
+        "VIAF ID"
+      ]
+    },
+    {
+      "id": "P215",
+      "label": "spectral class",
+      "aliases": [
+        "is an object of class",
+        "is a star of class"
+      ]
+    },
+    {
+      "id": "P217",
+      "label": "inventory number",
+      "aliases": [
+        "reference",
+        "accession number",
+        "shelfmark",
+        "call number",
+        "reference number",
+        "catalogue number",
+        "collection number",
+        "object number",
+        "local identifier",
+        "control number",
+        "loan number",
+        "catalog number",
+        "catalog identifier",
+        "catalogue identifier"
+      ]
+    },
+    {
+      "id": "P218",
+      "label": "ISO 639-1 code",
+      "aliases": [
+        "iso 639-1",
+        "ISO639-1",
+        "iso639-1",
+        "ISO language code (2 letter)"
+      ]
+    },
+    {
+      "id": "P219",
+      "label": "ISO 639-2 code",
+      "aliases": [
+        "iso 639-2",
+        "ISO639-2",
+        "ISO language code (3 letter)"
+      ]
+    },
+    {
+      "id": "P220",
+      "label": "ISO 639-3 code",
+      "aliases": [
+        "iso 639-3",
+        "ISO639-3",
+        "ISO language code (3 letter)"
+      ]
+    },
+    {
+      "id": "P221",
+      "label": "ISO 639-6 code",
+      "aliases": [
+        "ISO 639-6",
+        "ISO639-6",
+        "ISO language code (4 letter)"
+      ]
+    },
+    {
+      "id": "P223",
+      "label": "galaxy morphological type",
+      "aliases": [
+        "is a galaxy of type",
+        "De Vaucouleurs classification system",
+        "Hubble sequence"
+      ]
+    },
+    {
+      "id": "P225",
+      "label": "taxon name",
+      "aliases": [
+        "Latin name of a taxon (deprecated)",
+        "scientific name of a taxon",
+        "correct name (ICNafp)",
+        "valid name (ICZN)",
+        "taxonomic name"
+      ]
+    },
+    {
+      "id": "P227",
+      "label": "GND ID",
+      "aliases": [
+        "GND",
+        "GND identifier",
+        "Universal Authority File",
+        "Integrated Authority File",
+        "DNB authorities",
+        "GND-IDN",
+        "GND ID",
+        "Deutschen Nationalbibliothek ID",
+        "German National Library ID",
+        "Gemeinsame Normdatei ID",
+        "DNB author ID",
+        "IndividualisedGnd",
+        "GND number"
+      ]
+    },
+    {
+      "id": "P229",
+      "label": "IATA airline designator",
+      "aliases": [
+        "IATA reservation code",
+        "International Air Transport Association airline designator"
+      ]
+    },
+    {
+      "id": "P230",
+      "label": "ICAO airline designator",
+      "aliases": [
+        "International Civil Aviation Organization airline designator"
+      ]
+    },
+    {
+      "id": "P231",
+      "label": "CAS Registry Number",
+      "aliases": [
+        "CAS Number",
+        "CAS RN"
+      ]
+    },
+    {
+      "id": "P232",
+      "label": "EC number",
+      "aliases": [
+        "EC No.",
+        "EINECS No.",
+        "EC#",
+        "European Community number"
+      ]
+    },
+    {
+      "id": "P233",
+      "label": "canonical SMILES",
+      "aliases": [
+        "SMILES",
+        "Simplified Molecular Input Line Entry Specification"
+      ]
+    },
+    {
+      "id": "P234",
+      "label": "InChI",
+      "aliases": [
+        "International Chemical Identifier"
+      ]
+    },
+    {
+      "id": "P236",
+      "label": "ISSN",
+      "aliases": [
+        "E-ISSN",
+        "eISSN",
+        "P-ISSN",
+        "issne",
+        "issnp"
+      ]
+    },
+    {
+      "id": "P238",
+      "label": "IATA airport code",
+      "aliases": [
+        "International Air Transport Association airport code",
+        "uio",
+        "IATA station code",
+        "IATA location identifier"
+      ]
+    },
+    {
+      "id": "P239",
+      "label": "ICAO airport code",
+      "aliases": [
+        "International Civil Aviation Organization airport code",
+        "ICAO aerodrome code",
+        "ICAO airfield code"
+      ]
+    },
+    {
+      "id": "P240",
+      "label": "FAA airport code",
+      "aliases": [
+        "FAA LID"
+      ]
+    },
+    {
+      "id": "P241",
+      "label": "military branch",
+      "aliases": [
+        "branch",
+        "formation",
+        "service branch",
+        "unit branch"
+      ]
+    },
+    {
+      "id": "P242",
+      "label": "locator map image",
+      "aliases": [
+        "map",
+        "locator map",
+        "map image"
+      ]
+    },
+    {
+      "id": "P243",
+      "label": "OCLC number",
+      "aliases": [
+        "OCN",
+        "WorldCat accession number",
+        "WorldCat title ID",
+        "OCLC control number",
+        "WC OCN",
+        "WorldCat OCN",
+        "WorldCat OCLC control number"
+      ]
+    },
+    {
+      "id": "P244",
+      "label": "Library of Congress authority ID",
+      "aliases": [
+        "Library of Congress Name Authority File",
+        "Library of Congress Subject Headings",
+        "LCAuth identifier",
+        "SACO ID",
+        "NACO ID",
+        "LC/NACO/SACO Authority File ID",
+        "Library of Congress Subject Headings ID",
+        "LCSH ID",
+        "LCAuth ID",
+        "LCNAF ID",
+        "LCCN",
+        "Authority LCCN",
+        "LC Subject Heading ID",
+        "LC Name Authority ID",
+        "LC Name Authority File ID",
+        "LC Control Number",
+        "LC Subject ID",
+        "LC Name ID",
+        "Library of Congress Control Number (Authorities)",
+        "Library of Congress Control Number (Name Authority)",
+        "Library of Congress Control Number (Subject Authority)",
+        "NAF LCCN",
+        "LCSH LCCN",
+        "NACO LCCN",
+        "LC/NACO LCCN",
+        "LC/NACO Authority File ID",
+        "LCSH Authority File ID",
+        "LCNACO",
+        "LC Name Authority (LCCN)",
+        "LC Subject Authority (LCCN)",
+        "SACO LCCN",
+        "LoC Authority ID"
+      ]
+    },
+    {
+      "id": "P245",
+      "label": "Union List of Artist Names ID",
+      "aliases": [
+        "Union List of Artist Names",
+        "ULAN identifier",
+        "ULAN ID",
+        "Getty ULAN ID",
+        "ULAN"
+      ]
+    },
+    {
+      "id": "P246",
+      "label": "element symbol",
+      "aliases": [
+        "chemical symbol",
+        "formula"
+      ]
+    },
+    {
+      "id": "P247",
+      "label": "COSPAR ID",
+      "aliases": [
+        "International Designator",
+        "COSPAR designation"
+      ]
+    },
+    {
+      "id": "P248",
+      "label": "stated in",
+      "aliases": [
+        "originating source",
+        "source of claim",
+        "in statement",
+        "stated at",
+        "cited in",
+        "cited from",
+        "cited by",
+        "cited at",
+        "cited on",
+        "stated on"
+      ]
+    },
+    {
+      "id": "P249",
+      "label": "ticker symbol",
+      "aliases": [
+        "stock code",
+        "traded as",
+        "stock symbol",
+        "trading symbol",
+        "stock ticker"
+      ]
+    },
+    {
+      "id": "P263",
+      "label": "official residence",
+      "aliases": [
+        "lives in",
+        "lives at",
+        "resides at",
+        "home",
+        "domicile",
+        "presidential palace",
+        "presidential mansion",
+        "executive residence",
+        "executive mansion",
+        "gubernatorial mansion",
+        "state house",
+        "palace"
+      ]
+    },
+    {
+      "id": "P264",
+      "label": "record label",
+      "aliases": [
+        "label",
+        "labels"
+      ]
+    },
+    {
+      "id": "P267",
+      "label": "ATC code",
+      "aliases": [
+        "ATCC"
+      ]
+    },
+    {
+      "id": "P268",
+      "label": "Bibliothèque nationale de France ID",
+      "aliases": [
+        "RAMEAU ID",
+        "BnF ID",
+        "BnF identifier",
+        "RAMEAU identifier",
+        "Bibliothèque nationale de France identifier",
+        "National Library of France ID"
+      ]
+    },
+    {
+      "id": "P269",
+      "label": "IdRef ID",
+      "aliases": [
+        "IdRef",
+        "Système Universitaire de Documentation authorities ID",
+        "SUDOC authority ID",
+        "SUDOC authorities ID",
+        "SUDOC"
+      ]
+    },
+    {
+      "id": "P270",
+      "label": "CALIS ID",
+      "aliases": [
+        "CALIS Union Catalog Authorities"
+      ]
+    },
+    {
+      "id": "P271",
+      "label": "NACSIS-CAT author ID",
+      "aliases": [
+        "CiNii author identifier",
+        "CiNii author ID",
+        "CiNii author ID (books)",
+        "ci.nii.ac.jp author ID",
+        "NII (Japan)",
+        "CiNii Books author ID",
+        "NII ID"
+      ]
+    },
+    {
+      "id": "P272",
+      "label": "production company",
+      "aliases": [
+        "film studio",
+        "studio",
+        "motion picture studio",
+        "movie studio",
+        "production house",
+        "theatre company",
+        "theater company",
+        "theatrical troupe",
+        "ballet company",
+        "broadcasting company",
+        "produced by (company)",
+        "producer (company)"
+      ]
+    },
+    {
+      "id": "P274",
+      "label": "chemical formula",
+      "aliases": [
+        "formula",
+        "molecular formula"
+      ]
+    },
+    {
+      "id": "P275",
+      "label": "copyright license",
+      "aliases": [
+        "licence",
+        "content license",
+        "content licence",
+        "copyright licence",
+        "license",
+        "software license"
+      ]
+    },
+    {
+      "id": "P276",
+      "label": "location",
+      "aliases": [
+        "whereabouts",
+        "located in",
+        "venue",
+        "is in",
+        "place held",
+        "based in",
+        "neighborhood",
+        "region",
+        "in",
+        "located",
+        "locality",
+        "locale",
+        "from",
+        "place",
+        "neighbourhood",
+        "suburb",
+        "held by",
+        "city",
+        "town",
+        "village",
+        "near",
+        "exact location",
+        "position"
+      ]
+    },
+    {
+      "id": "P277",
+      "label": "programmed in",
+      "aliases": [
+        "language",
+        "written in",
+        "programming language",
+        "coded in"
+      ]
+    },
+    {
+      "id": "P279",
+      "label": "subclass of",
+      "aliases": [
+        "rdfs:subClassOf",
+        "has superclass",
+        "subtype of",
+        "subcategory of",
+        "is thereby also a",
+        "is necessarily also a",
+        "whose instances are among",
+        "is a type of",
+        "is a class of",
+        "type of",
+        "form of",
+        "way of",
+        "all members of this class also belong to",
+        "category of",
+        "whose instances are a subset of those of",
+        "sc (abbreviation)",
+        "kind of",
+        "sort of",
+        "variant of",
+        "subgenre of"
+      ]
+    },
+    {
+      "id": "P281",
+      "label": "postal code",
+      "aliases": [
+        "post code",
+        "zip code",
+        "postcode",
+        "zipcode",
+        "ZIP+4",
+        "PIN Code",
+        "postal index number",
+        "pincode"
+      ]
+    },
+    {
+      "id": "P282",
+      "label": "writing system",
+      "aliases": [
+        "script",
+        "written form",
+        "writing script"
+      ]
+    },
+    {
+      "id": "P286",
+      "label": "head coach",
+      "aliases": [
+        "manager",
+        "club manager",
+        "senior coach",
+        "team manager",
+        "coach",
+        "trainer"
+      ]
+    },
+    {
+      "id": "P287",
+      "label": "designed by",
+      "aliases": [
+        "has designer",
+        "designer"
+      ]
+    },
+    {
+      "id": "P289",
+      "label": "vessel class",
+      "aliases": [
+        "ship class",
+        "submarine class",
+        "spacecraft class",
+        "class of vessel",
+        "watercraft class"
+      ]
+    },
+    {
+      "id": "P291",
+      "label": "place of publication",
+      "aliases": [
+        "release region",
+        "publication region",
+        "published in (place)",
+        "publication place",
+        "publication location",
+        "location of publication",
+        "released in",
+        "publication city",
+        "printed in",
+        "printed at",
+        "published from",
+        "country (published in)",
+        "where published"
+      ]
+    },
+    {
+      "id": "P296",
+      "label": "station code",
+      "aliases": [
+        "station identifier",
+        "telegraph code",
+        "station numbering",
+        "station number"
+      ]
+    },
+    {
+      "id": "P297",
+      "label": "ISO 3166-1 alpha-2 code",
+      "aliases": [
+        "country code ISO 3166-1 alpha-2",
+        "two letter code",
+        "country code (ISO 3166-1 alpha-2)"
+      ]
+    },
+    {
+      "id": "P298",
+      "label": "ISO 3166-1 alpha-3 code",
+      "aliases": [
+        "country code ISO 3166-1 alpha-3",
+        "country code (ISO 3166-1 alpha-3)"
+      ]
+    },
+    {
+      "id": "P299",
+      "label": "ISO 3166-1 numeric code",
+      "aliases": [
+        "country code ISO 3166-1 numeric",
+        "ISO 3166-1",
+        "country code (ISO 3166-1 numeric)"
+      ]
+    },
+    {
+      "id": "P300",
+      "label": "ISO 3166-2 code",
+      "aliases": [
+        "subdivision code ISO 3166-2"
+      ]
+    },
+    {
+      "id": "P301",
+      "label": "category's main topic",
+      "aliases": [
+        "cmt",
+        "main article in category",
+        "main category topic",
+        "main topic of category",
+        "category's main article",
+        "article with category's topic",
+        "page with category's topic",
+        "item for this category",
+        "topic of category",
+        "main subject of category",
+        "category's topic",
+        "category topic",
+        "category's main subject",
+        "category's subject"
+      ]
+    },
+    {
+      "id": "P303",
+      "label": "EE breed number",
+      "aliases": [
+        "breed number"
+      ]
+    },
+    {
+      "id": "P304",
+      "label": "page(s)",
+      "aliases": [
+        "pp.",
+        "p.",
+        "page",
+        "pages",
+        "pg.",
+        "pgs.",
+        "page number",
+        "page numbers",
+        "page cited",
+        "page referenced",
+        "location within source",
+        "location in source"
+      ]
+    },
+    {
+      "id": "P305",
+      "label": "IETF language tag",
+      "aliases": [
+        "language tag IETF",
+        "BCP 47 language code",
+        "language code",
+        "ISO language code IETF implementation"
+      ]
+    },
+    {
+      "id": "P306",
+      "label": "operating system",
+      "aliases": [
+        "OS",
+        "supported OS",
+        "supported operating system",
+        "supported platform"
+      ]
+    },
+    {
+      "id": "P344",
+      "label": "director of photography",
+      "aliases": [
+        "cinematographer",
+        "DOP"
+      ]
+    },
+    {
+      "id": "P345",
+      "label": "IMDb ID",
+      "aliases": [
+        "Internet Movie Database identifier",
+        "IMDb identifier"
+      ]
+    },
+    {
+      "id": "P348",
+      "label": "software version identifier",
+      "aliases": [
+        "version",
+        "release version",
+        "software version",
+        "software version identifiers",
+        "software versions",
+        "release versions",
+        "versions",
+        "version number",
+        "software release version",
+        "game version identifier",
+        "software version number",
+        "game version number",
+        "video game version identifier",
+        "video game version number",
+        "game update number",
+        "video game update number",
+        "game version",
+        "update version",
+        "update number",
+        "update identifier",
+        "software update identifier",
+        "software update number",
+        "game update",
+        "video game update",
+        "app version",
+        "app version identifier",
+        "app version number",
+        "app update",
+        "app update identifier",
+        "app update number",
+        "application version",
+        "application version identifier",
+        "application version number",
+        "application update",
+        "application update identifier",
+        "application update number",
+        "patch number",
+        "patch identifier",
+        "video game patch number",
+        "video game patch identifier",
+        "game patch number",
+        "game patch identifier",
+        "application release identifier",
+        "application release number",
+        "app release identifier",
+        "app release number",
+        "software patch",
+        "video game patch",
+        "game patch",
+        "software patch identifier",
+        "software patch number",
+        "internal version number",
+        "project code name",
+        "software release",
+        "software release identifier",
+        "software release number"
+      ]
+    },
+    {
+      "id": "P349",
+      "label": "NDL Authority ID",
+      "aliases": [
+        "NDL Authorities",
+        "ndl",
+        "NDL identifier",
+        "NDL ID",
+        "NDLA identifier",
+        "NDLA ID",
+        "National Diet Library of Japan ID",
+        "National Diet Library ID",
+        "National Diet Library of Japan authority control ID",
+        "NDL Auth ID",
+        "National Diet Library Auth ID",
+        "NDLSH (NDL Subject Headings)",
+        "NDLNA (NDL Name Authority)",
+        "Web NDL Authorities ID",
+        "NDL Authority Data ID",
+        "NDLNAId"
+      ]
+    },
+    {
+      "id": "P352",
+      "label": "UniProt protein ID",
+      "aliases": [
+        "UniProtKB accession number"
+      ]
+    },
+    {
+      "id": "P353",
+      "label": "HGNC gene symbol",
+      "aliases": [
+        "HUGO Gene Nomenclature Committee gene symbol",
+        "Human Genome Organisation Gene Nomenclature Committee gene symbol"
+      ]
+    },
+    {
+      "id": "P355",
+      "label": "child organization or unit",
+      "aliases": [
+        "subsidiary company",
+        "subsidiary entities",
+        "imprint",
+        "has imprint",
+        "subordinate body",
+        "subordinate unit",
+        "parent company of",
+        "owns",
+        "subsidiary body",
+        "subsidiary organization",
+        "daughter company",
+        "daughter organization",
+        "subsidiary",
+        "child organization",
+        "child organization unit",
+        "subordinate organization unit",
+        "child unit",
+        "child agency",
+        "child company",
+        "child institution",
+        "has chapter",
+        "has subsidiary",
+        "subordinate agency",
+        "agency",
+        "child body"
+      ]
+    },
+    {
+      "id": "P356",
+      "label": "DOI",
+      "aliases": [
+        "Digital Object Identifier"
+      ]
+    },
+    {
+      "id": "P358",
+      "label": "discography",
+      "aliases": [
+        "discography link",
+        "recording catalog"
+      ]
+    },
+    {
+      "id": "P359",
+      "label": "Rijksmonument ID",
+      "aliases": [
+        "Rijksmonument identifier"
+      ]
+    },
+    {
+      "id": "P360",
+      "label": "is a list of",
+      "aliases": [
+        "main topic of list",
+        "list of",
+        "main article of list",
+        "lists",
+        "list has main topic",
+        "is a Wikimedia list of"
+      ]
+    },
+    {
+      "id": "P361",
+      "label": "part of",
+      "aliases": [
+        "meronym of",
+        "section of",
+        "system of",
+        "subsystem of",
+        "subassembly of",
+        "contained within",
+        "assembly of",
+        "part of-property",
+        "component of",
+        "in",
+        "within",
+        "is part of",
+        "subgroup of",
+        "collateral branch of",
+        "branch of",
+        "element of",
+        "chain",
+        "contained in",
+        "of"
+      ]
+    },
+    {
+      "id": "P364",
+      "label": "original language of film or TV show",
+      "aliases": [
+        "original language",
+        "language of the original work",
+        "created on language",
+        "media language"
+      ]
+    },
+    {
+      "id": "P366",
+      "label": "has use",
+      "aliases": [
+        "function",
+        "role",
+        "mission",
+        "purpose",
+        "utility",
+        "used for",
+        "used in",
+        "usage",
+        "used as",
+        "as",
+        "unit mission",
+        "use",
+        "can be used for",
+        "has purpose",
+        "has function",
+        "had use",
+        "have use",
+        "for"
+      ]
+    },
+    {
+      "id": "P367",
+      "label": "astronomic symbol image",
+      "aliases": [
+        "astronomical symbol image",
+        "astronomical symbol",
+        "astronomic symbol",
+        "planetary symbol image",
+        "planetary symbol"
+      ]
+    },
+    {
+      "id": "P368",
+      "label": "Sandbox-CommonsMediaFile",
+      "aliases": [
+        "Sandbox image"
+      ]
+    },
+    {
+      "id": "P369",
+      "label": "Sandbox-Item",
+      "aliases": [
+        "Sandbox",
+        "Sandbox property-item"
+      ]
+    },
+    {
+      "id": "P370",
+      "label": "Sandbox-String",
+      "aliases": [
+        "Sandbox string"
+      ]
+    },
+    {
+      "id": "P371",
+      "label": "presenter",
+      "aliases": [
+        "host",
+        "hostess",
+        "TV presenter",
+        "TV host",
+        "presented by",
+        "hosted by",
+        "event presenter",
+        "radio presenter",
+        "television presenter"
+      ]
+    },
+    {
+      "id": "P373",
+      "label": "Commons category",
+      "aliases": [
+        "commonscat",
+        "category Commons",
+        "category on Commons",
+        "Commons cat",
+        "Wikimedia Commons category",
+        "category Wikipedia Commons",
+        "category on Wikimedia Commons",
+        "Wikimedia Commons cat"
+      ]
+    },
+    {
+      "id": "P374",
+      "label": "Insee municipality code",
+      "aliases": [
+        "Insee municipality ID",
+        "Insee municipality identifier"
+      ]
+    },
+    {
+      "id": "P375",
+      "label": "space launch vehicle",
+      "aliases": [
+        "carrier rocket",
+        "launch vehicle",
+        "rocket used",
+        "launched vehicle"
+      ]
+    },
+    {
+      "id": "P376",
+      "label": "located on astronomical body",
+      "aliases": [
+        "on astronomical location",
+        "on astronomical body",
+        "astronomical body"
+      ]
+    },
+    {
+      "id": "P377",
+      "label": "SCN",
+      "aliases": [
+        "Satellite Catalog Number",
+        "NORAD Catalog Number",
+        "NASA catalog number",
+        "USSPACECOM object number",
+        "SATCAT no."
+      ]
+    },
+    {
+      "id": "P380",
+      "label": "Mérimée ID",
+      "aliases": [
+        "Mérimée identifier"
+      ]
+    },
+    {
+      "id": "P381",
+      "label": "PCP reference number",
+      "aliases": [
+        "PCP ref. no.",
+        "PCP no.",
+        "KGS identifier",
+        "PCP identifier"
+      ]
+    },
+    {
+      "id": "P382",
+      "label": "CBS municipality code",
+      "aliases": [
+        "municipality code (Netherlands)"
+      ]
+    },
+    {
+      "id": "P393",
+      "label": "edition number",
+      "aliases": [
+        "version number",
+        "software version number",
+        "number of event"
+      ]
+    },
+    {
+      "id": "P395",
+      "label": "licence plate code",
+      "aliases": [
+        "license plate code",
+        "vehicle registration plate"
+      ]
+    },
+    {
+      "id": "P396",
+      "label": "SBN author ID",
+      "aliases": [
+        "ICCU",
+        "SBN",
+        "SBN identifier",
+        "Servizio Bibliotecario Nazionale"
+      ]
+    },
+    {
+      "id": "P397",
+      "label": "parent astronomical body",
+      "aliases": [
+        "parent body",
+        "orbits",
+        "star",
+        "planetary system",
+        "primary"
+      ]
+    },
+    {
+      "id": "P398",
+      "label": "child astronomical body",
+      "aliases": [
+        "child body",
+        "satellite",
+        "orbited by",
+        "has planet",
+        "has moon",
+        "secondary"
+      ]
+    },
+    {
+      "id": "P399",
+      "label": "companion of",
+      "aliases": [
+        "astronomic companion of",
+        "astronomical companion of",
+        "companion",
+        "astronomic companion",
+        "astronomical companion",
+        "has companion",
+        "has astronomical companion"
+      ]
+    },
+    {
+      "id": "P400",
+      "label": "platform",
+      "aliases": [
+        "platforms",
+        "computing platform",
+        "game platform",
+        "environment",
+        "runtime",
+        "published on",
+        "hardware"
+      ]
+    },
+    {
+      "id": "P402",
+      "label": "OpenStreetMap relation ID",
+      "aliases": [
+        "OpenStreetMap relation",
+        "OSM relation",
+        "OpenStreetMap relation identifier",
+        "OSM relation ID",
+        "relation ID (OpenStreetMap)",
+        "relation ID (OSM)",
+        "osm rel id"
+      ]
+    },
+    {
+      "id": "P403",
+      "label": "mouth of the watercourse",
+      "aliases": [
+        "watercourse outflow",
+        "watercourse drain",
+        "outflow",
+        "drain",
+        "river mouth",
+        "outlet",
+        "watercourse ends in",
+        "flows into",
+        "tributary of"
+      ]
+    },
+    {
+      "id": "P404",
+      "label": "game mode",
+      "aliases": [
+        "mode",
+        "gameplay",
+        "play mode",
+        "player mode",
+        "player configuration",
+        "gamemode"
+      ]
+    },
+    {
+      "id": "P405",
+      "label": "taxon author",
+      "aliases": [
+        "author citation",
+        "described by",
+        "taxon authority"
+      ]
+    },
+    {
+      "id": "P406",
+      "label": "soundtrack release",
+      "aliases": [
+        "has soundtrack album",
+        "soundtrack extended play",
+        "soundtrack single",
+        "soundtrack album",
+        "OST"
+      ]
+    },
+    {
+      "id": "P407",
+      "label": "language of work or name",
+      "aliases": [
+        "broadcasting language",
+        "audio language",
+        "available in",
+        "language of work",
+        "language of the reference",
+        "language of website",
+        "language of URL",
+        "used language",
+        "language of the name",
+        "language of name",
+        "language of spoken text",
+        "named in language",
+        "language",
+        "language of object"
+      ]
+    },
+    {
+      "id": "P408",
+      "label": "software engine",
+      "aliases": [
+        "engine of software",
+        "game engine",
+        "powered by",
+        "render engine",
+        "engine"
+      ]
+    },
+    {
+      "id": "P409",
+      "label": "Libraries Australia ID",
+      "aliases": [
+        "AuCNLKIN",
+        "AuCNLKIN ID",
+        "AuCNLKIN identifier",
+        "Libraries Australia identifier",
+        "Australian National Bibliographic Database identifier",
+        "NLA Kinetica Service identifier",
+        "CNLKIN",
+        "CNLKIN identifier",
+        "CNL Kinetica Service identifier",
+        "NLA (Australia) identifier",
+        "NLA (Australia) ID"
+      ]
+    },
+    {
+      "id": "P410",
+      "label": "military, police or special rank",
+      "aliases": [
+        "rank",
+        "naval rank",
+        "police rank",
+        "military rank",
+        "military or police rank"
+      ]
+    },
+    {
+      "id": "P411",
+      "label": "canonization status",
+      "aliases": [
+        "canonisation status"
+      ]
+    },
+    {
+      "id": "P412",
+      "label": "voice type",
+      "aliases": [
+        "vocal type",
+        "range of voice",
+        "type of voice",
+        "register",
+        "tessitura",
+        "voice category",
+        "vocal range",
+        "vocal pitch"
+      ]
+    },
+    {
+      "id": "P413",
+      "label": "position played on team / speciality",
+      "aliases": [
+        "fielding position",
+        "specialism",
+        "position (on team)",
+        "speciality",
+        "player position",
+        "position"
+      ]
+    },
+    {
+      "id": "P414",
+      "label": "stock exchange",
+      "aliases": [
+        "exchange",
+        "listed on",
+        "listed on exchange",
+        "listed on stock exchange"
+      ]
+    },
+    {
+      "id": "P415",
+      "label": "radio format",
+      "aliases": [
+        "format",
+        "genre",
+        "radio station format"
+      ]
+    },
+    {
+      "id": "P416",
+      "label": "quantity symbol (string)",
+      "aliases": [
+        "symbol",
+        "variable"
+      ]
+    },
+    {
+      "id": "P418",
+      "label": "has seal, badge, or sigil",
+      "aliases": [
+        "seal",
+        "seal description"
+      ]
+    },
+    {
+      "id": "P421",
+      "label": "located in time zone",
+      "aliases": [
+        "timezone",
+        "time zone",
+        "TZ",
+        "observes time",
+        "observes standard time",
+        "standard time observed",
+        "time observed"
+      ]
+    },
+    {
+      "id": "P423",
+      "label": "shooting handedness",
+      "aliases": [
+        "dominant hand shooting"
+      ]
+    },
+    {
+      "id": "P424",
+      "label": "Wikimedia language code",
+      "aliases": [
+        "MediaWiki interlanguage prefix",
+        "language code",
+        "WMF language code",
+        "Wikibase monolingual text language code"
+      ]
+    },
+    {
+      "id": "P425",
+      "label": "field of this occupation",
+      "aliases": [
+        "profession's field",
+        "activity corresponding to this occupation",
+        "field of this profession",
+        "practices",
+        "practice",
+        "field of occupation",
+        "field of profession",
+        "works in",
+        "does"
+      ]
+    },
+    {
+      "id": "P426",
+      "label": "aircraft registration",
+      "aliases": [
+        "registration",
+        "tail number",
+        "reg"
+      ]
+    },
+    {
+      "id": "P427",
+      "label": "taxonomic type",
+      "aliases": [
+        "type species",
+        "type genus",
+        "type",
+        "type taxon",
+        "genotype",
+        "species typica",
+        "type specimen",
+        "nomenclatural type"
+      ]
+    },
+    {
+      "id": "P428",
+      "label": "botanist author abbreviation",
+      "aliases": [
+        "abbreviation of botanist",
+        "author abbreviation of botanist",
+        "botanist name",
+        "botanical author abbreviation",
+        "botanic author abbreviation",
+        "botany author",
+        "botanist name abbreviation",
+        "IPNI author abbreviation",
+        "standard form",
+        "IPNI standard form"
+      ]
+    },
+    {
+      "id": "P429",
+      "label": "dantai code",
+      "aliases": [
+        "municipality code (Japan)",
+        "Japanese municipality identifier"
+      ]
+    },
+    {
+      "id": "P432",
+      "label": "callsign of airline",
+      "aliases": [
+        "airline callsign",
+        "airline call sign",
+        "airl aéronefine code"
+      ]
+    },
+    {
+      "id": "P433",
+      "label": "issue",
+      "aliases": [
+        "no.",
+        "number",
+        "issue number"
+      ]
+    },
+    {
+      "id": "P434",
+      "label": "MusicBrainz artist ID",
+      "aliases": [
+        "MBID artist",
+        "MB artist ID"
+      ]
+    },
+    {
+      "id": "P435",
+      "label": "MusicBrainz work ID",
+      "aliases": [
+        "work MBID",
+        "song MBID",
+        "MusicBrainz work MBID",
+        "MBID work",
+        "MB work ID",
+        "MBW",
+        "work ID (MusicBrainz)",
+        "song ID (MusicBrainz)",
+        "MusicBrainz song ID",
+        "MusicBrainz composition ID",
+        "composition ID (MusicBrainz)"
+      ]
+    },
+    {
+      "id": "P436",
+      "label": "MusicBrainz release group ID",
+      "aliases": [
+        "release group MBID",
+        "album MBID",
+        "single MBID",
+        "EP MBID",
+        "MusicBrainz album",
+        "MBID release group",
+        "MB release group ID",
+        "MBRG",
+        "album ID (MusicBrainz)",
+        "release group ID (MusicBrainz)",
+        "single ID (MusicBrainz)",
+        "EP ID (MusicBrainz)",
+        "MusicBrainz master ID",
+        "master ID (MusicBrainz)",
+        "MBID",
+        "MBrgID",
+        "MBRGID",
+        "mbrgid"
+      ]
+    },
+    {
+      "id": "P437",
+      "label": "distribution format",
+      "aliases": [
+        "media",
+        "media type",
+        "type of media",
+        "form of publication",
+        "format",
+        "edition",
+        "book format",
+        "media format",
+        "medium",
+        "distribution",
+        "method of distribution",
+        "publication format",
+        "distribution method",
+        "packaged as"
+      ]
+    },
+    {
+      "id": "P439",
+      "label": "German municipality key",
+      "aliases": [
+        "municipality key (Germany)",
+        "Gemeindeschlüssel"
+      ]
+    },
+    {
+      "id": "P440",
+      "label": "German district key",
+      "aliases": [
+        "district key (Germany)"
+      ]
+    },
+    {
+      "id": "P442",
+      "label": "China division code for Statistics",
+      "aliases": [
+        "administrative division codes of the People's Republic of China",
+        "ref:admin:CN:nbs"
+      ]
+    },
+    {
+      "id": "P443",
+      "label": "pronunciation audio",
+      "aliases": [
+        "audio pronunciation",
+        "listen"
+      ]
+    },
+    {
+      "id": "P444",
+      "label": "review score",
+      "aliases": [
+        "review rating",
+        "rating (score)"
+      ]
+    },
+    {
+      "id": "P447",
+      "label": "review score by",
+      "aliases": [
+        "reviewer",
+        "score issuer",
+        "publication",
+        "scorer"
+      ]
+    },
+    {
+      "id": "P449",
+      "label": "original broadcaster",
+      "aliases": [
+        "original channel",
+        "channel",
+        "TV channel",
+        "radio network",
+        "network",
+        "television channel",
+        "radio station",
+        "original air channel",
+        "broadcast on",
+        "first air channel",
+        "original network",
+        "aired on",
+        "airs on"
+      ]
+    },
+    {
+      "id": "P451",
+      "label": "unmarried partner",
+      "aliases": [
+        "girlfriend",
+        "boyfriend",
+        "lover",
+        "cohabitant",
+        "partner",
+        "domestic partner",
+        "significant other",
+        "enbyfriend",
+        "romantic partner",
+        "life partner",
+        "partners",
+        "is partner of",
+        "is the partner of",
+        "SO",
+        "partner of",
+        "posslq",
+        "spiritual partner",
+        "relationship",
+        "non-married partner"
+      ]
+    },
+    {
+      "id": "P452",
+      "label": "industry",
+      "aliases": [
+        "field of exercise",
+        "branch",
+        "economic branch",
+        "field of action",
+        "sector"
+      ]
+    },
+    {
+      "id": "P453",
+      "label": "character role",
+      "aliases": [
+        "role",
+        "as",
+        "plays",
+        "acting role",
+        "performer of"
+      ]
+    },
+    {
+      "id": "P454",
+      "label": "Structurae structure ID",
+      "aliases": [
+        "Structurae ID (structure)",
+        "Structurae ID for building",
+        "Structurae ID for structure"
+      ]
+    },
+    {
+      "id": "P455",
+      "label": "Emporis building ID",
+      "aliases": [
+        "EBN",
+        "Emporis Building Number"
+      ]
+    },
+    {
+      "id": "P457",
+      "label": "foundational text",
+      "aliases": [
+        "establishing document",
+        "enabling law",
+        "created in document",
+        "constitutive text",
+        "created by",
+        "founding document",
+        "charter",
+        "constitution",
+        "treaty",
+        "organic law",
+        "established under",
+        "established by",
+        "main text"
+      ]
+    },
+    {
+      "id": "P459",
+      "label": "determination method or standard",
+      "aliases": [
+        "determined by",
+        "method",
+        "methodology",
+        "method of determination",
+        "standard",
+        "rationale",
+        "justification",
+        "measured by"
+      ]
+    },
+    {
+      "id": "P460",
+      "label": "said to be the same as",
+      "aliases": [
+        "the same as",
+        "equivalent to",
+        "equivalent of",
+        "is the same as",
+        "is said to be the same as",
+        "same",
+        "conspecific with",
+        "said to be equal to",
+        "equal to",
+        "could be equal to",
+        "may be equal to",
+        "could be",
+        "may be",
+        "said to be same as",
+        "same as",
+        "synonymous with",
+        "said to be identical to",
+        "may be identical to",
+        "could be identical to",
+        "identical to",
+        "could be the same as",
+        "may be the same as",
+        "identical",
+        "equal",
+        "considered to be the same as",
+        "considered the same as"
+      ]
+    },
+    {
+      "id": "P461",
+      "label": "opposite of",
+      "aliases": [
+        "inverse",
+        "opposite",
+        "is the opposite of",
+        "inverse of",
+        "contrasted to",
+        "contrast of",
+        "is opposite of",
+        "opposite to",
+        "has opposite",
+        "antagonist",
+        "adversary",
+        "opponent"
+      ]
+    },
+    {
+      "id": "P462",
+      "label": "color",
+      "aliases": [
+        "colour",
+        "colors",
+        "colours",
+        "has color",
+        "has colour",
+        "pigment",
+        "dye",
+        "has the colour",
+        "has the color",
+        "of the color",
+        "of the colour",
+        "with the colour",
+        "with the color"
+      ]
+    },
+    {
+      "id": "P463",
+      "label": "member of",
+      "aliases": [
+        "membership",
+        "band member of",
+        "member of musical group",
+        "in musical group",
+        "of organization",
+        "is member of",
+        "club"
+      ]
+    },
+    {
+      "id": "P465",
+      "label": "sRGB color hex triplet",
+      "aliases": [
+        "colour (hex triplet)",
+        "color hex triplet",
+        "RGB",
+        "sRGB",
+        "color triplet",
+        "hexcode",
+        "hex color"
+      ]
+    },
+    {
+      "id": "P466",
+      "label": "occupant",
+      "aliases": [
+        "tenant",
+        "inhabitant",
+        "renter",
+        "lessee",
+        "houses",
+        "location of",
+        "resident",
+        "home team",
+        "occupier",
+        "occupiers",
+        "occupants",
+        "user",
+        "users",
+        "inhabited by",
+        "used by",
+        "occupied by"
+      ]
+    },
+    {
+      "id": "P467",
+      "label": "legislated by",
+      "aliases": [
+        "enacted by",
+        "passed by",
+        "adopted by"
+      ]
+    },
+    {
+      "id": "P468",
+      "label": "dan/kyu rank",
+      "aliases": [
+        "go rank",
+        "judo rank",
+        "wushu rank",
+        "shogi rank",
+        "renju rank",
+        "kendo rank"
+      ]
+    },
+    {
+      "id": "P469",
+      "label": "lake on watercourse",
+      "aliases": [
+        "reservoir on this river",
+        "lake on this river",
+        "lakes on river",
+        "lake on river",
+        "lake on stream"
+      ]
+    },
+    {
+      "id": "P473",
+      "label": "local dialing code",
+      "aliases": [
+        "local calling code",
+        "telephone numbering plan",
+        "STD code",
+        "telephone code",
+        "telephone prefix",
+        "dialling code",
+        "area code",
+        "local dialling code"
+      ]
+    },
+    {
+      "id": "P474",
+      "label": "telephone country code",
+      "aliases": [
+        "phone country code",
+        "country code"
+      ]
+    },
+    {
+      "id": "P476",
+      "label": "CELEX number",
+      "aliases": [
+        "CELEX code",
+        "EUR-Lex ID"
+      ]
+    },
+    {
+      "id": "P477",
+      "label": "Canadian Register of Historic Places ID",
+      "aliases": [
+        "Canadian Historic Places identifier",
+        "historicplaces.ca",
+        "CRHP ID"
+      ]
+    },
+    {
+      "id": "P478",
+      "label": "volume",
+      "aliases": [
+        "volume of a book",
+        "volume of serial",
+        "vol.",
+        "tome",
+        "numbering of part",
+        "series numbering",
+        "numbering in series",
+        "number of series",
+        "number of part",
+        "part number",
+        "volume number",
+        "numbering of volume"
+      ]
+    },
+    {
+      "id": "P479",
+      "label": "input device",
+      "aliases": [
+        "input",
+        "digitiser",
+        "input device",
+        "input method"
+      ]
+    },
+    {
+      "id": "P480",
+      "label": "FilmAffinity film ID",
+      "aliases": [
+        "FilmAffinity identifier",
+        "FilmAffinity movie ID",
+        "FilmAffinity ID",
+        "FilmAffinity.com film ID",
+        "FilmAffinity.com movie ID",
+        "FA ID"
+      ]
+    },
+    {
+      "id": "P481",
+      "label": "Palissy ID",
+      "aliases": [
+        "Palissy",
+        "Palissy identifier"
+      ]
+    },
+    {
+      "id": "P483",
+      "label": "recorded at studio or venue",
+      "aliases": [
+        "recording studio",
+        "recording venue",
+        "recorded at event",
+        "studio",
+        "venue"
+      ]
+    },
+    {
+      "id": "P484",
+      "label": "IMA Number, broad sense",
+      "aliases": [
+        "IMA approval year"
+      ]
+    },
+    {
+      "id": "P485",
+      "label": "archives at",
+      "aliases": [
+        "papers at",
+        "correspondence at",
+        "archive location",
+        "archives held in"
+      ]
+    },
+    {
+      "id": "P486",
+      "label": "MeSH descriptor ID",
+      "aliases": [
+        "MeSH Unique ID",
+        "UI",
+        "MeSH ID"
+      ]
+    },
+    {
+      "id": "P487",
+      "label": "Unicode character",
+      "aliases": [
+        "Unicode symbol",
+        "emoji",
+        "pictograph",
+        "emote"
+      ]
+    },
+    {
+      "id": "P488",
+      "label": "chairperson",
+      "aliases": [
+        "leader",
+        "headed by",
+        "chairwoman",
+        "president",
+        "chair",
+        "chairman",
+        "dean"
+      ]
+    },
+    {
+      "id": "P489",
+      "label": "currency sign",
+      "aliases": [
+        "currency sign description",
+        "currency symbol",
+        "currency symbol description"
+      ]
+    },
+    {
+      "id": "P491",
+      "label": "orbit diagram",
+      "aliases": [
+        "orbital diagram"
+      ]
+    },
+    {
+      "id": "P492",
+      "label": "OMIM ID",
+      "aliases": [
+        "Online Mendelian Inheritance in Man",
+        "OMIM",
+        "MIM number"
+      ]
+    },
+    {
+      "id": "P493",
+      "label": "ICD-9 ID",
+      "aliases": [
+        "ICD-9 code",
+        "code ICD-9",
+        "ICD 9",
+        "Koodu ICD-9",
+        "Koodu mpaghara:: ICD-9"
+      ]
+    },
+    {
+      "id": "P494",
+      "label": "ICD-10 ID",
+      "aliases": [
+        "ICD 10",
+        "ICD-10 code"
+      ]
+    },
+    {
+      "id": "P495",
+      "label": "country of origin",
+      "aliases": [
+        "place of origin",
+        "comes from",
+        "CoO",
+        "originates from",
+        "origin country",
+        "country",
+        "homeland"
+      ]
+    },
+    {
+      "id": "P496",
+      "label": "ORCID iD",
+      "aliases": [
+        "Open Research Contributor ID",
+        "ORC ID",
+        "Open Researcher and Contributor ID",
+        "ORCiD",
+        "ORCID iD",
+        "ORCID ID"
+      ]
+    },
+    {
+      "id": "P498",
+      "label": "ISO 4217 code",
+      "aliases": [
+        "ISO 4217",
+        "ISO 4217 alphabetic code",
+        "ISO currency code",
+        "currency code"
+      ]
+    }
+  ]
+}

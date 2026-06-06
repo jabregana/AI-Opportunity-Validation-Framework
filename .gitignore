@@ -7,6 +7,7 @@ dist/
 build/
 *.egg-info/
 
-# Large/derived data — never check in
-fixtures/data/
+# Large/derived data — never check in (except the pinned WikiData cache)
+fixtures/data/*
+!fixtures/data/wikidata_aliases.json
 runs/

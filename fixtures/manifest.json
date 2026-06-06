@@ -21,11 +21,14 @@
       "description": "Synthetic Mem0 v3 export. Not yet implemented.",
       "status": "stub"
     },
-    "W-WIKIDATA-100K": {
-      "loader": "TODO",
-      "version": null,
-      "description": "WikiData property-alias dump (~100k pairs). Not yet implemented.",
-      "status": "stub"
+    "W-WIKIDATA-PROPS": {
+      "loader": "fixtures.workloads.w_wikidata_props:load",
+      "version": "0.1.0",
+      "description": "WikiData property labels + English aliases via wbgetentities REST API. Default scale: P1..P500 -> 288 properties with aliases -> 2457 workload pairs. Regenerate with python -m fixtures.generators.wikidata_aliases --max-pid N.",
+      "oracle_cardinality_default": 288,
+      "deterministic": "yes (cached JSON)",
+      "sha_pinned": false,
+      "notes": "Realistic paraphrase distribution (e.g., 'head of government' has 10 English aliases). Replaces the W-WIKIDATA-100K stub; 100K-scale fetch is multi-hour and unnecessary for current pilot statistical needs."
     },
     "W-CHURN-30D": {
       "loader": "TODO",

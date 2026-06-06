@@ -1,11 +1,12 @@
 from __future__ import annotations
 from typing import Callable
 
-from . import w_conceptnet_rel
+from . import w_conceptnet_rel, w_wikidata_props
 
 # Registry: workload_id -> loader callable returning list[(input_relation, oracle_canonical)]
 LOADERS: dict[str, Callable[[], list[tuple[str, str]]]] = {
     "W-CONCEPTNET-REL": w_conceptnet_rel.load,
+    "W-WIKIDATA-PROPS": w_wikidata_props.load,
 }
 
 
