@@ -1,6 +1,6 @@
 """Multi-tenant proxy variants.
 
-Three variants in this module, escalating in cross-source intelligence:
+Four variants in this module, escalating in cross-source intelligence:
 
   v0.4.0 PerSourceNamespaceProxy
     Per-source isolation. Never merges across sources. Source-prefixed
@@ -15,12 +15,23 @@ Three variants in this module, escalating in cross-source intelligence:
   v0.4.2 LazyCrossSourceConsensusProxy
     LAZY cross-source merge: write path is pure per-source isolation
     (same cost as v0.4.0), with a separate `consolidate()` method that
-    runs the merge offline using both alias-set Jaccard AND embedding-
-    similarity. The harness calls consolidate() between pass 1 and
-    pass 2 so reads see the final canonical. In production this maps
-    to a periodic background job that runs on a configurable cadence.
+    runs the merge offline using alias-set Jaccard OR embedding
+    cosine. The harness calls consolidate() between pass 1 and pass 2
+    so reads see the final canonical. In production this maps to a
+    periodic background job that runs on a configurable cadence.
 
-The v0.4.2 design is the deliberate write-latency-vs-merge-accuracy
+  v0.4.3 LazyConsensusANDRuleProxy
+    Same lazy design as v0.4.2 but with two added safety checks:
+      1. AND rule: both Jaccard AND embedding cosine must clear
+         their thresholds (vs v0.4.2's OR).
+      2. min_overlap: alias sets must share at least N elements
+         (default 2), not just one. v0.4.2 over-merges WIKIDATA
+         clusters that share only the common surface form "Apple"
+         (Jaccard = 1.0 over the single shared element). Requiring
+         two shared aliases ensures the evidence is more than a
+         single naming collision.
+
+The v0.4.2+ designs are the deliberate write-latency-vs-merge-accuracy
 split documented in the project README. Per-write cost stays at v0.3.1
 levels; cross-source intelligence accumulates with eventual consistency.
 """
@@ -380,6 +391,141 @@ class LazyCrossSourceConsensusProxy(Variant):
         for k in keys:
             members_by_root.setdefault(find(k), []).append(k)
         # Only merge classes with >=2 members get a merged canonical.
+        for root, members in members_by_root.items():
+            if len(members) < 2:
+                continue
+            merged_name = f"merged::{root[1]}"
+            for m in members:
+                self._merged[m] = merged_name
+
+        return {
+            "n_keys": len(keys),
+            "n_merge_edges": n_edges,
+            "n_merged_clusters": sum(
+                1 for members in members_by_root.values() if len(members) >= 2
+            ),
+            "n_singleton_keys": sum(
+                1 for members in members_by_root.values() if len(members) == 1
+            ),
+            "merge_reasons": reasons,
+        }
+
+
+class LazyConsensusANDRuleProxy(LazyCrossSourceConsensusProxy):
+    """v0.4.3: lazy cross-source merge with AND rule + min_overlap.
+
+    Inherits v0.4.2's lazy execution model (per-source write path,
+    explicit consolidate() between pass 1 and pass 2). Adds two safety
+    checks to address v0.4.2's WIKIDATA over-merging:
+
+    1. AND rule: both Jaccard AND embedding cosine must clear their
+       thresholds (vs v0.4.2's OR). Requires evidence from both
+       signal types before merging.
+
+    2. min_overlap_for_merge (default 2): the alias intersection must
+       have at least this many shared elements. v0.4.2 happily merges
+       two single-alias clusters that share their one alias (Jaccard
+       = 1.0). On WIKIDATA, several (source, local) clusters end up
+       single-alias for distinct entities that happen to share a
+       common surface like "Apple"; requiring two shared aliases
+       blocks these spurious one-word merges.
+
+    Trade-off: more conservative than v0.4.2. Will miss merges where
+    two sources legitimately share only one alias for the same entity.
+    For realistic enterprise data where teams use multiple aliases
+    per entity, this is safe. For sparse data, may under-merge.
+    """
+
+    name = "embed-proxy-v0.4.3-and-rule"
+
+    def __init__(
+        self,
+        inner_factory=None,
+        alias_jaccard_threshold: float = 0.5,
+        embedding_cosine_threshold: float = 0.85,
+        min_aliases_for_merge: int = 2,
+        min_overlap_for_merge: int = 2,
+    ):
+        if min_overlap_for_merge < 1:
+            raise ValueError("min_overlap_for_merge must be >= 1")
+        super().__init__(
+            inner_factory=inner_factory,
+            alias_jaccard_threshold=alias_jaccard_threshold,
+            embedding_cosine_threshold=embedding_cosine_threshold,
+            min_aliases_for_merge=min_aliases_for_merge,
+        )
+        self._min_overlap = min_overlap_for_merge
+
+    def consolidate(self) -> dict:
+        """Union-find merge with AND rule and min_overlap constraint."""
+        keys = list(self._aliases.keys())
+        centroids: dict[tuple[str, str], list[float] | None] = {
+            k: self._centroid(k) for k in keys
+        }
+        parent: dict[tuple[str, str], tuple[str, str]] = {k: k for k in keys}
+
+        def find(k: tuple[str, str]) -> tuple[str, str]:
+            while parent[k] != k:
+                parent[k] = parent[parent[k]]
+                k = parent[k]
+            return k
+
+        def union(a: tuple[str, str], b: tuple[str, str]) -> None:
+            ra, rb = find(a), find(b)
+            if ra != rb:
+                parent[rb] = ra
+
+        n_edges = 0
+        reasons = {
+            "and_passed": 0,
+            "blocked_overlap_below_min": 0,
+            "blocked_jaccard_below": 0,
+            "blocked_cosine_below": 0,
+            "blocked_both": 0,
+        }
+        for i in range(len(keys)):
+            ki = keys[i]
+            ai = self._aliases[ki]
+            if len(ai) < self._min_aliases:
+                continue
+            ci = centroids.get(ki)
+            for j in range(i + 1, len(keys)):
+                kj = keys[j]
+                if ki[0] == kj[0]:
+                    continue
+                aj = self._aliases[kj]
+                if len(aj) < self._min_aliases:
+                    continue
+                overlap = len(ai & aj)
+                if overlap < self._min_overlap:
+                    reasons["blocked_overlap_below_min"] += 1
+                    continue
+                union_size = len(ai | aj)
+                jaccard = overlap / union_size if union_size > 0 else 0.0
+                cosine_score = (
+                    _cosine(ci, centroids[kj])
+                    if ci is not None and centroids.get(kj) is not None
+                    else 0.0
+                )
+                jac_ok = jaccard >= self._jaccard_threshold
+                cos_ok = cosine_score >= self._cosine_threshold
+                if jac_ok and cos_ok:
+                    union(ki, kj)
+                    n_edges += 1
+                    reasons["and_passed"] += 1
+                elif jac_ok and not cos_ok:
+                    reasons["blocked_cosine_below"] += 1
+                elif cos_ok and not jac_ok:
+                    reasons["blocked_jaccard_below"] += 1
+                else:
+                    reasons["blocked_both"] += 1
+
+        # Same membership-size filter as v0.4.2: only equivalence
+        # classes with >= 2 members get a merged canonical.
+        self._merged.clear()
+        members_by_root: dict[tuple[str, str], list[tuple[str, str]]] = {}
+        for k in keys:
+            members_by_root.setdefault(find(k), []).append(k)
         for root, members in members_by_root.items():
             if len(members) < 2:
                 continue

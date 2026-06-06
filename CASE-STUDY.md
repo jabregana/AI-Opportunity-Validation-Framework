@@ -66,7 +66,7 @@ Gauntlet pass status:
 
 v0.3.1 is the first variant to pass all UC-4.x gates simultaneously on real WikiData. v0.1.0 wins UC-4.7 held-out generalization (28.4%) because its lower threshold catches more near-matches; v0.3.1 trades that for Tier B safety.
 
-## Honest limits
+## Known limits
 
 A probe with real sentence transformers (MiniLM-L6-v2 at 22M parameters and BGE-base-en-v1.5 at 110M; `docs/finding-neural-ceiling.md`) confirmed that bigger neural models do not separate true paraphrases from sibling or antonym hard negatives. The cosine distributions overlap by 55-67% under any tested model. This is the antonym/sibling problem of distributional semantics; cosine reflects training-context co-occurrence, not semantic identity. Bigger models compress the distribution upward, making the overlap worse.
 

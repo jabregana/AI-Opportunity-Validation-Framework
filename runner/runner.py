@@ -53,7 +53,7 @@ def _run_variant(variant, workload, two_pass: bool = True):
         consolidate() runs the cross-source merge; pass 2 returns merged
         canonicals. The diff between pass 1 and pass 2 is the drift_rate.
       - UC-4.6 latency benchmark uses _run_variant_single_pass instead
-        to keep timing honest.
+        to keep timing measurement accurate.
     """
     t0 = time.perf_counter()
     # Pass 1: ingestion. Capture pre-consolidation predictions for the
@@ -79,7 +79,7 @@ def _run_variant(variant, workload, two_pass: bool = True):
     else:
         raise RuntimeError(
             "single-pass via _run_variant is no longer supported; "
-            "use _run_variant_single_pass for latency-honest measurement"
+            "use _run_variant_single_pass for accurate latency measurement"
         )
     elapsed = time.perf_counter() - t0
     return preds, pre_preds, consolidation_summary, elapsed

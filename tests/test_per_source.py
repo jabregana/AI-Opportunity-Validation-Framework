@@ -15,6 +15,7 @@ import random
 
 from runner.variants.per_source import (
     CrossSourceConsensusProxy,
+    LazyConsensusANDRuleProxy,
     LazyCrossSourceConsensusProxy,
     PerSourceNamespaceProxy,
 )
@@ -455,6 +456,120 @@ def test_lazy_proxy_order_invariance():
 
     ari = adjusted_rand_index(sig_a, sig_b)
     assert ari >= 0.9, f"low order-invariance: ARI = {ari:.3f}"
+
+
+def test_v043_blocks_single_shared_alias_merge():
+    """v0.4.3 min_overlap=2 blocks the WIKIDATA-style failure where two
+    single-alias clusters across sources merge because they share their
+    one surface form (e.g. tech_company 'Apple' vs biology 'Apple')."""
+
+    class _ApplePassthrough(Variant):
+        name = "test-passthrough"
+
+        def __init__(self):
+            self._cache: dict[str, str] = {}
+
+        def align(self, input_relation):
+            return self._cache.setdefault(input_relation, input_relation)
+
+    # v0.4.2 with min_aliases=1 over-merges here.
+    v042 = LazyCrossSourceConsensusProxy(
+        inner_factory=_ApplePassthrough,
+        alias_jaccard_threshold=0.5,
+        embedding_cosine_threshold=1.0,  # disable embedding path (cos never exceeds 1)
+        min_aliases_for_merge=1,
+    )
+    v042.align_with_context("Apple", {"source_id": "tech"})
+    v042.align_with_context("Apple", {"source_id": "biology"})
+    summary = v042.consolidate()
+    # v0.4.2 fires the merge — this is the bug v0.4.3 addresses.
+    assert summary["n_merge_edges"] == 1
+
+    # v0.4.3 default (min_overlap=2) blocks it.
+    v043 = LazyConsensusANDRuleProxy(
+        inner_factory=_ApplePassthrough,
+        alias_jaccard_threshold=0.5,
+        embedding_cosine_threshold=1.0,  # disable embedding path (cos never exceeds 1) so we
+                                          # isolate the overlap rule
+        min_aliases_for_merge=1,
+        min_overlap_for_merge=2,
+    )
+    v043.align_with_context("Apple", {"source_id": "tech"})
+    v043.align_with_context("Apple", {"source_id": "biology"})
+    summary = v043.consolidate()
+    assert summary["n_merge_edges"] == 0
+    assert summary["merge_reasons"]["blocked_overlap_below_min"] == 1
+
+
+def test_v043_and_rule_requires_both_signals():
+    """v0.4.3 needs BOTH Jaccard and embedding cosine to fire. Lone
+    cosine match is not enough; lone Jaccard match is not enough."""
+
+    class _DistinctEmbedder:
+        dim = 2
+
+        def embed(self, text):
+            # Two distinct vectors so we can force cosine to be low
+            if "X" in text:
+                return [1.0, 0.0]
+            return [0.0, 1.0]
+
+    class _InnerWithEmbedder:
+        name = "t"
+        embedder = _DistinctEmbedder()
+
+        def align(self, input_relation):
+            return input_relation
+
+    # High Jaccard, low cosine: should NOT merge under AND.
+    v043 = LazyConsensusANDRuleProxy(
+        inner_factory=_InnerWithEmbedder,
+        alias_jaccard_threshold=0.4,
+        embedding_cosine_threshold=0.8,
+        min_aliases_for_merge=2,
+        min_overlap_for_merge=2,
+    )
+    # source A: ["X", "Y"] — embedding for X plus embedding for Y mixed
+    # source B: ["X", "Y"] — same content as A
+    # Actually with our distinct embedder, embed("X") = [1,0] and
+    # embed("Y") = [0,1]. Both inner returns input as canonical.
+    # The aliases for (A, "X") = {"X"}, for (A, "Y") = {"Y"}; min_aliases=2 blocks.
+    # Need to set up so single canonical accumulates >=2 aliases.
+
+    class _SingleClusterInner:
+        name = "t2"
+        embedder = _DistinctEmbedder()
+
+        def align(self, input_relation):
+            return "CLUSTER"  # everything goes into one canonical
+
+    v043b = LazyConsensusANDRuleProxy(
+        inner_factory=_SingleClusterInner,
+        alias_jaccard_threshold=0.4,
+        embedding_cosine_threshold=0.8,
+        min_aliases_for_merge=2,
+        min_overlap_for_merge=2,
+    )
+    # source A: aliases {X, Y}; source B: same
+    for s in ["A", "B"]:
+        v043b.align_with_context("X", {"source_id": s})
+        v043b.align_with_context("Y", {"source_id": s})
+    # Now (A, "CLUSTER") aliases = {X, Y}, same for B.
+    # Jaccard = 1.0 (passes). Embedding centroid for A is mean of
+    # [1,0] and [0,1] = [0.5, 0.5] (after normalize). Same for B.
+    # Cosine = 1.0. Both pass. Merge.
+    summary = v043b.consolidate()
+    assert summary["n_merge_edges"] == 1
+
+
+def test_v043_default_min_overlap_is_2():
+    p = LazyConsensusANDRuleProxy()
+    assert p._min_overlap == 2
+
+
+def test_v043_min_overlap_invalid_raises():
+    with pytest.raises(ValueError):
+        LazyConsensusANDRuleProxy(min_overlap_for_merge=0)
 
 
 def test_wikidata_disambiguation_workload_loads():
