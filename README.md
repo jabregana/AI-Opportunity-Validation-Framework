@@ -157,7 +157,7 @@ v0.4.2 is the production-shape design: write path serves online traffic at v0.3.
 
 Picking a wedge in a moving competitive landscape is easy to get wrong. The opportunity scan and the harness are deliberate sequencing: first establish that the niche is real and unoccupied, then put the measurement infrastructure in place, then build the proxy. The first real candidate variant landed against the same gates as every later iteration, so progress (and the two genuine reversals when real data flipped synthetic results) is unambiguous.
 
-For a tighter narrative of the project (problem framing, decision sequencing, iteration record, known limits, what the harness was actually worth), see [`CASE-STUDY.md`](CASE-STUDY.md).
+For a tighter narrative of the project (problem framing, decision sequencing, iteration record, known limits, what the harness was actually worth), see [`CASE-STUDY.md`](CASE-STUDY.md). For a candid audit of what the current state does and does not prove, see [`GAPS-AND-LIMITATIONS.md`](GAPS-AND-LIMITATIONS.md).
 
 ## License
 

@@ -97,6 +97,10 @@ These are the kinds of mistakes that ship in real teams when measurement is an a
 
 The single-tenant story is in good shape. v0.3.1 is the GA candidate. Open questions are about scale, multi-tenancy, and downstream integration, not about whether the core proxy works.
 
+## Candid audit
+
+A separate document, [`GAPS-AND-LIMITATIONS.md`](GAPS-AND-LIMITATIONS.md), audits what the current state of the project does and does not prove. The headline: we have a well-instrumented prototype, not a verified product. The largest gaps are no head-to-head against Mem0, no real agent memory data (LongMemEval is stubbed), no scale tests beyond K ≈ 300 canonicals, and a multi-tenant story that rests on two small workloads we authored ourselves.
+
 ## Pointers
 
 - Opportunity: [`docs/opportunity.md`](docs/opportunity.md)
