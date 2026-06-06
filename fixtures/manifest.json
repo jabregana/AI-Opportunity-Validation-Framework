@@ -9,11 +9,13 @@
       "sha_pinned": false,
       "notes": "SHA is computed at load time via artifacts.workload_sha256() and recorded in each run artifact."
     },
-    "W-LME-S": {
-      "loader": "TODO",
-      "version": null,
-      "description": "LongMemEval-S subset (Xu et al., 2024). Not yet implemented.",
-      "status": "stub"
+    "W-LONGMEMEVAL-S": {
+      "loader": "fixtures.workloads.w_longmemeval_s:load (raises NotImplementedError)",
+      "version": "0.1.0-stub",
+      "description": "LongMemEval-S benchmark (Xu et al., 2024). Dataset is downloaded; loader is a stub pending NER + retrieval integration. See docs/longmemeval-integration-plan.md.",
+      "status": "characterized-but-not-loadable",
+      "dataset_path": "~/.cache/huggingface/hub/datasets--xiaowu0162--LongMemEval/snapshots/.../longmemeval_s",
+      "raw_size_bytes": 278025796
     },
     "W-MEM0-EXP": {
       "loader": "TODO",
