@@ -546,6 +546,119 @@ class LazyConsensusANDRuleProxy(LazyCrossSourceConsensusProxy):
         }
 
 
+class IntrospectiveLazyConsensusProxy(LazyConsensusANDRuleProxy):
+    """v0.4.4: lazy consensus with workload-adaptive thresholds.
+
+    Inspects the distribution of cross-source pair scores during
+    consolidate() and picks aggressive or conservative thresholds
+    based on the observed structure. The goal: match the best
+    manually-tuned v0.4.x on each workload without user input.
+
+    Heuristic:
+    1. Compute alias-overlap counts across all cross-source pairs
+       that pass the min_aliases gate.
+    2. Count "strong" pairs (overlap >= 2 AND embedding cosine >= 0.85
+       AND Jaccard >= 0.5). These are confident multi-evidence
+       global-stratum matches.
+    3. If the strong-pair density (strong / total considered) exceeds
+       `strong_density_aggressive_threshold` (default 0.02), the
+       workload looks global-stratum-heavy; relax min_aliases to 1
+       so single-alias singletons can also participate in merging.
+       Otherwise stay at the conservative min_aliases.
+
+    The classification is a one-shot decision per consolidate() call,
+    not adaptive within a single consolidation. For workloads that
+    shift character over time, re-running consolidate after every
+    epoch lets the variant re-pick.
+
+    Reports the classification + chosen thresholds in the consolidate
+    summary so the runner can log it.
+    """
+
+    name = "embed-proxy-v0.4.4-adaptive"
+
+    def __init__(
+        self,
+        inner_factory=None,
+        alias_jaccard_threshold: float = 0.5,
+        embedding_cosine_threshold: float = 0.85,
+        conservative_min_aliases: int = 2,
+        conservative_min_overlap: int = 2,
+        aggressive_min_aliases: int = 1,
+        aggressive_min_overlap: int = 1,
+        strong_density_aggressive_threshold: float = 0.02,
+    ):
+        super().__init__(
+            inner_factory=inner_factory,
+            alias_jaccard_threshold=alias_jaccard_threshold,
+            embedding_cosine_threshold=embedding_cosine_threshold,
+            min_aliases_for_merge=conservative_min_aliases,
+            min_overlap_for_merge=conservative_min_overlap,
+        )
+        self._conservative_min_aliases = conservative_min_aliases
+        self._conservative_min_overlap = conservative_min_overlap
+        self._aggressive_min_aliases = aggressive_min_aliases
+        self._aggressive_min_overlap = aggressive_min_overlap
+        self._strong_density_threshold = strong_density_aggressive_threshold
+
+    def consolidate(self) -> dict:
+        """Two-phase consolidate: classify workload first, then merge."""
+        keys = list(self._aliases.keys())
+        centroids = {k: self._centroid(k) for k in keys}
+
+        # Phase 1: classify workload using overlap>=2 + jaccard>=0.5 +
+        # cosine>=0.85 as the "strong evidence" signal. Considers pairs
+        # at the conservative min_aliases gate.
+        n_total = 0
+        n_strong = 0
+        for i in range(len(keys)):
+            ki = keys[i]
+            ai = self._aliases[ki]
+            if len(ai) < self._conservative_min_aliases:
+                continue
+            ci = centroids.get(ki)
+            for j in range(i + 1, len(keys)):
+                kj = keys[j]
+                if ki[0] == kj[0]:
+                    continue
+                aj = self._aliases[kj]
+                if len(aj) < self._conservative_min_aliases:
+                    continue
+                n_total += 1
+                overlap = len(ai & aj)
+                if overlap < 2:
+                    continue
+                union_size = len(ai | aj)
+                jaccard = overlap / union_size if union_size > 0 else 0.0
+                if jaccard < self._jaccard_threshold:
+                    continue
+                if ci is None or centroids.get(kj) is None:
+                    continue
+                if _cosine(ci, centroids[kj]) < self._cosine_threshold:
+                    continue
+                n_strong += 1
+
+        density = n_strong / n_total if n_total > 0 else 0.0
+
+        if density >= self._strong_density_threshold:
+            classification = "global_stratum_heavy"
+            self._min_aliases = self._aggressive_min_aliases
+            self._min_overlap = self._aggressive_min_overlap
+        else:
+            classification = "ambiguity_heavy"
+            self._min_aliases = self._conservative_min_aliases
+            self._min_overlap = self._conservative_min_overlap
+
+        # Phase 2: run the inherited AND-rule consolidate with the
+        # picked settings.
+        result = super().consolidate()
+        result["adaptive_classification"] = classification
+        result["adaptive_strong_density"] = density
+        result["adaptive_min_aliases_chosen"] = self._min_aliases
+        result["adaptive_min_overlap_chosen"] = self._min_overlap
+        return result
+
+
 class PerSourceNamespaceProxy(Variant):
     """Maintain one inner variant per observed source_id.
 

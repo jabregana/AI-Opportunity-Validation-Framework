@@ -11,6 +11,7 @@ from .embed_proxy import (
 )
 from .per_source import (
     CrossSourceConsensusProxy,
+    IntrospectiveLazyConsensusProxy,
     LazyConsensusANDRuleProxy,
     LazyCrossSourceConsensusProxy,
     PerSourceNamespaceProxy,
@@ -29,6 +30,7 @@ FACTORIES: dict[str, Callable[[], Variant]] = {
     "embed-proxy-v0.4.1-consensus": CrossSourceConsensusProxy,
     "embed-proxy-v0.4.2-lazy-consensus": LazyCrossSourceConsensusProxy,
     "embed-proxy-v0.4.3-and-rule": LazyConsensusANDRuleProxy,
+    "embed-proxy-v0.4.4-adaptive": IntrospectiveLazyConsensusProxy,
 }
 
 

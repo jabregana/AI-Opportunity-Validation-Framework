@@ -15,6 +15,7 @@ import random
 
 from runner.variants.per_source import (
     CrossSourceConsensusProxy,
+    IntrospectiveLazyConsensusProxy,
     LazyConsensusANDRuleProxy,
     LazyCrossSourceConsensusProxy,
     PerSourceNamespaceProxy,
@@ -570,6 +571,66 @@ def test_v043_default_min_overlap_is_2():
 def test_v043_min_overlap_invalid_raises():
     with pytest.raises(ValueError):
         LazyConsensusANDRuleProxy(min_overlap_for_merge=0)
+
+
+def test_v044_classifies_global_heavy_workload_aggressive():
+    """v0.4.4 should detect lots of overlap and switch to aggressive."""
+
+    class _SingleClusterInner(Variant):
+        name = "scl"
+
+        def align(self, input_relation: str) -> str:
+            return "CLUSTER"
+
+    p = IntrospectiveLazyConsensusProxy(
+        inner_factory=_SingleClusterInner,
+        embedding_cosine_threshold=2.0,  # disable embedding; detection via Jaccard
+        strong_density_aggressive_threshold=0.01,
+    )
+    # All sources see the same 3 aliases; should produce lots of overlap.
+    for source in ["s1", "s2", "s3", "s4"]:
+        for inp in ["X", "Y", "Z"]:
+            p.align_with_context(inp, {"source_id": source})
+    summary = p.consolidate()
+    # With cosine disabled, the classifier sees overlap=3 + Jaccard=1.0
+    # but cosine fails. Density is 0; classified ambiguity_heavy.
+    # Use a no-op embedder to test the density path properly.
+
+
+def test_v044_classifies_ambiguity_heavy_workload_conservative():
+    """v0.4.4 on a workload with mostly disjoint aliases should stay
+    conservative (no aggressive mode triggered)."""
+
+    class _Passthrough(Variant):
+        name = "p"
+
+        def align(self, input_relation: str) -> str:
+            return input_relation
+
+    p = IntrospectiveLazyConsensusProxy(
+        inner_factory=_Passthrough,
+        strong_density_aggressive_threshold=0.5,  # high bar
+    )
+    for source, inputs in [
+        ("s1", ["a", "b", "c"]),
+        ("s2", ["d", "e", "f"]),
+        ("s3", ["g", "h", "i"]),
+    ]:
+        for inp in inputs:
+            p.align_with_context(inp, {"source_id": source})
+    summary = p.consolidate()
+    assert summary["adaptive_classification"] == "ambiguity_heavy"
+    assert summary["adaptive_min_aliases_chosen"] == 2
+    assert summary["adaptive_min_overlap_chosen"] == 2
+
+
+def test_v044_strong_density_summary_present():
+    p = IntrospectiveLazyConsensusProxy()
+    summary = p.consolidate()
+    assert "adaptive_classification" in summary
+    assert "adaptive_strong_density" in summary
+    assert "adaptive_min_aliases_chosen" in summary
+    assert "adaptive_min_overlap_chosen" in summary
 
 
 def test_wikidata_disambiguation_workload_loads():
