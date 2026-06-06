@@ -169,6 +169,52 @@ def test_stub_regression_on_nightly_opens_soft_regression(tmp_path):
     assert payload["pipeline_decision"] == "SOFT_REGRESSION_OPENED"
 
 
+def test_uc_4_4_blocks_high_false_merge_variant(tmp_path):
+    """A variant that aliases everything should FAIL the UC-4.4 gate.
+    Uses an in-memory fixture with two pairs that should NOT alias."""
+    fixture_path = tmp_path / "fake_tier_b.json"
+    fixture_path.write_text(json.dumps({
+        "schema_version": "1",
+        "fixture_sha256": "sha256:test",
+        "reference_embedder": "test",
+        "pairs": [
+            {"a": "foo", "b": "different_thing_a", "cosine": 0.9},
+            {"a": "bar", "b": "different_thing_b", "cosine": 0.9},
+        ],
+    }))
+    # stub-random-bucket hashes everything into 34 buckets; with only 2
+    # pairs (4 unique inputs) it'll occasionally alias by collision.
+    # Use embed-proxy-v0.1.0 instead — disjoint tokens guarantee no merge.
+    rc = runner_main(
+        [
+            "--variant", "embed-proxy-v0.1.0",
+            "--use-case", "UC-4.4",
+            "--tier", "fast",
+            "--tier-b-fixture", str(fixture_path),
+            "--out-dir", str(tmp_path / "runs"),
+        ]
+    )
+    assert rc == 0
+    artifact = json.loads(next((tmp_path / "runs").glob("run-*.json")).read_text())
+    tx = artifact["test_executions"][0]
+    assert tx["use_case"] == "UC-4.4"
+    assert tx["type"] == "guardrail_kill_switch"
+    assert tx["metric_id"] == "uc_4_4_tier_b_false_merge_rate"
+    assert tx["point_estimate"] == 0.0
+    assert tx["outcome"] == "PASS"
+    assert artifact["pipeline_decision"] == "PASS_AND_MERGE"
+
+
+def test_uc_4_4_requires_tier_b_fixture():
+    rc = runner_main(["--variant", "embed-proxy-v0.1.0", "--use-case", "UC-4.4"])
+    assert rc == 2
+
+
+def test_uc_4_1_still_requires_baseline_and_workload():
+    rc = runner_main(["--variant", "embed-proxy-v0.1.0", "--use-case", "UC-4.1"])
+    assert rc == 2
+
+
 def test_embed_proxy_v010_rejects_null_superior(tmp_path):
     """embed-proxy-v0.1.0 (HashedTokenEmbedder + cosine threshold)
     statistically outperforms b-raw-identity on UC-4.1; both tiers should

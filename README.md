@@ -37,6 +37,7 @@ tests/                           35 unit tests
 docs/
   opportunity.md                 wedge selection and competitive landscape
   experiments.md                 test plan and statistical framework
+  roadmap.md                     v0.4.0+ source-attributed resolution and other open work
 ```
 
 ## Pilot run

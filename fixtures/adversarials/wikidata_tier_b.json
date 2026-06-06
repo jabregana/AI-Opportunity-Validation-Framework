@@ -1,0 +1,362 @@
+{
+  "schema_version": "1",
+  "generated_utc": "2026-06-06T14:04:00.875177+00:00",
+  "canonical_source": "W-WIKIDATA-PROPS",
+  "n_canonicals": 288,
+  "reference_embedder": "model2vec",
+  "cosine_threshold": 0.85,
+  "n_pairs": 70,
+  "pairs": [
+    {
+      "a": "review score",
+      "b": "review score by",
+      "cosine": 0.9951112949581249
+    },
+    {
+      "a": "ISO 3166-1 alpha-2 code",
+      "b": "ISO 3166-1 alpha-3 code",
+      "cosine": 0.9845651091834354
+    },
+    {
+      "a": "ISO 639-1 code",
+      "b": "ISO 639-2 code",
+      "cosine": 0.9823232336324759
+    },
+    {
+      "a": "ISO 639-1 code",
+      "b": "ISO 639-3 code",
+      "cosine": 0.9804957788554604
+    },
+    {
+      "a": "ISO 639-2 code",
+      "b": "ISO 639-3 code",
+      "cosine": 0.9803776281916997
+    },
+    {
+      "a": "ISO 639-1 code",
+      "b": "ISO 639-6 code",
+      "cosine": 0.9779868978249109
+    },
+    {
+      "a": "ISO 639-3 code",
+      "b": "ISO 639-6 code",
+      "cosine": 0.977249407013456
+    },
+    {
+      "a": "ISO 639-2 code",
+      "b": "ISO 639-6 code",
+      "cosine": 0.9760472713587998
+    },
+    {
+      "a": "ICD-10 ID",
+      "b": "ICD-9 ID",
+      "cosine": 0.9653941381179407
+    },
+    {
+      "a": "MusicBrainz artist ID",
+      "b": "MusicBrainz work ID",
+      "cosine": 0.9400743876865068
+    },
+    {
+      "a": "flag",
+      "b": "flag image",
+      "cosine": 0.9317258075551862
+    },
+    {
+      "a": "contains the administrative territorial entity",
+      "b": "located in the administrative territorial entity",
+      "cosine": 0.9272973729924576
+    },
+    {
+      "a": "field of this occupation",
+      "b": "occupation",
+      "cosine": 0.9213375719024693
+    },
+    {
+      "a": "part of",
+      "b": "part of the series",
+      "cosine": 0.9199774911706852
+    },
+    {
+      "a": "followed by",
+      "b": "follows",
+      "cosine": 0.9190136401211518
+    },
+    {
+      "a": "MusicBrainz release group ID",
+      "b": "MusicBrainz work ID",
+      "cosine": 0.9165752653151547
+    },
+    {
+      "a": "ISO 3166-1 alpha-2 code",
+      "b": "ISO 3166-2 code",
+      "cosine": 0.9160031786968035
+    },
+    {
+      "a": "currency",
+      "b": "currency sign",
+      "cosine": 0.9132464695823118
+    },
+    {
+      "a": "ISO 3166-1 numeric code",
+      "b": "ISO 3166-2 code",
+      "cosine": 0.908057825874355
+    },
+    {
+      "a": "child astronomical body",
+      "b": "parent astronomical body",
+      "cosine": 0.8996776077821329
+    },
+    {
+      "a": "IATA airline designator",
+      "b": "ICAO airline designator",
+      "cosine": 0.8991872451979454
+    },
+    {
+      "a": "ISO 3166-1 alpha-3 code",
+      "b": "ISO 3166-2 code",
+      "cosine": 0.8945219770584449
+    },
+    {
+      "a": "head of government",
+      "b": "head of state",
+      "cosine": 0.8932141959743723
+    },
+    {
+      "a": "German district key",
+      "b": "German municipality key",
+      "cosine": 0.8928918895686704
+    },
+    {
+      "a": "MusicBrainz artist ID",
+      "b": "MusicBrainz release group ID",
+      "cosine": 0.888727572817873
+    },
+    {
+      "a": "child astronomical body",
+      "b": "located on astronomical body",
+      "cosine": 0.8875196283688789
+    },
+    {
+      "a": "taxon author",
+      "b": "taxon name",
+      "cosine": 0.887350895641675
+    },
+    {
+      "a": "taxon name",
+      "b": "taxon rank",
+      "cosine": 0.8871547908697316
+    },
+    {
+      "a": "based on",
+      "b": "has use",
+      "cosine": 0.8862722295090937
+    },
+    {
+      "a": "architect",
+      "b": "architectural style",
+      "cosine": 0.8862133915082859
+    },
+    {
+      "a": "IATA airport code",
+      "b": "ICAO airport code",
+      "cosine": 0.8838693557211941
+    },
+    {
+      "a": "FAA airport code",
+      "b": "ICAO airport code",
+      "cosine": 0.8814772240766194
+    },
+    {
+      "a": "headquarters location",
+      "b": "location",
+      "cosine": 0.8813408383477637
+    },
+    {
+      "a": "based on",
+      "b": "designed by",
+      "cosine": 0.8768764926981116
+    },
+    {
+      "a": "field of this occupation",
+      "b": "field of work",
+      "cosine": 0.874973310813251
+    },
+    {
+      "a": "image",
+      "b": "logo image",
+      "cosine": 0.8741082198316436
+    },
+    {
+      "a": "FAA airport code",
+      "b": "IATA airport code",
+      "cosine": 0.8735298883495836
+    },
+    {
+      "a": "parent taxon",
+      "b": "taxon name",
+      "cosine": 0.8732262268642875
+    },
+    {
+      "a": "producer",
+      "b": "production company",
+      "cosine": 0.8716624902579955
+    },
+    {
+      "a": "family",
+      "b": "has use",
+      "cosine": 0.8710025211857654
+    },
+    {
+      "a": "has use",
+      "b": "part of",
+      "cosine": 0.8696656906687577
+    },
+    {
+      "a": "based on",
+      "b": "family",
+      "cosine": 0.8695139404820592
+    },
+    {
+      "a": "collection",
+      "b": "is a list of",
+      "cosine": 0.8687301759884778
+    },
+    {
+      "a": "based on",
+      "b": "part of",
+      "cosine": 0.8669419078366903
+    },
+    {
+      "a": "ISO 3166-1 alpha-2 code",
+      "b": "ISO 3166-1 numeric code",
+      "cosine": 0.8659376932844548
+    },
+    {
+      "a": "has use",
+      "b": "is a list of",
+      "cosine": 0.865794263842975
+    },
+    {
+      "a": "member of",
+      "b": "part of",
+      "cosine": 0.8652525831024319
+    },
+    {
+      "a": "child",
+      "b": "family",
+      "cosine": 0.8646935736749075
+    },
+    {
+      "a": "lake on watercourse",
+      "b": "mouth of the watercourse",
+      "cosine": 0.8642944983262328
+    },
+    {
+      "a": "place of burial",
+      "b": "place of death",
+      "cosine": 0.8620483343683116
+    },
+    {
+      "a": "taxon name",
+      "b": "taxonomic type",
+      "cosine": 0.8618655304014727
+    },
+    {
+      "a": "cast member",
+      "b": "member of",
+      "cosine": 0.8615908025656933
+    },
+    {
+      "a": "depicts",
+      "b": "image",
+      "cosine": 0.8611810802077317
+    },
+    {
+      "a": "inflows",
+      "b": "outflows",
+      "cosine": 0.8601571624195714
+    },
+    {
+      "a": "has use",
+      "b": "stated in",
+      "cosine": 0.8597256736573667
+    },
+    {
+      "a": "ISO 3166-1 alpha-3 code",
+      "b": "ISO 3166-1 numeric code",
+      "cosine": 0.8596945936066849
+    },
+    {
+      "a": "based on",
+      "b": "stated in",
+      "cosine": 0.8593935801769624
+    },
+    {
+      "a": "location",
+      "b": "location of discovery",
+      "cosine": 0.8591407672154419
+    },
+    {
+      "a": "author",
+      "b": "taxon author",
+      "cosine": 0.8583445225101681
+    },
+    {
+      "a": "director",
+      "b": "director of photography",
+      "cosine": 0.8579882812818002
+    },
+    {
+      "a": "country",
+      "b": "country of origin",
+      "cosine": 0.8572860392502369
+    },
+    {
+      "a": "family",
+      "b": "father",
+      "cosine": 0.8552413100714723
+    },
+    {
+      "a": "collection",
+      "b": "family",
+      "cosine": 0.8545751807527031
+    },
+    {
+      "a": "family",
+      "b": "is a list of",
+      "cosine": 0.8541225536382835
+    },
+    {
+      "a": "family",
+      "b": "part of",
+      "cosine": 0.852906222847798
+    },
+    {
+      "a": "audio",
+      "b": "voice type",
+      "cosine": 0.8528326674907114
+    },
+    {
+      "a": "child",
+      "b": "has use",
+      "cosine": 0.8520951327394981
+    },
+    {
+      "a": "country",
+      "b": "has use",
+      "cosine": 0.8517668872743696
+    },
+    {
+      "a": "based on",
+      "b": "follows",
+      "cosine": 0.8511727723433165
+    },
+    {
+      "a": "based on",
+      "b": "platform",
+      "cosine": 0.8511715266537158
+    }
+  ],
+  "fixture_sha256": "sha256:164407286695c69de866a607fffbea29d88b1a0d6040544ce39c42c4356822eb"
+}
