@@ -1,0 +1,67 @@
+{
+  "schema_version": "1",
+  "generated_utc": "2026-06-06T05:25:47.052614+00:00",
+  "canonical_source": "W-CONCEPTNET-REL",
+  "n_canonicals": 34,
+  "reference_embedder": "model2vec",
+  "cosine_threshold": 0.85,
+  "n_pairs": 11,
+  "pairs": [
+    {
+      "a": "MadeOf",
+      "b": "PartOf",
+      "cosine": 0.9248996065702221
+    },
+    {
+      "a": "RelatedTo",
+      "b": "SimilarTo",
+      "cosine": 0.9173965559944255
+    },
+    {
+      "a": "FormOf",
+      "b": "MadeOf",
+      "cosine": 0.9149526116167084
+    },
+    {
+      "a": "FormOf",
+      "b": "PartOf",
+      "cosine": 0.9045112036533357
+    },
+    {
+      "a": "FormOf",
+      "b": "MannerOf",
+      "cosine": 0.888754564562278
+    },
+    {
+      "a": "MadeOf",
+      "b": "MannerOf",
+      "cosine": 0.8797522244417264
+    },
+    {
+      "a": "DerivedFrom",
+      "b": "DistinctFrom",
+      "cosine": 0.878732249764478
+    },
+    {
+      "a": "MannerOf",
+      "b": "PartOf",
+      "cosine": 0.8714595634068303
+    },
+    {
+      "a": "CapableOf",
+      "b": "MadeOf",
+      "cosine": 0.8609181714799831
+    },
+    {
+      "a": "MadeOf",
+      "b": "SymbolOf",
+      "cosine": 0.8606635243378113
+    },
+    {
+      "a": "CapableOf",
+      "b": "PartOf",
+      "cosine": 0.8526089888453291
+    }
+  ],
+  "fixture_sha256": "sha256:d07ff5577587ef225cc6db0f2f4ba10cafc1a6ba6463de0a4d371f8f3b5b9bf0"
+}

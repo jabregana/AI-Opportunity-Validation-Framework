@@ -3,7 +3,7 @@ from typing import Callable
 
 from .base import Variant
 from .b_raw import BRawIdentity
-from .embed_proxy import EmbeddingSchemaProxy
+from .embed_proxy import EmbeddingSchemaProxy, NeuralEmbeddingSchemaProxy
 from .stub_proxy import StubRandomBucketProxy
 
 # Registry: variant_id -> factory (no-arg or default-arg)
@@ -11,6 +11,7 @@ FACTORIES: dict[str, Callable[[], Variant]] = {
     "b-raw-identity": BRawIdentity,
     "stub-random-bucket": StubRandomBucketProxy,
     "embed-proxy-v0.1.0": EmbeddingSchemaProxy,
+    "embed-proxy-v0.2.0": NeuralEmbeddingSchemaProxy,
 }
 
 

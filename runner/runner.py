@@ -111,21 +111,35 @@ def main(argv: list[str] | None = None) -> int:
 
     var_correct = alignment.per_item_correctness(var_preds, workload)
     base_correct = alignment.per_item_correctness(base_preds, workload)
-    diffs = [float(v - b) for v, b in zip(var_correct, base_correct)]
-    bs = stats.paired_bootstrap(diffs, n_resamples=args.bootstrap_resamples)
     mc_b, mc_c = stats.mcnemar_discordant_counts(var_correct, base_correct)
+
+    # Primary signal: per-item B-cubed F1. Each item gets a continuous
+    # score in [0, 1]; paired bootstrap on the per-item difference. This
+    # replaces both (a) per-item strict-cluster correctness, which is
+    # degenerate at sub-perfect F1, and (b) an earlier attempt at
+    # index-resampled pairwise F1 bootstrap, which suffers from
+    # bootstrap-duplicate-pair pathology on pair-level metrics.
+    var_bcubed = alignment.per_item_bcubed_f1(var_preds, workload)
+    base_bcubed = alignment.per_item_bcubed_f1(base_preds, workload)
+    bcubed_diffs = [v - b for v, b in zip(var_bcubed, base_bcubed)]
+    bs = stats.paired_bootstrap(
+        bcubed_diffs, n_resamples=args.bootstrap_resamples
+    )
+
+    var_mean_bcubed = sum(var_bcubed) / len(var_bcubed) if var_bcubed else 0.0
+    base_mean_bcubed = sum(base_bcubed) / len(base_bcubed) if base_bcubed else 0.0
 
     metric_id_suffix = args.use_case.lower().replace("-", "_").replace(".", "_")
 
     # Build one test_execution per metric. For the pilot UC-4.1 we have one
-    # paired-bootstrap test on per-item strict-cluster correctness diff.
+    # paired-bootstrap test on the per-item B-cubed F1 difference.
     test_executions: list[dict] = [
         {
             "test_seq_id": 1,
             "use_case": args.use_case,
-            "metric_id": f"{metric_id_suffix}_per_item_correct_diff",
+            "metric_id": f"{metric_id_suffix}_per_item_bcubed_f1_diff",
             "type": "superiority",
-            "statistical_test": "paired_bootstrap_percentile",
+            "statistical_test": "paired_bootstrap_per_item_bcubed",
             "n": bs.n,
             "point_estimate": bs.mean_diff,
             "always_valid_ci_lower": bs.ci_low,
@@ -133,12 +147,14 @@ def main(argv: list[str] | None = None) -> int:
             "ci_level": bs.ci_level,
             "p_value": bs.p_value_one_sided_gt,
             "diagnostics": {
+                "variant_mean_bcubed_f1": var_mean_bcubed,
+                "baseline_mean_bcubed_f1": base_mean_bcubed,
                 "variant_pairwise_f1": var_f1.f1,
                 "baseline_pairwise_f1": base_f1.f1,
                 "variant_seconds": var_elapsed,
                 "baseline_seconds": base_elapsed,
-                "mcnemar_b_variant_wins": mc_b,
-                "mcnemar_c_baseline_wins": mc_c,
+                "per_item_strict_correct_mcnemar_b": mc_b,
+                "per_item_strict_correct_mcnemar_c": mc_c,
                 "items": len(workload),
             },
         }
@@ -166,7 +182,11 @@ def main(argv: list[str] | None = None) -> int:
     print(f"  variant {var.name}: pairwise F1 = {var_f1.f1:.4f}")
     print(f"  baseline {base.name}: pairwise F1 = {base_f1.f1:.4f}")
     print(
-        f"  paired per-item correctness diff: {bs.mean_diff:+.4f} "
+        f"  per-item B-cubed F1: variant mean = {var_mean_bcubed:.4f}, "
+        f"baseline mean = {base_mean_bcubed:.4f}"
+    )
+    print(
+        f"  paired per-item B-cubed F1 diff: {bs.mean_diff:+.4f} "
         f"(95% CI [{bs.ci_low:+.4f}, {bs.ci_high:+.4f}], "
         f"one-sided p = {bs.p_value_one_sided_gt:.4f})"
     )

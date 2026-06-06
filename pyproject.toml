@@ -11,6 +11,7 @@ dependencies = []
 
 [project.optional-dependencies]
 dev = ["pytest>=8.0"]
+neural = ["model2vec>=0.5"]
 
 [project.scripts]
 amg-run = "runner.runner:main"

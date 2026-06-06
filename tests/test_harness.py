@@ -131,9 +131,11 @@ def test_end_to_end_run_emits_three_block_artifact(tmp_path):
     }
 
 
-def test_pilot_inconclusive_blocks_pr_on_fast_tier(tmp_path):
-    """The stub variants are both degenerate so UC-4.1 yields INCONCLUSIVE;
-    §6.4.1 says INCONCLUSIVE on fast tier must block the PR."""
+def test_stub_random_bucket_regresses_against_b_raw(tmp_path):
+    """stub-random-bucket muddles cluster assignments (precision drops
+    below singleton-cluster baseline) without recovering enough recall,
+    so on B-cubed F1 it is statistically worse than b-raw-identity.
+    Fast tier blocks PR on REGRESSION_DETECTED."""
     runner_main(
         [
             "--variant", "stub-random-bucket",
@@ -146,11 +148,11 @@ def test_pilot_inconclusive_blocks_pr_on_fast_tier(tmp_path):
         ]
     )
     payload = json.loads(next(tmp_path.glob("run-*.json")).read_text())
-    assert payload["test_executions"][0]["outcome"] == "INCONCLUSIVE"
+    assert payload["test_executions"][0]["outcome"] == "REGRESSION_DETECTED"
     assert payload["pipeline_decision"] == "BLOCK_PR"
 
 
-def test_pilot_inconclusive_soft_regresses_on_nightly(tmp_path):
+def test_stub_regression_on_nightly_opens_soft_regression(tmp_path):
     runner_main(
         [
             "--variant", "stub-random-bucket",
@@ -163,6 +165,28 @@ def test_pilot_inconclusive_soft_regresses_on_nightly(tmp_path):
         ]
     )
     payload = json.loads(next(tmp_path.glob("run-*.json")).read_text())
-    # On nightly, INCONCLUSIVE alone is not a blocker per §6.4.1.
-    assert payload["test_executions"][0]["outcome"] == "INCONCLUSIVE"
-    assert payload["pipeline_decision"] == "PASS_AND_MERGE"
+    assert payload["test_executions"][0]["outcome"] == "REGRESSION_DETECTED"
+    assert payload["pipeline_decision"] == "SOFT_REGRESSION_OPENED"
+
+
+def test_embed_proxy_v010_rejects_null_superior(tmp_path):
+    """embed-proxy-v0.1.0 (HashedTokenEmbedder + cosine threshold)
+    statistically outperforms b-raw-identity on UC-4.1; both tiers should
+    PASS_AND_MERGE."""
+    for tier in ["fast", "nightly"]:
+        out = tmp_path / tier
+        out.mkdir()
+        runner_main(
+            [
+                "--variant", "embed-proxy-v0.1.0",
+                "--baseline", "b-raw-identity",
+                "--workload", "W-CONCEPTNET-REL",
+                "--use-case", "UC-4.1",
+                "--tier", tier,
+                "--bootstrap-resamples", "500",
+                "--out-dir", str(out),
+            ]
+        )
+        payload = json.loads(next(out.glob("run-*.json")).read_text())
+        assert payload["test_executions"][0]["outcome"] == "REJECT_NULL_SUPERIOR"
+        assert payload["pipeline_decision"] == "PASS_AND_MERGE"

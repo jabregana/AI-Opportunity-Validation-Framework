@@ -159,3 +159,32 @@ class EmbeddingSchemaProxy(Variant):
 
         self._cache[input_relation] = chosen
         return chosen
+
+
+class NeuralEmbeddingSchemaProxy(EmbeddingSchemaProxy):
+    """v0.2.0 proxy: same algorithm as v0.1.0 but with a neural embedder.
+
+    Default: model2vec potion-base-32M with the sentence template
+    "the relation type called X". Threshold 0.75 — a compromise that
+    captures most paraphrase synonyms (IsA <-> INSTANCE_OF: 0.71;
+    Causes <-> leads_to: 0.75; Desires <-> wants: 0.90) at the cost of
+    some false positives on antonyms and siblings (Synonym <-> Antonym:
+    0.65 passes; LOCATED_IN <-> LOCATED_NEAR: 0.93 passes). UC-4.4 Tier
+    A and Tier B are the gates that explicitly catch the false-positive
+    class.
+    """
+
+    name = "embed-proxy-v0.2.0"
+
+    def __init__(
+        self,
+        model_name: str = "minishlab/potion-base-32M",
+        similarity_threshold: float = 0.75,
+        template: str | None = "the relation type called {}",
+    ):
+        from .neural_embedder import Model2VecEmbedder
+
+        super().__init__(
+            embedder=Model2VecEmbedder(model_name, template=template),
+            similarity_threshold=similarity_threshold,
+        )

@@ -67,6 +67,68 @@ def paired_bootstrap(
     )
 
 
+def paired_metric_bootstrap(
+    variant_preds: list[tuple[str, str]],
+    baseline_preds: list[tuple[str, str]],
+    oracle: list[tuple[str, str]],
+    metric_fn,
+    n_resamples: int = 10_000,
+    ci_level: float = 0.95,
+    seed: int = 0xC0FFEE,
+) -> BootstrapResult:
+    """Bootstrap CI and p-values on (variant_metric - baseline_metric) by
+    resampling input indices with replacement and recomputing both metrics
+    on the resampled subset.
+
+    metric_fn signature: `(predictions, oracle) -> float`.
+
+    Appropriate for per-item or per-query metrics (latency, recall@k per
+    query, mean B-cubed F1 over items). NOT appropriate for pair-level
+    metrics like pairwise F1: resampling with replacement creates
+    duplicate items that are trivially same-pred-same-oracle for any
+    deterministic variant, inflating TP and biasing the distribution.
+    For pair-level signal use `per_item_bcubed_f1` then `paired_bootstrap`
+    on the per-item difference array.
+    """
+    n = len(oracle)
+    if len(variant_preds) != n or len(baseline_preds) != n:
+        raise ValueError("variant, baseline, and oracle must be same length")
+    if n < 2:
+        raise ValueError("need >= 2 items")
+
+    var_observed = float(metric_fn(variant_preds, oracle))
+    base_observed = float(metric_fn(baseline_preds, oracle))
+    observed_diff = var_observed - base_observed
+
+    rng = random.Random(seed)
+    diffs: list[float] = []
+    for _ in range(n_resamples):
+        idx = [rng.randrange(n) for _ in range(n)]
+        var_r = [variant_preds[i] for i in idx]
+        base_r = [baseline_preds[i] for i in idx]
+        oracle_r = [oracle[i] for i in idx]
+        var_m = float(metric_fn(var_r, oracle_r))
+        base_m = float(metric_fn(base_r, oracle_r))
+        diffs.append(var_m - base_m)
+
+    diffs.sort()
+    alpha = 1.0 - ci_level
+    lo_idx = int((alpha / 2) * n_resamples)
+    hi_idx = int((1 - alpha / 2) * n_resamples) - 1
+    p_one_sided = sum(1 for d in diffs if d <= 0) / n_resamples
+    p_two_sided = 2 * min(p_one_sided, 1 - p_one_sided)
+    return BootstrapResult(
+        mean_diff=observed_diff,
+        ci_low=diffs[lo_idx],
+        ci_high=diffs[hi_idx],
+        ci_level=ci_level,
+        n_resamples=n_resamples,
+        n=n,
+        p_value_one_sided_gt=p_one_sided,
+        p_value_two_sided=p_two_sided,
+    )
+
+
 def mcnemar_discordant_counts(
     a_correct: list[int], b_correct: list[int]
 ) -> tuple[int, int]:
