@@ -292,6 +292,94 @@ class StructurallyFilteredHybridSchemaProxy(EmbeddingSchemaProxy):
         )
 
 
+class ANNSchemaProxy(EmbeddingSchemaProxy):
+    """v0.5.5 proxy: same matching policy as v0.3.1 but the nearest-canonical
+    lookup is delegated to an ANN index (HNSW if hnswlib is installed,
+    else a numpy-vectorized linear scan).
+
+    Motivation: the default `align()` does a pure-Python O(K) cosine
+    scan against every canonical, which collapses throughput at the
+    K~10k+ scale documented in `docs/finding-scale-stress.md`. The ANN
+    index keeps lookups sub-linear (HNSW) or at least vectorized
+    (numpy linear).
+
+    Behavior parity with v0.3.1 is the design constraint: same
+    structural filter, same threshold, same first-writer-wins canonical
+    naming. The ANN index is wired so that insertion order matches the
+    canonical list order; deterministic replays produce identical
+    outputs.
+
+    Approximation note: HNSW is approximate. For top-1 cosine lookup at
+    the recall settings used here (M=16, ef_search=64) the top-1 match
+    is within ~1% recall of the exact answer on typical embedding
+    distributions. Below-threshold near-matches (which never trigger an
+    alias anyway) are where the approximation error concentrates; this
+    matters only for variants that gate behavior on borderline cosines.
+    """
+
+    name = "embed-proxy-v0.5.5-ann"
+
+    def __init__(
+        self,
+        token_weight: float = 2.0,
+        neural_weight: float = 1.0,
+        similarity_threshold: float = 0.8,
+        model_name: str = "minishlab/potion-base-32M",
+        template: str | None = "the relation type called {}",
+        ann_backend: str = "auto",
+    ):
+        from .ann_index import build_index
+        from .neural_embedder import Model2VecEmbedder
+        from .structural_filter import structural_merge_guard
+
+        token_emb = HashedTokenEmbedder()
+        neural_emb = Model2VecEmbedder(model_name, template=template)
+        hybrid = HybridConcatEmbedder(
+            [(token_emb, token_weight), (neural_emb, neural_weight)]
+        )
+        super().__init__(
+            embedder=hybrid,
+            similarity_threshold=similarity_threshold,
+            merge_guard=structural_merge_guard,
+        )
+        self._ann = build_index(hybrid.dim, backend=ann_backend)
+        self._ann_backend = ann_backend
+
+    @property
+    def ann_backend_name(self) -> str:
+        return type(self._ann).__name__
+
+    def align(self, input_relation: str) -> str:
+        cached = self._cache.get(input_relation)
+        if cached is not None:
+            return cached
+
+        emb = self.embedder.embed(input_relation)
+
+        if self._ann.size == 0:
+            self._canonicals.append(input_relation)
+            self._embeddings.append(emb)
+            self._ann.add(0, emb)
+            self._cache[input_relation] = input_relation
+            return input_relation
+
+        best_idx, best_sim = self._ann.nearest(emb)
+
+        if best_sim >= self.threshold and self.merge_guard(
+            input_relation, self._canonicals[best_idx]
+        ):
+            chosen = self._canonicals[best_idx]
+        else:
+            new_idx = len(self._canonicals)
+            self._canonicals.append(input_relation)
+            self._embeddings.append(emb)
+            self._ann.add(new_idx, emb)
+            chosen = input_relation
+
+        self._cache[input_relation] = chosen
+        return chosen
+
+
 class HybridSchemaProxy(EmbeddingSchemaProxy):
     """v0.3.0 proxy: hybrid token + neural embedder.
 
