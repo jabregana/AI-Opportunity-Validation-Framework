@@ -20,8 +20,9 @@ The proxy's quality lift is LARGEST at the biggest model and smallest at the tin
 | llama3.1:8b (8.0B) | 0.4067 | **1.0000** | **+0.5933** | 26 / 6 / 6 |
 | qwen2.5:14b (14.8B) | **0.3968** | 0.9464 | +0.5496 | **26** / 7 / 6 |
 | qwen2.5vl:32b (33.5B) | 0.4550 | **1.0000** | +0.5450 | 24 / 6 / 6 |
+| claude-opus-4-7 (frontier, API) | 0.5284 | 0.9630 | +0.4345 | 20 / 7 / 6 |
 
-With the proxy in front, all five model sizes converge to ~0.95-1.00 B-cubed F1. The 8B and 32B models hit a perfect 1.0 (exactly 6 unique outputs for 6 oracle entities). Without the proxy, the BIGGEST model is the WORST baseline by a wide margin.
+With the proxy in front, all six model sizes converge to ~0.87-1.00 B-cubed F1. The 8B and 32B local models hit a perfect 1.0 (exactly 6 unique outputs for 6 oracle entities). Without the proxy, the medium-tier local models (8B-32B) are the worst baselines; Opus has a slightly higher baseline because its world knowledge does some canonicalization on its own, but it still fragments meaningfully (20 unique outputs from 30 inputs).
 
 ## Why the hypothesis was wrong
 
@@ -39,7 +40,10 @@ Not predicted, but real. With the proxy in front, the 14B model ran almost 3x fa
 | llama3.2:3b (3.2B) | 153 ms/call | 104 ms/call | 1.47x |
 | llama3.1:8b (8.0B) | 206 ms/call | 145 ms/call | 1.42x |
 | qwen2.5:14b (14.8B) | 572 ms/call | 200 ms/call | 2.86x |
-| qwen2.5vl:32b (33.5B) | 764 ms/call | 382 ms/call | **2.00x** |
+| qwen2.5vl:32b (33.5B) | 764 ms/call | 382 ms/call | 2.00x |
+| claude-opus-4-7 (API) | 1192 ms/call | 1035 ms/call | **1.15x** |
+
+The local-Ollama models show a meaningful speedup that grows with model size (smaller LLM compute when the canonical is already in the input). The Opus speedup shrinks because cloud round-trip dominates per-call latency at the API tier; the proxy still saves some LLM compute time but cannot compress the network leg. For self-hosted production, the local-model speedup is the more representative number; for API deployments, the dominant savings are quality and determinism, not latency.
 
 The proxy gives the LLM less to reason about. The canonical is already locked in; the LLM just echoes it. Bigger LLMs benefit more because they were doing more reasoning per call without the proxy.
 
@@ -60,7 +64,7 @@ Proves: pre-normalizing entity aliases before an LLM extraction call produces a 
 
 Does not prove: that the same lift holds on real conversational text where entities are mentioned obliquely, in pronouns, or across multi-turn context. The benchmark uses short single-sentence utterances with one entity each. A multi-turn co-referential benchmark is the natural next experiment.
 
-Does not prove: that the lift survives at very large LLMs (70B+, GPT-4 class). The 32B run confirms the pattern through the medium-large tier; the very-large tier (70B-200B+ frontier models) remains untested. Adding a Llama-3-70B or Claude Haiku tier to the ladder would close the question.
+Confirmed at the frontier tier (Claude Opus 4.7 via Anthropic API): the lift persists but the pattern of "lift grows with model size" peaks at the 8B-32B band and softens at frontier scale. Opus's lift (+0.4345) is smaller than 8B (+0.5933), 14B (+0.5496), and 32B (+0.5450) but still larger than 1B (+0.2275) and 3B (+0.4544). The "frustrated middle" interpretation: 8B-32B models have enough world knowledge to faithfully echo every surface variant (fragments badly), not enough discipline to self-canonicalize. Opus has more discipline so its baseline starts higher (0.5284 vs 0.40 at 8B-14B), but it still fragments — 20 unique outputs from 30 inputs is substantial.
 
 Does not prove: that the lift survives on real multi-turn conversational text with sparse alias coverage. A 10-conversation multi-turn benchmark (`docs/finding-conversational-llm.md`) confirms the pattern with smaller magnitude (+0.04 to +0.18 macro-F1 across the same 1B/3B/14B models) — the lift is smaller because co-reference resolution is the LLM's job and the proxy does not help with it. Real conversational data with sparse alias coverage is the next experiment.
 
