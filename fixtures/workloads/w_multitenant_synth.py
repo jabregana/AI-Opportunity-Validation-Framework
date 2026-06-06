@@ -112,85 +112,137 @@ def _aliases(*forms):
     return list(forms)
 
 
-# PARTIAL stratum: same surface form, two source-conditional meanings.
-# Each entry has TWO oracles, each with its own source subset.
+# PARTIAL stratum: same primary surface form, source-conditional meanings.
+# Each split has its OWN set of aliases reflecting what THAT source's
+# meaning would actually be written as. Sources that share an oracle
+# share the same alias set; sources that have a different oracle have
+# their own alias set with only the primary surface form in common.
+# This is what realistic multi-tenant data looks like: each team uses
+# the surface forms that match THEIR meaning.
 _PARTIAL = [
-    {"surface_forms": _aliases("Apple", "AAPL", "Apple Inc"),
-     "splits": [
-         {"oracle": "Apple_Inc", "sources": ["sales", "marketing", "eng", "finance", "legal"]},
-         {"oracle": "Apple_Supplier_Inc", "sources": ["ops"]},
-     ]},
-    {"surface_forms": _aliases("Amazon", "AMZN", "Amazon.com"),
-     "splits": [
-         {"oracle": "Amazon_Inc", "sources": ["sales", "marketing", "finance"]},
-         {"oracle": "Amazon_Logistics_Partner", "sources": ["ops"]},
-         {"oracle": "Amazon_Web_Services", "sources": ["eng"]},
-     ]},
-    {"surface_forms": _aliases("Salesforce", "SFDC", "Salesforce.com"),
-     "splits": [
-         {"oracle": "Salesforce_CRM", "sources": ["sales", "marketing"]},
-         {"oracle": "Salesforce_Inc", "sources": ["finance", "legal"]},
-     ]},
-    {"surface_forms": _aliases("Oracle", "Oracle Corp", "Oracle Corporation"),
-     "splits": [
-         {"oracle": "Oracle_Database", "sources": ["eng"]},
-         {"oracle": "Oracle_Corporation", "sources": ["sales", "finance", "legal"]},
-     ]},
-    {"surface_forms": _aliases("Java"),
-     "splits": [
-         {"oracle": "Java_Programming_Language", "sources": ["eng"]},
-         {"oracle": "Java_Coffee_Brand", "sources": ["ops", "marketing"]},
-     ]},
-    {"surface_forms": _aliases("Python"),
-     "splits": [
-         {"oracle": "Python_Programming_Language", "sources": ["eng"]},
-         {"oracle": "Python_Snake_Skin_Brand", "sources": ["marketing"]},
-     ]},
-    {"surface_forms": _aliases("Mercury", "Mercury Brand"),
-     "splits": [
-         {"oracle": "Mercury_Cars", "sources": ["ops"]},
-         {"oracle": "Mercury_Insurance", "sources": ["finance", "legal"]},
-     ]},
-    {"surface_forms": _aliases("Office"),
-     "splits": [
-         {"oracle": "Microsoft_Office_Suite", "sources": ["eng", "sales", "marketing", "hr"]},
-         {"oracle": "Physical_Office_Space", "sources": ["ops", "finance"]},
-     ]},
-    {"surface_forms": _aliases("Excel"),
-     "splits": [
-         {"oracle": "Microsoft_Excel", "sources": ["eng", "sales", "finance"]},
-         {"oracle": "Excel_Performance_Rating", "sources": ["hr"]},
-     ]},
-    {"surface_forms": _aliases("Outlook"),
-     "splits": [
-         {"oracle": "Microsoft_Outlook", "sources": ["eng", "hr"]},
-         {"oracle": "Sales_Outlook_Forecast", "sources": ["sales", "finance"]},
-     ]},
-    {"surface_forms": _aliases("Surface"),
-     "splits": [
-         {"oracle": "Microsoft_Surface_Device", "sources": ["eng", "sales"]},
-         {"oracle": "Brand_Surface_Area", "sources": ["marketing"]},
-     ]},
-    {"surface_forms": _aliases("Acme", "Acme Inc"),
-     "splits": [
-         {"oracle": "Acme_Supplier", "sources": ["ops"]},
-         {"oracle": "Acme_Customer_Account", "sources": ["sales", "finance"]},
-     ]},
-    {"surface_forms": _aliases("Sun"),
-     "splits": [
-         {"oracle": "Sun_Microsystems", "sources": ["eng"]},
-         {"oracle": "Sun_Insurance_Co", "sources": ["finance"]},
-     ]},
-    {"surface_forms": _aliases("Champion"),
-     "splits": [
-         {"oracle": "Champion_Account_Tier", "sources": ["sales"]},
-         {"oracle": "Champion_Brand_Apparel", "sources": ["marketing"]},
-     ]},
-    {"surface_forms": _aliases("Saturn"),
-     "splits": [
-         {"oracle": "Saturn_Cars", "sources": ["ops"]},
-         {"oracle": "Saturn_Marketing_Campaign", "sources": ["marketing"]},
-     ]},
+    {"splits": [
+        {"oracle": "Apple_Inc",
+         "sources": ["sales", "marketing", "eng", "finance", "legal"],
+         "aliases": ["Apple", "AAPL", "Apple Inc", "Apple Computer"]},
+        {"oracle": "Apple_Supplier_Inc",
+         "sources": ["ops"],
+         "aliases": ["Apple", "Apple Foods", "Apple Supplier", "Apple Inc Supplier"]},
+    ]},
+    {"splits": [
+        {"oracle": "Amazon_Inc",
+         "sources": ["sales", "marketing", "finance"],
+         "aliases": ["Amazon", "AMZN", "Amazon.com", "Amazon retail"]},
+        {"oracle": "Amazon_Logistics_Partner",
+         "sources": ["ops"],
+         "aliases": ["Amazon", "Amazon Logistics", "Amazon delivery partner", "Amazon Flex"]},
+        {"oracle": "Amazon_Web_Services",
+         "sources": ["eng"],
+         "aliases": ["Amazon", "AWS", "Amazon Web Services", "Amazon cloud"]},
+    ]},
+    {"splits": [
+        {"oracle": "Salesforce_CRM",
+         "sources": ["sales", "marketing"],
+         "aliases": ["Salesforce", "SFDC", "Salesforce.com", "Salesforce CRM"]},
+        {"oracle": "Salesforce_Inc",
+         "sources": ["finance", "legal"],
+         "aliases": ["Salesforce", "Salesforce Inc", "Salesforce Corporation", "CRM Vendor Salesforce"]},
+    ]},
+    {"splits": [
+        {"oracle": "Oracle_Database",
+         "sources": ["eng"],
+         "aliases": ["Oracle", "Oracle DB", "Oracle Database", "Oracle RDBMS"]},
+        {"oracle": "Oracle_Corporation",
+         "sources": ["sales", "finance", "legal"],
+         "aliases": ["Oracle", "Oracle Corp", "Oracle Corporation", "Oracle Inc"]},
+    ]},
+    {"splits": [
+        {"oracle": "Java_Programming_Language",
+         "sources": ["eng"],
+         "aliases": ["Java", "Java language", "Java SE", "JVM"]},
+        {"oracle": "Java_Coffee_Brand",
+         "sources": ["ops", "marketing"],
+         "aliases": ["Java", "Java coffee", "Java Coffee Brand", "Java roast"]},
+    ]},
+    {"splits": [
+        {"oracle": "Python_Programming_Language",
+         "sources": ["eng"],
+         "aliases": ["Python", "Python language", "Python3", "CPython"]},
+        {"oracle": "Python_Snake_Skin_Brand",
+         "sources": ["marketing"],
+         "aliases": ["Python", "Python Skin", "Python leather", "Python Brand"]},
+    ]},
+    {"splits": [
+        {"oracle": "Mercury_Cars",
+         "sources": ["ops"],
+         "aliases": ["Mercury", "Mercury auto", "Mercury Motors", "Mercury vehicle"]},
+        {"oracle": "Mercury_Insurance",
+         "sources": ["finance", "legal"],
+         "aliases": ["Mercury", "Mercury Insurance", "Mercury Insurance Group", "Mercury General"]},
+    ]},
+    {"splits": [
+        {"oracle": "Microsoft_Office_Suite",
+         "sources": ["eng", "sales", "marketing", "hr"],
+         "aliases": ["Office", "MS Office", "Office 365", "Office Suite"]},
+        {"oracle": "Physical_Office_Space",
+         "sources": ["ops", "finance"],
+         "aliases": ["Office", "Office Space", "Office Building", "Office HQ"]},
+    ]},
+    {"splits": [
+        {"oracle": "Microsoft_Excel",
+         "sources": ["eng", "sales", "finance"],
+         "aliases": ["Excel", "MS Excel", "Excel Spreadsheet", "Excel workbook"]},
+        {"oracle": "Excel_Performance_Rating",
+         "sources": ["hr"],
+         "aliases": ["Excel", "Excels", "Excels rating", "Performance: Excels"]},
+    ]},
+    {"splits": [
+        {"oracle": "Microsoft_Outlook",
+         "sources": ["eng", "hr"],
+         "aliases": ["Outlook", "MS Outlook", "Outlook client", "Outlook calendar"]},
+        {"oracle": "Sales_Outlook_Forecast",
+         "sources": ["sales", "finance"],
+         "aliases": ["Outlook", "Sales Outlook", "Sales Forecast", "Quarterly Outlook"]},
+    ]},
+    {"splits": [
+        {"oracle": "Microsoft_Surface_Device",
+         "sources": ["eng", "sales"],
+         "aliases": ["Surface", "MS Surface", "Surface Pro", "Surface tablet"]},
+        {"oracle": "Brand_Surface_Area",
+         "sources": ["marketing"],
+         "aliases": ["Surface", "Brand Surface", "Surface coverage", "Brand surface area"]},
+    ]},
+    {"splits": [
+        {"oracle": "Acme_Supplier",
+         "sources": ["ops"],
+         "aliases": ["Acme", "Acme Supplier", "Acme Logistics", "Acme parts"]},
+        {"oracle": "Acme_Customer_Account",
+         "sources": ["sales", "finance"],
+         "aliases": ["Acme", "Acme Inc", "Acme Corp", "Acme account"]},
+    ]},
+    {"splits": [
+        {"oracle": "Sun_Microsystems",
+         "sources": ["eng"],
+         "aliases": ["Sun", "Sun Microsystems", "SUNW", "Sun Solaris"]},
+        {"oracle": "Sun_Insurance_Co",
+         "sources": ["finance"],
+         "aliases": ["Sun", "Sun Insurance", "Sun Life", "Sun Insurance Co"]},
+    ]},
+    {"splits": [
+        {"oracle": "Champion_Account_Tier",
+         "sources": ["sales"],
+         "aliases": ["Champion", "Champion Tier", "Champion Account", "Champion customer"]},
+        {"oracle": "Champion_Brand_Apparel",
+         "sources": ["marketing"],
+         "aliases": ["Champion", "Champion brand", "Champion apparel", "Champion Sportswear"]},
+    ]},
+    {"splits": [
+        {"oracle": "Saturn_Cars",
+         "sources": ["ops"],
+         "aliases": ["Saturn", "Saturn auto", "Saturn Motors", "Saturn vehicle"]},
+        {"oracle": "Saturn_Marketing_Campaign",
+         "sources": ["marketing"],
+         "aliases": ["Saturn", "Saturn campaign", "Project Saturn", "Saturn launch"]},
+    ]},
 ]
 
 
@@ -273,12 +325,14 @@ def load():
             for alias in aliases:
                 entries.append(WorkloadEntry(source, alias, oracle))
 
-    # PARTIAL: shared surface forms, source-subset-conditional oracle
+    # PARTIAL: shared primary surface form, source-conditional meaning
+    # with source-specific alias sets reflecting each meaning's actual
+    # contextual aliases.
     for e in _PARTIAL:
         for split in e["splits"]:
             oracle = split["oracle"]
             for source in split["sources"]:
-                for alias in e["surface_forms"]:
+                for alias in split["aliases"]:
                     entries.append(WorkloadEntry(source, alias, oracle))
 
     # CONDITIONAL: different meaning per source
@@ -300,6 +354,9 @@ def stratum_for_canonical(canonical: str) -> str:
     for e in _PARTIAL:
         for split in e["splits"]:
             if split["oracle"] == canonical:
+                return "partial"
+            # Old field name kept for tests that may reference it.
+            if isinstance(split.get("aliases"), list) and split["oracle"] == canonical:
                 return "partial"
     for e in _CONDITIONAL:
         for source, (oracle, _aliases) in e["per_source"].items():

@@ -32,12 +32,50 @@ from runner.fdr import LordPlusPlusLedger, run_ledger
 from runner.metrics import alignment, stats
 
 
-def _run_variant(variant, workload):
+def _run_variant(variant, workload, two_pass: bool = True):
     """Apply variant to workload entries, return predictions and wall-clock seconds.
 
     Calls align_with_context so multi-tenant variants get source_id;
     single-tenant variants ignore context per the base-class default.
+
+    Two-pass execution: stateful variants (like v0.4.1
+    CrossSourceConsensusProxy) can accumulate merge decisions over time,
+    so early writes get a temporary canonical that may be updated later.
+    Pass 1 builds the state. Pass 2 re-queries each entry to capture the
+    FINAL canonical regardless of write order. Single-tenant variants
+    (v0.1.0 - v0.3.1) are idempotent on the second call thanks to their
+    per-input caches, so two-pass is a no-op for them except for the
+    doubled wall-clock time. UC-4.6 (latency) explicitly passes
+    two_pass=False to keep its measurement honest.
     """
+    t0 = time.perf_counter()
+    # Pass 1: ingestion (build state)
+    for entry in workload:
+        ctx = {"source_id": entry.source_id}
+        variant.align_with_context(entry.input, ctx)
+    if two_pass:
+        # Pass 2: re-query to capture final canonicals
+        preds = []
+        for entry in workload:
+            ctx = {"source_id": entry.source_id}
+            canonical = variant.align_with_context(entry.input, ctx)
+            preds.append((entry.input, canonical))
+    else:
+        # Single-pass: caller wants timing-honest one-pass results.
+        # Re-run with fresh variant? No, we already polluted state. The
+        # caller must construct a fresh variant for this path.
+        raise RuntimeError(
+            "single-pass requested but state is already polluted; "
+            "build a fresh variant and call this with two_pass=False from the start"
+        )
+    elapsed = time.perf_counter() - t0
+    return preds, elapsed
+
+
+def _run_variant_single_pass(variant, workload):
+    """One-pass variant of _run_variant for UC-4.6 latency measurement.
+    Predicted canonicals reflect the state AT the moment of each write,
+    which is what latency benchmarks want."""
     t0 = time.perf_counter()
     preds = []
     for entry in workload:

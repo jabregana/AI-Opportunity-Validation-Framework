@@ -11,7 +11,10 @@ import pytest
 
 from runner.variants.base import Variant
 from runner.variants.b_raw import BRawIdentity
-from runner.variants.per_source import PerSourceNamespaceProxy
+from runner.variants.per_source import (
+    CrossSourceConsensusProxy,
+    PerSourceNamespaceProxy,
+)
 
 
 def test_same_input_different_sources_get_distinct_canonicals():
@@ -154,6 +157,123 @@ def test_synth_workload_has_three_strata():
     assert "Sales_Pipeline" in pipeline_oracles
     assert "CI_Pipeline" in pipeline_oracles
     assert stratum_for_canonical("CI_Pipeline") == "conditional"
+
+
+class _SingleClusterInner(Variant):
+    """Test inner: routes every input to a single fixed canonical.
+    Simulates a real clustering variant that successfully merges all
+    of a source's aliases into one local cluster."""
+
+    def __init__(self, canonical_name: str = "C"):
+        self.name = f"test-inner-{canonical_name}"
+        self._canonical = canonical_name
+
+    def align(self, input_relation: str) -> str:
+        return self._canonical
+
+
+def test_consensus_proxy_merges_high_overlap_clusters():
+    """v0.4.1: sales and ops both have a local cluster with the same set
+    of aliases — should merge across sources."""
+
+    def inner_factory():
+        return _SingleClusterInner("Microsoft")
+
+    p = CrossSourceConsensusProxy(
+        inner_factory=inner_factory,
+        alias_jaccard_threshold=0.5,
+        min_aliases_for_merge=2,
+    )
+    # Sales: 3 aliases for Microsoft, all going to local canonical "Microsoft"
+    for inp in ["Microsoft", "MSFT", "Microsoft Corp"]:
+        p.align_with_context(inp, {"source_id": "sales"})
+    # Ops: same 3 aliases, same local canonical
+    for inp in ["Microsoft", "MSFT", "Microsoft Corp"]:
+        p.align_with_context(inp, {"source_id": "ops"})
+    # Now (sales, Microsoft) aliases = (ops, Microsoft) aliases = same set.
+    # Jaccard = 1.0; merge.
+    c_sales = p.align_with_context("Microsoft", {"source_id": "sales"})
+    c_ops = p.align_with_context("Microsoft", {"source_id": "ops"})
+    assert c_sales == c_ops, f"high-overlap should merge: {c_sales!r} vs {c_ops!r}"
+    assert c_sales.startswith("merged::")
+
+
+def test_consensus_proxy_isolates_low_overlap_clusters():
+    """v0.4.1: sales and ops have local clusters that share one alias
+    only (the surface form 'Apple'). Jaccard is low; stay isolated."""
+
+    def inner_factory():
+        return _SingleClusterInner("Apple")
+
+    p = CrossSourceConsensusProxy(
+        inner_factory=inner_factory,
+        alias_jaccard_threshold=0.5,
+        min_aliases_for_merge=2,
+    )
+    for inp in ["Apple", "AAPL", "Apple Inc", "Apple Computer"]:
+        p.align_with_context(inp, {"source_id": "sales"})
+    for inp in ["Apple", "Apple Foods", "Apple Supplier", "Apple Inc Supplier"]:
+        p.align_with_context(inp, {"source_id": "ops"})
+    # Overlap = {"Apple"} = 1, union = 7. Jaccard = 1/7 ≈ 0.14 < 0.5.
+    c_sales = p.align_with_context("Apple", {"source_id": "sales"})
+    c_ops = p.align_with_context("Apple", {"source_id": "ops"})
+    assert c_sales != c_ops, f"low-overlap should isolate: {c_sales!r} vs {c_ops!r}"
+    assert c_sales.startswith("sales::")
+    assert c_ops.startswith("ops::")
+
+
+def test_consensus_proxy_too_few_aliases_no_merge():
+    """min_aliases_for_merge guard: with too few aliases per cluster,
+    don't attempt cross-source merge."""
+
+    def inner_factory():
+        return _SingleClusterInner("X")
+
+    p = CrossSourceConsensusProxy(
+        inner_factory=inner_factory, min_aliases_for_merge=3
+    )
+    # Only 2 aliases per source — below min of 3, so no merge.
+    for inp in ["X", "Y"]:
+        p.align_with_context(inp, {"source_id": "a"})
+    for inp in ["X", "Y"]:
+        p.align_with_context(inp, {"source_id": "b"})
+    c_a = p.align_with_context("X", {"source_id": "a"})
+    c_b = p.align_with_context("X", {"source_id": "b"})
+    assert c_a != c_b
+    assert c_a.startswith("a::")
+
+
+def test_consensus_proxy_threshold_invalid_raises():
+    with pytest.raises(ValueError):
+        CrossSourceConsensusProxy(alias_jaccard_threshold=1.5)
+    with pytest.raises(ValueError):
+        CrossSourceConsensusProxy(alias_jaccard_threshold=0.0)
+
+
+def test_consensus_proxy_legacy_align_routes_to_default_namespace():
+    p = CrossSourceConsensusProxy(inner_factory=BRawIdentity)
+    c = p.align("Microsoft")
+    assert c.startswith("default::")
+
+
+def test_consensus_proxy_synth_partial_stratum_aliases_now_differ():
+    """After the synthetic-partial-stratum fix, sales and ops writing
+    'Apple' get DIFFERENT alias sets. v0.4.1 should isolate them."""
+    from fixtures import workloads
+
+    w = workloads.load("W-MULTITENANT-SYNTH")
+    sales_apple_aliases = {e.input for e in w
+                           if e.source_id == "sales" and "Apple" in e.input
+                           and e.oracle_canonical == "Apple_Inc"}
+    ops_apple_aliases = {e.input for e in w
+                         if e.source_id == "ops" and "Apple" in e.input
+                         and e.oracle_canonical == "Apple_Supplier_Inc"}
+    # Only "Apple" itself should be in both
+    overlap = sales_apple_aliases & ops_apple_aliases
+    assert overlap == {"Apple"}, f"unexpected overlap: {overlap}"
+    # And there should be plenty of source-specific aliases
+    assert len(sales_apple_aliases - ops_apple_aliases) >= 2
+    assert len(ops_apple_aliases - sales_apple_aliases) >= 2
 
 
 def test_wikidata_disambiguation_workload_loads():
