@@ -30,3 +30,18 @@ from .normalizer import EntityNormalizer
 from .consolidator import AdvisoryConsolidator
 
 __all__ = ["EntityNormalizer", "AdvisoryConsolidator"]
+
+
+def __getattr__(name):
+    # Lazy re-export for the preprocessors subpackage so importers
+    # writing `from runner.service import RegexNERPreprocessor` work
+    # without forcing every user to pay the preprocessor import cost.
+    if name in {
+        "RegexNERPreprocessor",
+        "SpacyNERPreprocessor",
+        "TransformersNERPreprocessor",
+        "NERPreprocessor",
+    }:
+        from . import preprocessors
+        return getattr(preprocessors, name)
+    raise AttributeError(f"module 'runner.service' has no attribute {name!r}")

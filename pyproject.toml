@@ -13,6 +13,8 @@ dependencies = []
 dev = ["pytest>=8.0"]
 neural = ["model2vec>=0.5"]
 ann = ["hnswlib>=0.8", "numpy>=1.24"]
+ner = ["spacy>=3.7"]
+ner-transformers = ["transformers>=4.40", "torch>=2.0"]
 
 [project.scripts]
 amg-run = "runner.runner:main"
