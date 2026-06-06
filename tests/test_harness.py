@@ -214,6 +214,80 @@ def test_uc_4_4_requires_tier_b_fixture():
     assert rc == 2
 
 
+def test_uc_4_6_latency_smoke(tmp_path):
+    """UC-4.6 emits an artifact with latency quantiles in diagnostics."""
+    rc = runner_main(
+        [
+            "--variant", "embed-proxy-v0.1.0",
+            "--workload", "W-CONCEPTNET-REL",
+            "--use-case", "UC-4.6",
+            "--tier", "fast",
+            "--out-dir", str(tmp_path),
+        ]
+    )
+    assert rc == 0
+    payload = json.loads(next(tmp_path.glob("run-*.json")).read_text())
+    tx = payload["test_executions"][0]
+    assert tx["use_case"] == "UC-4.6"
+    assert tx["metric_id"] == "uc_4_6_per_write_latency_ms"
+    assert tx["type"] == "guardrail_kill_switch"
+    diag = tx["diagnostics"]
+    assert diag["p50_ms"] >= 0
+    assert diag["p95_ms"] >= diag["p50_ms"]
+    assert diag["p99_ms"] >= diag["p95_ms"]
+    assert diag["qps_observed_single_thread"] > 0
+
+
+def test_uc_4_6_requires_workload():
+    rc = runner_main(["--variant", "embed-proxy-v0.1.0", "--use-case", "UC-4.6"])
+    assert rc == 2
+
+
+def test_uc_4_7_held_out_smoke(tmp_path):
+    """UC-4.7 lite splits workload 80/20 and emits a paired accuracy
+    bootstrap when a baseline is provided."""
+    rc = runner_main(
+        [
+            "--variant", "embed-proxy-v0.1.0",
+            "--baseline", "b-raw-identity",
+            "--workload", "W-CONCEPTNET-REL",
+            "--use-case", "UC-4.7",
+            "--tier", "fast",
+            "--bootstrap-resamples", "200",
+            "--out-dir", str(tmp_path),
+        ]
+    )
+    assert rc == 0
+    payload = json.loads(next(tmp_path.glob("run-*.json")).read_text())
+    tx = payload["test_executions"][0]
+    assert tx["use_case"] == "UC-4.7"
+    assert tx["metric_id"] == "uc_4_7_held_out_accuracy_diff"
+    assert tx["type"] == "superiority"
+    diag = tx["diagnostics"]
+    assert 0 <= diag["variant_accuracy"] <= 1
+    assert 0 <= diag["baseline_accuracy"] <= 1
+    assert diag["n_ingestion"] > 0
+    assert diag["n_queries"] > 0
+    assert diag["holdout_fraction"] == 0.2
+
+
+def test_uc_4_7_split_is_deterministic_with_seed(tmp_path):
+    """Same split_seed → same train/query partition."""
+    common = ["--variant", "embed-proxy-v0.1.0", "--baseline", "b-raw-identity",
+              "--workload", "W-CONCEPTNET-REL", "--use-case", "UC-4.7",
+              "--tier", "fast", "--bootstrap-resamples", "100"]
+    out1 = tmp_path / "run1"
+    out2 = tmp_path / "run2"
+    runner_main(common + ["--split-seed", "42", "--out-dir", str(out1)])
+    runner_main(common + ["--split-seed", "42", "--out-dir", str(out2)])
+    p1 = json.loads(next(out1.glob("run-*.json")).read_text())
+    p2 = json.loads(next(out2.glob("run-*.json")).read_text())
+    assert p1["test_executions"][0]["diagnostics"]["n_ingestion"] == \
+        p2["test_executions"][0]["diagnostics"]["n_ingestion"]
+    assert p1["test_executions"][0]["diagnostics"]["variant_accuracy"] == \
+        p2["test_executions"][0]["diagnostics"]["variant_accuracy"]
+
+
 def test_uc_4_1_still_requires_baseline_and_workload():
     rc = runner_main(["--variant", "embed-proxy-v0.1.0", "--use-case", "UC-4.1"])
     assert rc == 2

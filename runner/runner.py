@@ -20,6 +20,7 @@ Both modes apply the §6.4.1 INCONCLUSIVE-is-FAIL gate and write a
 from __future__ import annotations
 import argparse
 import json
+import random
 import sys
 import time
 from dataclasses import asdict
@@ -94,6 +95,270 @@ def _pipeline_decision(
     if tier == "fast":
         return "BLOCK_PR", reasons
     return "SOFT_REGRESSION_OPENED", reasons
+
+
+def _run_uc_4_7(args) -> int:
+    """UC-4.7 lite — held-out generalization.
+
+    Splits the workload into an ingestion set (first 1 - holdout_fraction)
+    and a query set (the rest). The variant builds its canonical store on
+    the ingestion set, then for each held-out query input, checks whether
+    align() returns the same canonical as the variant assigned to the
+    query input's oracle group during ingestion.
+
+    Compared to UC-4.1 (which trains and tests on the same set), this is
+    the basic generalization test: does the proxy correctly route unseen
+    surface forms to the right existing canonical?
+
+    A full UC-4.7 with a downstream retrieval system (per spec §3) needs
+    a fact-and-query corpus like LongMemEval-S. This lite version uses
+    the held-out subset of the same workload as a proxy for retrieval
+    relevance.
+    """
+    workload = workloads.load(args.workload)
+    workload_sha = artifacts.workload_sha256(
+        [(e.input, e.oracle_canonical) for e in workload]
+    )
+    holdout = args.holdout_fraction
+    if not 0 < holdout < 1:
+        print("--holdout-fraction must be in (0, 1)", file=sys.stderr)
+        return 2
+
+    # Deterministic split: group by oracle canonical so each oracle group
+    # gets a held-out item. Otherwise rare canonicals may have all items
+    # in the ingestion set, leaving no queries for them.
+    rng = random.Random(args.split_seed)
+    by_oracle: dict[str, list] = {}
+    for entry in workload:
+        by_oracle.setdefault(entry.oracle_canonical, []).append(entry)
+    ingestion: list = []
+    queries: list = []
+    for canonical, entries in by_oracle.items():
+        if len(entries) < 2:
+            ingestion.extend(entries)
+            continue
+        shuffled = list(entries)
+        rng.shuffle(shuffled)
+        n_query = max(1, int(round(len(shuffled) * holdout)))
+        queries.extend(shuffled[:n_query])
+        ingestion.extend(shuffled[n_query:])
+
+    if not queries:
+        print("Workload too small for hold-out split", file=sys.stderr)
+        return 2
+
+    variant_factory = variants.FACTORIES[args.variant]
+    baseline_factory = variants.FACTORIES[args.baseline] if args.baseline else None
+
+    def _ingest_and_query(factory) -> tuple[list[float], float]:
+        """Returns per-query F1 contribution (0 or 1) and elapsed seconds."""
+        v = factory()
+        t0 = time.perf_counter()
+        # Ingestion phase: build the canonical store.
+        for entry in ingestion:
+            v.align_with_context(entry.input, {"source_id": entry.source_id})
+        # Record what canonical each oracle-cluster received during ingestion.
+        oracle_to_canonical: dict[str, set[str]] = {}
+        for entry in ingestion:
+            c = v.align_with_context(entry.input, {"source_id": entry.source_id})
+            oracle_to_canonical.setdefault(entry.oracle_canonical, set()).add(c)
+        # Query phase: for each held-out query, get the variant's canonical
+        # for that input and check it's in the set of canonicals already
+        # assigned to that query's oracle group.
+        correct: list[float] = []
+        for entry in queries:
+            c = v.align_with_context(entry.input, {"source_id": entry.source_id})
+            expected = oracle_to_canonical.get(entry.oracle_canonical, set())
+            correct.append(1.0 if c in expected else 0.0)
+        elapsed = time.perf_counter() - t0
+        return correct, elapsed
+
+    var_correct, var_elapsed = _ingest_and_query(variant_factory)
+    var_accuracy = sum(var_correct) / len(var_correct)
+
+    test_executions = []
+    if baseline_factory is not None:
+        base_correct, base_elapsed = _ingest_and_query(baseline_factory)
+        base_accuracy = sum(base_correct) / len(base_correct)
+        diffs = [v - b for v, b in zip(var_correct, base_correct)]
+        bs = stats.paired_bootstrap(diffs, n_resamples=args.bootstrap_resamples)
+        test_executions.append({
+            "test_seq_id": 1,
+            "use_case": args.use_case,
+            "metric_id": "uc_4_7_held_out_accuracy_diff",
+            "type": "superiority",
+            "statistical_test": "paired_bootstrap_held_out_accuracy",
+            "n": bs.n,
+            "point_estimate": bs.mean_diff,
+            "always_valid_ci_lower": bs.ci_low,
+            "always_valid_ci_upper": bs.ci_high,
+            "ci_level": bs.ci_level,
+            "p_value": bs.p_value_one_sided_gt,
+            "diagnostics": {
+                "variant_accuracy": var_accuracy,
+                "baseline_accuracy": base_accuracy,
+                "n_ingestion": len(ingestion),
+                "n_queries": len(queries),
+                "n_oracle_groups": len(by_oracle),
+                "holdout_fraction": holdout,
+                "variant_seconds": var_elapsed,
+                "baseline_seconds": base_elapsed,
+            },
+        })
+        ordered, ledger = run_ledger(test_executions, target_q=args.target_q)
+        for t in ordered:
+            t["outcome"] = _outcome_from_bootstrap(bs, t["alpha_allocated"])
+        decision, _reasons = _pipeline_decision(ordered, tier=args.tier)
+        test_executions = ordered
+    else:
+        # No baseline: report variant accuracy as informational.
+        ledger = LordPlusPlusLedger(target_q=args.target_q)
+        test_executions.append({
+            "test_seq_id": 1,
+            "use_case": args.use_case,
+            "metric_id": "uc_4_7_held_out_accuracy",
+            "type": "informational",
+            "statistical_test": "raw_proportion",
+            "n": len(queries),
+            "point_estimate": var_accuracy,
+            "alpha_allocated": 0.0,
+            "outcome": "PASS",
+            "diagnostics": {
+                "variant_accuracy": var_accuracy,
+                "n_ingestion": len(ingestion),
+                "n_queries": len(queries),
+                "n_oracle_groups": len(by_oracle),
+                "holdout_fraction": holdout,
+                "variant_seconds": var_elapsed,
+            },
+        })
+        decision = "PASS_AND_MERGE"
+
+    path = artifacts.emit(
+        variant_name=variant_factory().name,
+        baseline_name=baseline_factory().name if baseline_factory else "(none)",
+        workload_id=args.workload,
+        workload_sha=workload_sha,
+        tier=args.tier,
+        test_executions=test_executions,
+        ledger=ledger,
+        pipeline_decision=decision,
+        out_dir=args.out_dir,
+    )
+    print(f"Wrote {path}")
+    print(f"  variant {args.variant} on {args.workload}")
+    print(f"  split: {len(ingestion)} ingestion, {len(queries)} held-out queries")
+    print(f"  variant held-out accuracy: {var_accuracy:.4f}")
+    if baseline_factory is not None:
+        print(f"  baseline {args.baseline} held-out accuracy: {base_accuracy:.4f}")
+        print(
+            f"  paired diff: {test_executions[0]['point_estimate']:+.4f}, "
+            f"CI [{test_executions[0]['always_valid_ci_lower']:+.4f}, "
+            f"{test_executions[0]['always_valid_ci_upper']:+.4f}], "
+            f"one-sided p={test_executions[0]['p_value']:.4f}"
+        )
+        print(f"  outcome: {test_executions[0]['outcome']}")
+    print(f"  pipeline_decision: {decision}")
+    return 0
+
+
+def _run_uc_4_6(args) -> int:
+    """UC-4.6 lite — per-write latency on a workload (single-thread).
+
+    Measures the variant's latency at "no contention" (one request at a
+    time, in process). This is the floor; a proper QPS sweep with
+    concurrent load is a separate workstream.
+    """
+    workload = workloads.load(args.workload)
+    workload_sha = artifacts.workload_sha256(
+        [(e.input, e.oracle_canonical) for e in workload]
+    )
+
+    variant_factory = variants.FACTORIES[args.variant]
+    v = variant_factory()
+    # Warmup: first call often pays one-time init costs (e.g., embedder
+    # model load). Discount the first N writes from the latency sample.
+    warmup = min(50, len(workload) // 20)
+
+    latencies_ms: list[float] = []
+    t_total_start = time.perf_counter()
+    for i, entry in enumerate(workload):
+        ctx = {"source_id": entry.source_id}
+        t0 = time.perf_counter()
+        v.align_with_context(entry.input, ctx)
+        elapsed_ms = (time.perf_counter() - t0) * 1000.0
+        if i >= warmup:
+            latencies_ms.append(elapsed_ms)
+    total_seconds = time.perf_counter() - t_total_start
+
+    n = len(latencies_ms)
+    sorted_lat = sorted(latencies_ms)
+    def pct(p: float) -> float:
+        idx = max(0, min(n - 1, int(round((p / 100) * n)) - 1))
+        return sorted_lat[idx]
+
+    p50 = pct(50)
+    p95 = pct(95)
+    p99 = pct(99)
+    p999 = pct(99.9)
+    mean = sum(latencies_ms) / n if n > 0 else 0.0
+    qps_observed = (len(workload) - warmup) / total_seconds if total_seconds > 0 else 0.0
+
+    # §3 UC-4.6 guardrail: p99 < 100 ms. This is at single-thread, no
+    # contention; concurrent load could only raise it.
+    p99_threshold_ms = args.latency_p99_threshold_ms
+    outcome = "PASS" if p99 < p99_threshold_ms else "FAIL"
+
+    test_executions = [
+        {
+            "test_seq_id": 1,
+            "use_case": args.use_case,
+            "metric_id": "uc_4_6_per_write_latency_ms",
+            "type": "guardrail_kill_switch",
+            "statistical_test": "raw_quantile",
+            "n": n,
+            "point_estimate": p99,
+            "guardrail_threshold": p99_threshold_ms,
+            "alpha_allocated": 0.0,
+            "outcome": outcome,
+            "diagnostics": {
+                "p50_ms": p50,
+                "p95_ms": p95,
+                "p99_ms": p99,
+                "p99_9_ms": p999,
+                "mean_ms": mean,
+                "writes_measured": n,
+                "writes_warmed": warmup,
+                "total_seconds": total_seconds,
+                "qps_observed_single_thread": qps_observed,
+            },
+        }
+    ]
+
+    ledger = LordPlusPlusLedger(target_q=args.target_q)
+    decision = "BLOCK_PR" if outcome == "FAIL" and args.tier == "fast" else (
+        "SOFT_REGRESSION_OPENED" if outcome == "FAIL" else "PASS_AND_MERGE"
+    )
+
+    path = artifacts.emit(
+        variant_name=v.name,
+        baseline_name="(none, latency self-measurement)",
+        workload_id=args.workload,
+        workload_sha=workload_sha,
+        tier=args.tier,
+        test_executions=test_executions,
+        ledger=ledger,
+        pipeline_decision=decision,
+        out_dir=args.out_dir,
+    )
+    print(f"Wrote {path}")
+    print(f"  variant {v.name} on {args.workload}")
+    print(f"  writes measured: {n} (warmup discounted: {warmup})")
+    print(f"  latency ms — p50: {p50:.3f}, p95: {p95:.3f}, p99: {p99:.3f}, p99.9: {p999:.3f}, mean: {mean:.3f}")
+    print(f"  observed throughput (single thread): {qps_observed:.0f} writes/sec")
+    print(f"  guardrail p99 < {p99_threshold_ms} ms: {outcome}")
+    print(f"  pipeline_decision: {decision}")
+    return 0
 
 
 def _run_uc_4_4(args) -> int:
@@ -210,6 +475,16 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--kill-switch-threshold", type=float, default=0.01,
                    help="(UC-4.4 only) max acceptable false-merge rate "
                         "(default 1%% per experiments.md §3 UC-4.4 Tier A)")
+    # UC-4.6-specific
+    p.add_argument("--latency-p99-threshold-ms", type=float, default=100.0,
+                   help="(UC-4.6 only) p99 latency kill-switch in ms "
+                        "(default 100 ms per experiments.md §3 UC-4.6)")
+    # UC-4.7-specific
+    p.add_argument("--holdout-fraction", type=float, default=0.2,
+                   help="(UC-4.7 only) fraction of each oracle group to hold "
+                        "out for queries (default 0.2)")
+    p.add_argument("--split-seed", type=int, default=0xC0FFEE,
+                   help="(UC-4.7 only) deterministic split seed")
     args = p.parse_args(argv)
 
     if args.use_case == "UC-4.4":
@@ -217,6 +492,16 @@ def main(argv: list[str] | None = None) -> int:
             print("UC-4.4 requires --tier-b-fixture", file=sys.stderr)
             return 2
         return _run_uc_4_4(args)
+    if args.use_case == "UC-4.6":
+        if not args.workload:
+            print("UC-4.6 requires --workload", file=sys.stderr)
+            return 2
+        return _run_uc_4_6(args)
+    if args.use_case == "UC-4.7":
+        if not args.workload:
+            print("UC-4.7 requires --workload", file=sys.stderr)
+            return 2
+        return _run_uc_4_7(args)
 
     # UC-4.1 path (existing logic)
     if not args.baseline or not args.workload:
