@@ -1,0 +1,416 @@
+{
+  "schema_version": "1",
+  "source": "wikidata wbgetentities REST API",
+  "n_surfaces": 15,
+  "n_candidates": 28,
+  "n_workload_pairs": 124,
+  "surfaces": [
+    {
+      "surface": "Mustang",
+      "n_candidates": 4,
+      "candidates": [
+        {
+          "qid": "Q183476",
+          "domain": "automotive",
+          "expected_label": "Ford Mustang",
+          "actual_label": "Ford Mustang",
+          "aliases": [
+            "Mustang"
+          ]
+        },
+        {
+          "qid": "Q211848",
+          "domain": "biology",
+          "expected_label": "mustang",
+          "actual_label": "mustang",
+          "aliases": [
+            "mustangs"
+          ]
+        },
+        {
+          "qid": "Q192075",
+          "domain": "military",
+          "expected_label": "North American P-51 Mustang",
+          "actual_label": "North American P-51 Mustang",
+          "aliases": [
+            "P-51",
+            "Mustang fighter",
+            "Mustang",
+            "North American Mustang",
+            "F-51 Mustang",
+            "Mustang aircraft",
+            "North American Mustang aircraft",
+            "Pursuit Design 51",
+            "P-51 Mustang"
+          ]
+        },
+        {
+          "qid": "Q221562",
+          "domain": "fashion",
+          "expected_label": "Mustang Holding",
+          "actual_label": "Mustang Holding",
+          "aliases": [
+            "Mustang",
+            "Mustang Store",
+            "Mustang Jeans"
+          ]
+        }
+      ]
+    },
+    {
+      "surface": "Beetle",
+      "n_candidates": 2,
+      "candidates": [
+        {
+          "qid": "Q22671",
+          "domain": "biology",
+          "expected_label": "beetles",
+          "actual_label": "beetles",
+          "aliases": [
+            "coleopteran",
+            "coleopterans"
+          ]
+        },
+        {
+          "qid": "Q152946",
+          "domain": "automotive",
+          "expected_label": "Volkswagen Beetle",
+          "actual_label": "Volkswagen Beetle",
+          "aliases": [
+            "VW Beetle",
+            "Volkswagen Type 1",
+            "Volkswagen Bug",
+            "VW Bug",
+            "Beetle"
+          ]
+        }
+      ]
+    },
+    {
+      "surface": "Polo",
+      "n_candidates": 2,
+      "candidates": [
+        {
+          "qid": "Q134211",
+          "domain": "sports",
+          "expected_label": "polo",
+          "actual_label": "polo",
+          "aliases": [
+            "equestrian polo"
+          ]
+        },
+        {
+          "qid": "Q6101",
+          "domain": "history",
+          "expected_label": "Marco Polo",
+          "actual_label": "Marco Polo",
+          "aliases": [
+            "Magebeiluo",
+            "Marco Emilio Polo",
+            "M. Polo",
+            "Polo",
+            "Ser Polo"
+          ]
+        }
+      ]
+    },
+    {
+      "surface": "Tiger",
+      "n_candidates": 2,
+      "candidates": [
+        {
+          "qid": "Q19939",
+          "domain": "biology",
+          "expected_label": "tiger",
+          "actual_label": "tiger",
+          "aliases": [
+            "Panthera tigris",
+            "tigress",
+            "tigers",
+            "P. tigris"
+          ]
+        },
+        {
+          "qid": "Q10993",
+          "domain": "sports",
+          "expected_label": "Tiger Woods",
+          "actual_label": "Tiger Woods",
+          "aliases": [
+            "Eldrick Tont Woods",
+            "Eldrick Tont \"Tiger\" Woods",
+            "Tiger",
+            "Eldrick \"Tiger\" Woods",
+            "Woods"
+          ]
+        }
+      ]
+    },
+    {
+      "surface": "Oracle",
+      "n_candidates": 3,
+      "candidates": [
+        {
+          "qid": "Q19900",
+          "domain": "tech_company",
+          "expected_label": "Oracle Corporation",
+          "actual_label": "Oracle Corporation",
+          "aliases": [
+            "Big Red",
+            "Oracle International Corporation (Redwood Shores, CA)",
+            "ORCL",
+            "oracle.com",
+            "Oracle"
+          ]
+        },
+        {
+          "qid": "Q185524",
+          "domain": "tech_product",
+          "expected_label": "Oracle Database",
+          "actual_label": "Oracle Database",
+          "aliases": [
+            "Oracle",
+            "Oracle RDBMS",
+            "Oracle DBMS"
+          ]
+        },
+        {
+          "qid": "Q217123",
+          "domain": "mythology",
+          "expected_label": "oracle",
+          "actual_label": "oracle",
+          "aliases": [
+            "fortune-teller",
+            "fortune teller",
+            "diviner",
+            "fortuneteller"
+          ]
+        }
+      ]
+    },
+    {
+      "surface": "Falcon",
+      "n_candidates": 2,
+      "candidates": [
+        {
+          "qid": "Q43489",
+          "domain": "biology",
+          "expected_label": "falcon",
+          "actual_label": "falcon",
+          "aliases": []
+        },
+        {
+          "qid": "Q249091",
+          "domain": "aerospace",
+          "expected_label": "Falcon 9",
+          "actual_label": "Falcon 9",
+          "aliases": [
+            "Mercury redstone",
+            "electrón un cohete más grande",
+            "black claro cohete",
+            "Falcon 9 rocket",
+            "Falcon 9 booster"
+          ]
+        }
+      ]
+    },
+    {
+      "surface": "Cobra",
+      "n_candidates": 2,
+      "candidates": [
+        {
+          "qid": "Q2303322",
+          "domain": "biology",
+          "expected_label": "cobra",
+          "actual_label": "cobra",
+          "aliases": []
+        },
+        {
+          "qid": "Q219629",
+          "domain": "military",
+          "expected_label": "Bell AH-1 Cobra",
+          "actual_label": "Bell AH-1 Cobra",
+          "aliases": [
+            "Viper",
+            "Bell AH-1 HueyCobra",
+            "Huey Cobra",
+            "Bell AH-1",
+            "Bell 209",
+            "Snake",
+            "Cobra",
+            "AH-1 Cobra"
+          ]
+        }
+      ]
+    },
+    {
+      "surface": "Apple",
+      "n_candidates": 3,
+      "candidates": [
+        {
+          "qid": "Q312",
+          "domain": "tech_company",
+          "expected_label": "Apple Inc.",
+          "actual_label": "Apple Inc.",
+          "aliases": [
+            "Apple Incorporated",
+            "Apple (company)"
+          ]
+        },
+        {
+          "qid": "Q89",
+          "domain": "biology",
+          "expected_label": "apple",
+          "actual_label": "apple",
+          "aliases": [
+            "apple fruit"
+          ]
+        },
+        {
+          "qid": "Q213710",
+          "domain": "music",
+          "expected_label": "Apple Records",
+          "actual_label": "Apple Records",
+          "aliases": [
+            "Apple",
+            "Apple (label)"
+          ]
+        }
+      ]
+    },
+    {
+      "surface": "Mercury",
+      "n_candidates": 2,
+      "candidates": [
+        {
+          "qid": "Q308",
+          "domain": "astronomy",
+          "expected_label": "Mercury",
+          "actual_label": "Mercury",
+          "aliases": [
+            "Sol I",
+            "Hermes",
+            "Sol b",
+            "Sol 1",
+            "Planet Mercury",
+            "☿"
+          ]
+        },
+        {
+          "qid": "Q1150",
+          "domain": "mythology",
+          "expected_label": "Mercury",
+          "actual_label": "Mercury",
+          "aliases": [
+            "Mercurius",
+            "Mercury (mythology)"
+          ]
+        }
+      ]
+    },
+    {
+      "surface": "Saturn",
+      "n_candidates": 1,
+      "candidates": [
+        {
+          "qid": "Q193",
+          "domain": "astronomy",
+          "expected_label": "Saturn",
+          "actual_label": "Saturn",
+          "aliases": [
+            "♄",
+            "Sol VI",
+            "Sol 6"
+          ]
+        }
+      ]
+    },
+    {
+      "surface": "Amazon",
+      "n_candidates": 1,
+      "candidates": [
+        {
+          "qid": "Q3884",
+          "domain": "geography",
+          "expected_label": "Amazon",
+          "actual_label": "Amazon",
+          "aliases": []
+        }
+      ]
+    },
+    {
+      "surface": "Java",
+      "n_candidates": 1,
+      "candidates": [
+        {
+          "qid": "Q251",
+          "domain": "tech_product",
+          "expected_label": "Java",
+          "actual_label": "Java",
+          "aliases": [
+            "java programming language"
+          ]
+        }
+      ]
+    },
+    {
+      "surface": "Python",
+      "n_candidates": 1,
+      "candidates": [
+        {
+          "qid": "Q28865",
+          "domain": "tech_product",
+          "expected_label": "Python",
+          "actual_label": "Python",
+          "aliases": [
+            "Python programming language",
+            "Python language",
+            "Python (language)",
+            "Python computer language",
+            "Python Programming Language",
+            "Python (scripting language)",
+            "Python (lang)",
+            "Python (programming)",
+            "Python (computer language)",
+            "Python (software)",
+            "Python (Programming Language)",
+            "Python (computing)",
+            "Python.org"
+          ]
+        }
+      ]
+    },
+    {
+      "surface": "Jaguar",
+      "n_candidates": 1,
+      "candidates": [
+        {
+          "qid": "Q30055",
+          "domain": "automotive",
+          "expected_label": "Jaguar Cars",
+          "actual_label": "Jaguar Cars",
+          "aliases": [
+            "Jaguar"
+          ]
+        }
+      ]
+    },
+    {
+      "surface": "Raspberry Pi",
+      "n_candidates": 1,
+      "candidates": [
+        {
+          "qid": "Q245",
+          "domain": "tech_product",
+          "expected_label": "Raspberry Pi",
+          "actual_label": "Raspberry Pi",
+          "aliases": [
+            "RPi",
+            "RasPi",
+            "Pi",
+            "RaspberryPi"
+          ]
+        }
+      ]
+    }
+  ]
+}

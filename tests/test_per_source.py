@@ -125,3 +125,56 @@ def test_multitenant_workload_loads():
     assert ("sales", "Apple_Inc") in apple_oracles
     assert ("ops", "Apple_Supplier_Inc") in apple_oracles
     assert ("marketing", "Apple_Inc") in apple_oracles
+
+
+def test_synth_workload_has_three_strata():
+    """W-MULTITENANT-SYNTH has explicit global / partial / conditional
+    strata. Verify a representative from each."""
+    from fixtures import workloads
+    from fixtures.workloads.w_multitenant_synth import stratum_for_canonical
+
+    w = workloads.load("W-MULTITENANT-SYNTH")
+    assert len(w) > 300
+
+    # global stratum: Microsoft appears in all 7 sources, all → Microsoft_Corp
+    msft = {(e.source_id, e.oracle_canonical) for e in w if e.input == "Microsoft"}
+    assert all(o == "Microsoft_Corp" for _, o in msft)
+    assert len({s for s, _ in msft}) >= 5  # at least 5 sources see Microsoft
+    assert stratum_for_canonical("Microsoft_Corp") == "global"
+
+    # partial stratum: Apple has source-subset-conditional oracle
+    apple = {(e.source_id, e.oracle_canonical) for e in w if e.input == "Apple"}
+    apple_oracles = {o for _, o in apple}
+    assert apple_oracles == {"Apple_Inc", "Apple_Supplier_Inc"}
+    assert stratum_for_canonical("Apple_Inc") == "partial"
+
+    # conditional stratum: Pipeline means three different things in three sources
+    pipeline = {(e.source_id, e.oracle_canonical) for e in w if e.input == "Pipeline"}
+    pipeline_oracles = {o for _, o in pipeline}
+    assert "Sales_Pipeline" in pipeline_oracles
+    assert "CI_Pipeline" in pipeline_oracles
+    assert stratum_for_canonical("CI_Pipeline") == "conditional"
+
+
+def test_wikidata_disambiguation_workload_loads():
+    """W-MULTITENANT-WIKIDATA is KG-grounded: same surface, different
+    real WikiData canonicals per source."""
+    from fixtures import workloads
+    from fixtures.workloads.w_multitenant_wikidata import disambiguated_surfaces
+
+    w = workloads.load("W-MULTITENANT-WIKIDATA")
+    assert len(w) > 100
+
+    # The key test: Apple has multiple distinct oracle canonicals
+    apple = {(e.source_id, e.oracle_canonical) for e in w if e.input == "Apple"}
+    oracles = {o for _, o in apple}
+    assert len(oracles) >= 3, f"Apple should have at least 3 oracles, got: {oracles}"
+    assert any("Apple Inc" in o for o in oracles)
+    assert "apple" in oracles  # the fruit
+    assert "Apple Records" in oracles
+
+    # disambiguated_surfaces helper returns surfaces with >1 candidate
+    ds = disambiguated_surfaces()
+    assert "Apple" in ds
+    assert "Mustang" in ds
+    assert "Oracle" in ds

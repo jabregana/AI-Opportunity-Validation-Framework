@@ -22,13 +22,21 @@ class WorkloadEntry(NamedTuple):
     oracle_canonical: str
 
 
-from . import w_conceptnet_rel, w_multitenant_demo, w_wikidata_props
+from . import (
+    w_conceptnet_rel,
+    w_multitenant_demo,
+    w_multitenant_synth,
+    w_multitenant_wikidata,
+    w_wikidata_props,
+)
 
 # Registry: workload_id -> loader callable returning list[WorkloadEntry]
 LOADERS: dict[str, Callable[[], list[WorkloadEntry]]] = {
     "W-CONCEPTNET-REL": w_conceptnet_rel.load,
     "W-WIKIDATA-PROPS": w_wikidata_props.load,
     "W-MULTITENANT-DEMO": w_multitenant_demo.load,
+    "W-MULTITENANT-SYNTH": w_multitenant_synth.load,
+    "W-MULTITENANT-WIKIDATA": w_multitenant_wikidata.load,
 }
 
 
