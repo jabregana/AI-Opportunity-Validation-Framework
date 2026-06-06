@@ -7,6 +7,7 @@ from .embed_proxy import (
     EmbeddingSchemaProxy,
     HybridSchemaProxy,
     NeuralEmbeddingSchemaProxy,
+    StructurallyFilteredHybridSchemaProxy,
 )
 from .stub_proxy import StubRandomBucketProxy
 
@@ -17,6 +18,7 @@ FACTORIES: dict[str, Callable[[], Variant]] = {
     "embed-proxy-v0.1.0": EmbeddingSchemaProxy,
     "embed-proxy-v0.2.0": NeuralEmbeddingSchemaProxy,
     "embed-proxy-v0.3.0": HybridSchemaProxy,
+    "embed-proxy-v0.3.1": StructurallyFilteredHybridSchemaProxy,
 }
 
 

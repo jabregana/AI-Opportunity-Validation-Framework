@@ -3,7 +3,8 @@
 The proxy maintains a canonical store. For each incoming relation:
   1. Normalize and embed the surface form.
   2. Find the existing canonical with the highest cosine similarity.
-  3. If that similarity is at or above the threshold, return that canonical.
+  3. If that similarity is at or above the threshold, optionally check a
+     merge_guard callback; if either is unsatisfied, fall through to (4).
   4. Otherwise mint a new canonical (the input surface form becomes its
      own canonical name; first writer wins).
 
@@ -14,6 +15,12 @@ case/underscore/camelCase class of synonyms (`WORKS_AT`, `works_at`,
 Paraphrase coverage is the job of a neural embedder, which can be
 swapped in via the Embedder protocol.
 
+The merge_guard callback (added in v0.3.1) is a deterministic filter
+that fires AFTER the embedding-based match. Returning False blocks the
+merge and forces a new canonical. Used to encode structural rules
+(digit content, prepositional asymmetry) that semantic similarity
+cannot resolve.
+
 Closest neural-embedder candidates (not implemented in v0.1.0 because of
 PyTorch / Python 3.14 wheel availability):
   - sentence-transformers/all-MiniLM-L6-v2 (22M params, well-known)
@@ -23,7 +30,7 @@ PyTorch / Python 3.14 wheel availability):
 from __future__ import annotations
 import hashlib
 import re
-from typing import Protocol
+from typing import Callable, Protocol
 
 from .base import Variant
 
@@ -112,6 +119,7 @@ class EmbeddingSchemaProxy(Variant):
         self,
         embedder: Embedder | None = None,
         similarity_threshold: float = 0.7,
+        merge_guard: Callable[[str, str], bool] | None = None,
     ):
         if not -1.0 <= similarity_threshold <= 1.0:
             raise ValueError(
@@ -121,6 +129,8 @@ class EmbeddingSchemaProxy(Variant):
             embedder if embedder is not None else HashedTokenEmbedder()
         )
         self.threshold = similarity_threshold
+        # Default: always allow the embedding-based match.
+        self.merge_guard = merge_guard or (lambda _input, _canonical: True)
         self._canonicals: list[str] = []
         self._embeddings: list[list[float]] = []
         self._cache: dict[str, str] = {}
@@ -150,7 +160,9 @@ class EmbeddingSchemaProxy(Variant):
                 best_sim = sim
                 best_idx = i
 
-        if best_sim >= self.threshold:
+        if best_sim >= self.threshold and self.merge_guard(
+            input_relation, self._canonicals[best_idx]
+        ):
             chosen = self._canonicals[best_idx]
         else:
             self._canonicals.append(input_relation)
@@ -227,6 +239,52 @@ class NeuralEmbeddingSchemaProxy(EmbeddingSchemaProxy):
         super().__init__(
             embedder=Model2VecEmbedder(model_name, template=template),
             similarity_threshold=similarity_threshold,
+        )
+
+
+class StructurallyFilteredHybridSchemaProxy(EmbeddingSchemaProxy):
+    """v0.3.1 proxy: HybridSchemaProxy plus a deterministic structural
+    merge guard.
+
+    Identical embedding logic to v0.3.0 (token + neural concat with
+    token-dominant weights, threshold 0.8). After the embedding match
+    clears threshold, a deterministic filter runs:
+
+      Rule 1: digit content differs       -> block the merge
+      Rule 2: trailing preposition asymm. -> block the merge
+
+    Both rules came directly from observed v0.3.0 failures on the
+    WikiData Tier B gauntlet (ISO 639-X codes, "review score" vs
+    "review score by"). Adding them is expected to reduce Tier B
+    false-merge rate without sacrificing UC-4.1 wins.
+
+    The filter is variant-specific: it is wired only into this variant,
+    not into v0.3.0 itself, so the harness can compare them
+    side-by-side and credit the filter's contribution explicitly.
+    """
+
+    name = "embed-proxy-v0.3.1"
+
+    def __init__(
+        self,
+        token_weight: float = 2.0,
+        neural_weight: float = 1.0,
+        similarity_threshold: float = 0.8,
+        model_name: str = "minishlab/potion-base-32M",
+        template: str | None = "the relation type called {}",
+    ):
+        from .neural_embedder import Model2VecEmbedder
+        from .structural_filter import structural_merge_guard
+
+        token_emb = HashedTokenEmbedder()
+        neural_emb = Model2VecEmbedder(model_name, template=template)
+        hybrid = HybridConcatEmbedder(
+            [(token_emb, token_weight), (neural_emb, neural_weight)]
+        )
+        super().__init__(
+            embedder=hybrid,
+            similarity_threshold=similarity_threshold,
+            merge_guard=structural_merge_guard,
         )
 
 
