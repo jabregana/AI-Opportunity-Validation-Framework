@@ -60,9 +60,10 @@ Across a 1.2B → 3.2B → 14.8B model ladder (Ollama), pre-normalizing entity a
 | 3.2B (llama3.2:3b) | 0.4921 | 0.9464 | +0.4544 | 153 ms → 104 ms |
 | 8.0B (llama3.1:8b) | 0.4067 | **1.0000** | +0.5933 | 206 ms → 145 ms |
 | 14.8B (qwen2.5:14b) | 0.3968 | 0.9464 | +0.5496 | 572 ms → 200 ms |
-| 33.5B (qwen2.5vl:32b) | 0.4550 | **1.0000** | +0.5450 | 764 ms → **382 ms** |
+| 33.5B (qwen2.5vl:32b) | 0.4550 | **1.0000** | +0.5450 | 764 ms → 382 ms |
+| frontier (claude-opus-4-7, API) | 0.5284 | 0.9630 | +0.4345 | 1192 ms → 1035 ms |
 
-A 3B model with the proxy beats a 14B model without it. The 8B and 32B both reach PERFECT 1.0 coherence with the proxy. At the largest tier the proxy is also 2x faster per call. A multi-turn conversational variant ([`docs/finding-conversational-llm.md`](docs/finding-conversational-llm.md)) confirms the pattern holds in dialogue too, with smaller magnitude (+0.04 to +0.18 macro-F1) because co-reference is the LLM's job. See [`docs/finding-small-llm-quality.md`](docs/finding-small-llm-quality.md).
+A 3B model with the proxy beats a 14B model without it. The 8B and 32B both reach PERFECT 1.0 coherence with the proxy and beat frontier-tier Opus without it. The "lift grows with size" pattern peaks at 8B-32B (the "frustrated middle"); softens at the frontier tier because Opus has more discipline to self-canonicalize, but the lift still persists at +0.4345. Latency speedup grows for local models but shrinks at the API tier (cloud RTT dominates). A multi-turn conversational variant ([`docs/finding-conversational-llm.md`](docs/finding-conversational-llm.md)) confirms the pattern in dialogue, smaller magnitude (+0.04 to +0.18). See [`docs/finding-small-llm-quality.md`](docs/finding-small-llm-quality.md).
 
 ### When to use this middleware
 
