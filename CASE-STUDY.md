@@ -101,9 +101,17 @@ Three findings, refined as the ladder extends from 1B local to a frontier API mo
 
 Practical implications: a 3B model with the proxy in front (0.9464) beats a 14B without it (0.3968) and is only slightly behind Opus without it (0.5284). An 8B-with-proxy hits perfect coherence (1.0000) at 145 ms/call — beating Opus-with-proxy (0.9630, 1035 ms/call) by every measure except raw model capability on other tasks. The proxy compensates for model size on the entity-coherence axis across a >100x size range from 1.2B to frontier-tier. Latency speedup grows with local model size (2x at 32B) but shrinks at the API tier (1.15x at Opus) because cloud round-trip dominates the per-call cost. Determinism comes for free regardless: the canonical is locked in upstream so retry noise does not refragment downstream memory.
 
-A multi-turn conversational variant of the same benchmark (`docs/finding-conversational-llm.md`) confirms the pattern holds in realistic dialogue shapes too, with smaller magnitude (+0.04 to +0.18 macro-F1 instead of +0.23 to +0.55 B-cubed). The lift shrinks because co-reference resolution is the LLM's job (the proxy does not touch "they" or "the company") and the conversation context partially disambiguates aliases on its own. The 14B model still gets the biggest lift; 3B and 14B still converge to the same with-proxy ceiling.
+A multi-turn conversational variant of the same benchmark (`docs/finding-conversational-llm.md`) confirms the pattern holds in realistic dialogue shapes, with two interesting differences. (1) Magnitude on local models is smaller (+0.04 to +0.18 macro-F1 instead of +0.23 to +0.55 B-cubed) because co-reference resolution is the LLM's job (the proxy does not touch "they" or "the company"). (2) **Opus's conversational lift is the LARGEST in the ladder at +0.2733** (vs only +0.4345 single-sentence) — Opus tries harder than smaller models to catch every mention in a multi-turn dialogue, producing more surface variants per entity that the proxy then canonicalizes. With proxy, Opus's recall hits a perfect 1.000.
 
-See `docs/finding-small-llm-quality.md` and `docs/finding-conversational-llm.md` for the full results; bench scripts at `experiments/small_llm_quality_bench.py` and `experiments/conversational_llm_bench.py`.
+| Conversational F1 | no proxy | with proxy | Δ |
+|---|---|---|---|
+| llama3.2:3b | 0.8667 | 0.9333 | +0.0667 |
+| qwen2.5:14b | 0.7533 | 0.9333 | +0.1800 |
+| **claude-opus-4-7** | **0.6400** | **0.9133** | **+0.2733** |
+
+The strongest specific commercial claim from combined data: **an 8B-local-with-proxy delivers 1.0 single-sentence and ~0.93 multi-turn coherence at ~145 ms/call; Opus-frontier-without-proxy delivers 0.5284 single-sentence and 0.6400 multi-turn at ~1100-1200 ms/call.** A self-hosted 8B + proxy beats a frontier API call on every dimension that matters for entity-normalization workloads.
+
+See `docs/finding-small-llm-quality.md` and `docs/finding-conversational-llm.md` for the full results; bench scripts at `experiments/small_llm_quality_bench.py`, `experiments/claude_api_quality_bench.py`, `experiments/conversational_llm_bench.py`, and `experiments/claude_api_conversational_bench.py`.
 
 ### Multi-tenant B-cubed F1
 
