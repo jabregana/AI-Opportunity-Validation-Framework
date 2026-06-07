@@ -67,7 +67,20 @@ Across a 1.2B → 3.2B → 14.8B model ladder (Ollama), pre-normalizing entity a
 | 33.5B (qwen2.5vl:32b) | 0.4550 | **1.0000** | +0.5450 | 764 ms → 382 ms |
 | frontier (claude-opus-4-7, API) | 0.5284 | 0.9630 | +0.4345 | 1192 ms → 1035 ms |
 
-A 3B model with the proxy beats a 14B model without it. The 8B and 32B both reach PERFECT 1.0 coherence with the proxy and beat frontier-tier Opus without it. The "lift grows with size" pattern peaks at 8B-32B (the "frustrated middle"); softens at the frontier tier because Opus has more discipline to self-canonicalize, but the lift still persists at +0.4345. Latency speedup grows for local models but shrinks at the API tier (cloud RTT dominates). A multi-turn conversational variant ([`docs/finding-conversational-llm.md`](docs/finding-conversational-llm.md)) confirms the pattern in dialogue, smaller magnitude (+0.04 to +0.18). See [`docs/finding-small-llm-quality.md`](docs/finding-small-llm-quality.md).
+A 3B model with the proxy beats a 14B model without it. The 8B and 32B both reach PERFECT 1.0 coherence with the proxy and beat frontier-tier Opus without it.
+
+**Real-data confirmation across 14 models from 5 providers** ([`docs/finding-full-ladder-sweep.md`](docs/finding-full-ladder-sweep.md)): on 227 real Twitter Financial News tweets, **no frontier API matches qwen2.5:3b (free local 3B) + proxy on entity-normalization accuracy**:
+
+| Rank | Model | With-proxy accuracy | Latency |
+|---|---|---|---|
+| 1 | **qwen2.5:3b** (free local) | **0.872** | 119 ms |
+| 2 | llama3.2:3b (free local) | 0.855 | 121 ms |
+| 3 | gpt-4o (OpenAI) | 0.828 | 912 ms |
+| 7 | gemini-2.5-flash (Google) | 0.802 | 587 ms |
+| 9 | gemini-2.5-pro (Google) | 0.775 | 1804 ms |
+| 10 | claude-opus-4-7 (Anthropic) | 0.758 | 1617 ms |
+
+qwen2.5:3b WITHOUT proxy (0.789) even beats Opus WITH proxy (0.758). Cost per million records: ~$0 (self-hosted) vs ~$10k (Opus). See the [full 14-model ladder](docs/finding-full-ladder-sweep.md) for details.
 
 ### When to use this middleware
 

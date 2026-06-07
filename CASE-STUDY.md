@@ -84,7 +84,23 @@ Gauntlet pass status (single-tenant):
 
 v0.3.1 is the first variant to pass all UC-4.x gates simultaneously on real WikiData. v0.1.0 wins UC-4.7 held-out generalization (28.4%) because its lower threshold catches more near-matches; v0.3.1 trades that for Tier B safety.
 
-### Downstream LLM quality lift across model sizes (the flagship commercialization number)
+### THE FLAGSHIP NUMBER — Free local 3B + proxy beats every frontier API
+
+Full 14-model ladder on 227 real Twitter Financial News tweets, 4 frontier providers + 10 local model families (`docs/finding-full-ladder-sweep.md`). Top of the ranking by with-proxy accuracy:
+
+| Rank | Model | Type | With-proxy accuracy | Latency / call |
+|---|---|---|---|---|
+| 1 | **qwen2.5:3b** | Local 3.1B (free) | **0.872** | 119 ms |
+| 2 | llama3.2:3b | Local 3.2B (free) | 0.855 | 121 ms |
+| 3 | gpt-4o | OpenAI frontier | 0.828 | 912 ms |
+| 4 | qwen2.5vl:7b | Local 8.3B (free) | 0.819 | 178 ms |
+| 7 | gemini-2.5-flash | Google frontier | 0.802 | 587 ms |
+| 9 | gemini-2.5-pro | Google frontier | 0.775 | 1804 ms |
+| 10 | claude-opus-4-7 | Anthropic frontier | 0.758 | 1617 ms |
+
+A free local 3B model with our proxy beats every frontier API tested. **qwen2.5:3b WITHOUT proxy (0.789) even beats Opus WITH proxy (0.758).** Cost per million tweets: ~$0 (self-hosted) vs ~$10k (Opus); latency ~14x faster.
+
+### Downstream LLM quality lift across model sizes (the original finding)
 
 Synthetic workload: 6 oracle entities × 5 aliases each = 30 utterances. Each utterance is a short sentence ("Bought AAPL today.", "Microsoft Corporation reported earnings."). Each model is asked to extract the main entity. With the proxy in front (Mem0PreNormalized `mention_map` pattern), aliases are canonicalized BEFORE the LLM sees the text. B-cubed F1 measures how coherent the LLM's extracted entities are vs the oracle.
 
