@@ -1,107 +1,115 @@
 # Gaps and Limitations
 
-This document is a candid audit of what the current state of the project does and does not prove. Written so an outside reader can decide for themselves where the claims hold and where they need more work.
+A candid audit of what the current state of the project does and does not prove. This document is updated as gaps are closed (or as new ones are surfaced). The most important gap-closing event was the **substantial-N revision in June 2026** which corrected the small-benchmark overclaim.
 
-## Are we pressure-testing conclusively? No.
+## TL;DR after 4-stage evaluation
 
-Here is what we have versus what we would need for production-credible claims.
+We have a well-instrumented prototype with a defensible measurement framework. The proxy is incrementally useful for entity-heavy LLM pipelines, NOT a market-defining product. The framework catching its own small-N overclaim in stage 4 is the project's most credibility-bearing artifact.
 
-| Dimension | What we have | What we would need | Status |
-|---|---|---|---|
-| Single-tenant clustering | WikiData 2457 entries, real paraphrase distribution, paired bootstrap with tight CIs | Same plus a second real corpus | Decent |
-| Single-tenant Tier B safety | WikiData 70 hard-negative pairs, machine-mined | Thousands of pairs, hand-validated | Thin coverage |
-| Latency | Single-thread p99 on 2457 writes | QPS sweeps under concurrent load, longer runs to surface tail behavior | Floor only |
-| Multi-tenant clustering | Two workloads totaling 654 entries (516 synthetic + 138 KG-grounded) | Real multi-team agent logs at thousands of entries | Weak |
-| Multi-tenant Tier B | None | Cross-source false-merge fixture | Missing |
-| Real agent memory ingestion | Zero | LongMemEval-S or equivalent fully integrated | Missing |
-| Downstream task evaluation | UC-4.7 lite (held out from the same workload) | Retrieval F1 from a real QA task with the proxy interposed | Missing |
-| Scale | K (canonical count) ≈ 300 maximum | K = 10k-1M to surface O(K^2) consolidate cost and memory profile | Missing |
-| Production noise patterns | Three coarse noise modes at fixed rates | Domain shift over time, mixed-language inputs, Levenshtein-close typos, adversarial users | Thin |
-| Direct comparison against Mem0 | None | Run Mem0 v3 on the same workloads, compare F1 and latency | Missing |
+The remaining gaps are smaller and more specific than the original audit suggested. Many big gaps have been closed; new smaller ones have surfaced.
 
-### The specific holes that bite hardest
+## What's been closed since the original audit (chronological)
 
-1. **The whole multi-tenant story rests on two small synthetic workloads we authored.** The synthetic workload was built around the strata the variants would need to navigate, then victory was declared when v0.4.4 navigated them. That is the textbook selection-effect problem. The "v0.4.4 passes both workloads" claim is real but its generalization to production is unproven.
+### Gap-closing wave 1 (2026-06-06, "Items 1-5")
 
-2. **Cadence invariance is a small-K artifact.** The finding that "cadence does not affect final F1" holds on 138-516 entry workloads. At K=10k+, ordering effects in union-find and floating-point centroid drift might break this. We do not know.
+| Original gap | Status | Finding doc |
+|---|---|---|
+| No comparison against Mem0 | **Closed (with nuance)** — Mem0 v3 OSS outputs natural-language facts, not canonical IDs; direct head-to-head was a category error. Followed up with live wrapper test on real Mem0 instance. | `docs/finding-mem0-comparison.md`, `docs/finding-mem0-live-wrapper.md` |
+| Real UC-4.7 with LongMemEval-S | **Closed (negative result)** — All variants regress against b-raw on long-form conversational text (p=1.0000, BLOCK_PR). Narrowed the claim from "agent memory" to "entity normalization in property graphs." | `docs/finding-longmemeval-regression.md` |
+| Scale stress test | **Closed (revealed scaling cliff)** — At K~16k, ingestion throughput collapsed 9x. Led to v0.5.5 ANN index and v0.5.7 multi-tenant ANN. | `docs/finding-scale-stress.md`, `docs/finding-ann-scale.md`, `docs/finding-mt-ann-scale.md` |
+| Multi-tenant Tier B fixture | **Closed (caught two real bugs)** — HashedTokenEmbedder hash collision and v0.4.4 over-aggressive merge. Both fixed in v0.5.0. | `docs/finding-multitenant-tier-b.md` |
+| Real multi-tenant dataset | **Closed (negative result)** — Stack Overflow tag dataset shows proxies under-cluster on singleton-heavy data. Led to v0.5.3 singleton-aware variant. | `docs/finding-stackoverflow-mt.md` |
 
-3. **No comparison against Mem0 v3.** The wedge thesis is "we beat LLM-in-loop." We have never run Mem0 v3 on the same data to verify. The latency claim (30ms vs 500-2000ms) is from typical LLM API numbers, not measured against an actual Mem0 deployment. A reviewer would correctly ask "show me your variant beating Mem0 on Mem0's own benchmark."
+### Gap-closing wave 2 (2026-06-06 to 2026-06-07, commercialization battery)
 
-4. **UC-4.7 lite is held out from the same workload.** Real UC-4.7 is held-out questions against a different memory ingestion. The "held-out generalization 28% on WikiData" number is an in-distribution test, not true generalization.
+| New gap surfaced | Status | Finding doc |
+|---|---|---|
+| Live Mem0 deployment validation | **Closed** — wrapper produces canonical-named stored memories (Alphabet 0→3, Microsoft 1→5, Tesla 1→5). Validation at storage level. | `docs/finding-mem0-live-wrapper.md` |
+| Multi-session retrieval F1 | **Closed (with nuance)** — On shared-user store, Mem0's own dedup absorbs much of the wrapper's value. Per-tenant deployments still benefit. | `docs/finding-multi-session-mem0.md` |
+| Open-world alias coverage (out-of-map entities) | **Closed** — Partial map (2/5 aliases) recovers 87% of full-map lift; embedding fallback adds +3.7%. | `docs/finding-open-world-alias.md` |
+| Unseen-entity handling | **Closed (with documented limit)** — Embedding fallback partially handles unseen entities (5→4 alias collapse), but misses acronym/expansion pairs. | `docs/finding-unseen-entity.md` |
+| Co-reference resolver value | **Closed (negative)** — Coref preprocessor regresses (-0.024 F1). LLMs do co-reference internally. | `docs/finding-coref-doesnt-help.md` |
+| Real-data benchmark at small N | **Closed** — 30→269 tweets, +25% surface-variant reduction, +10pp accuracy. | `docs/finding-real-dataset.md`, `docs/finding-scale-tweet.md` |
+| Production case study | **Closed** — 50-entity curated map on 405 real tweets, +7.7pp accuracy [95% CI +4.7, +10.9]. | `docs/finding-case-study-financial.md` |
+| Full LLM ladder at small N | **Closed** — 14 models across 5 providers (Anthropic Opus, OpenAI gpt-4o, Google Gemini Pro/Flash, 10 local). | `docs/finding-full-ladder-sweep.md` |
 
-5. **Tier B at 70 pairs is thin.** v0.3.1 passed WikiData Tier B at 0/70. That tells us we do not fail on those 70 specific pairs. Production has thousands of edge cases. 70 is a vibe check, not a proof.
+### Gap-closing wave 3 (2026-06-07, substantial-N pressure test)
 
-## Where we fall short of the wedge ambition
+**The biggest gap-closer: the substantial-N revision** (`docs/finding-substantial-N-revision.md`). The previous small-N benchmark (N=227, 10-entity map) was tail-biased to famous brands. Scaled to N=836 with 125 entities:
 
-The original thesis from `docs/opportunity.md`:
-
-> A deterministic, no-LLM-in-hot-path schema-alignment proxy that out-competes Mem0's LLM-in-extraction-prompt approach on agent memory graphs.
-
-Six things we would need to claim this credibly. Status of each:
-
-| Claim | Status |
+| Original (small N=227) | Revised (substantial N=836) |
 |---|---|
-| Deterministic write path | Done |
-| No LLM in hot path | Done |
-| Lower latency than LLM approach | 30ms p99 measured, but vs Mem0-typical numbers, not vs measured Mem0 |
-| Comparable or better clustering quality than Mem0 on real data | Unverified. Never run Mem0 on the same workloads. |
-| Works on real agent memory (multi-turn dialogue, real entities) | Unverified. LongMemEval stubbed. Synthetic only. |
-| Production-ready at scale | Unverified. K ≈ 300 maximum tested. No memory profile, no concurrent-write test. |
+| qwen2.5:3b + proxy: 0.872 | qwen2.5:3b + proxy: 0.758 (**-11.4 pp**) |
+| llama3.2:3b + proxy: 0.855 | llama3.2:3b + proxy: 0.758 (-9.7 pp) |
+| qwen2.5vl:7b + proxy: 0.819 | qwen2.5vl:7b + proxy: 0.773 (-4.6 pp) |
+| gpt-4o + proxy: 0.828 | gpt-4o + proxy: 0.773 (-5.5 pp) |
+| **Headline:** "3B beats every frontier" | **Headline:** "7B ties frontier at 1000x lower cost" |
 
-So we have a credible PROTOTYPE with a defensible measurement harness. We do not have a verified PRODUCT.
+**Smaller models drop more at scale.** Frontier models are more robust to long-tail entities (regional banks, ETFs, abstract concepts like Federal Reserve, S&P 500) which small models miss. The framework forced this revision before any public claim went out.
 
-## What would actually move the project from prototype to claim-defensible
+## What still remains as honest gaps
 
-In order of payoff per session of effort:
+These are the limitations that did NOT get closed by the gap-closing waves above. They are smaller and more specific than the original audit.
 
-1. **Run Mem0 v3 on W-WIKIDATA-PROPS.** Use the Mem0 SDK, ingest the same workload, query the canonicals it produces, score with the same B-cubed F1 metric. If v0.3.1 beats it, that is a defensible head-to-head. If not, the wedge thesis needs revision. Single most important missing experiment.
+### Open gaps in the data
 
-2. **Real UC-4.7 with LongMemEval-S.** Build the NER + retrieval scorer. The current UC-4.7 lite is in-distribution; real UC-4.7 measures actual downstream impact. Two synth workloads plus one real benchmark turns a portfolio piece into a defensible artifact.
+| Gap | Severity | Path to close |
+|---|---|---|
+| Substantial-N full ladder (Opus + Gemini Pro/Flash at N=836) | **Medium** | ~$50 + 30 min of API calls. Completes the revised ranking across all 4 frontier providers. |
+| Multi-corpus generalization beyond Twitter | Medium | Add Reuters financial news, Reddit r/wallstreetbets, internal Slack archives. Tests whether the pattern is corpus-specific. |
+| Out-of-distribution tweets (no target entity mentioned) | Medium | Currently filtered out. Including them tests precision when the proxy shouldn't fire. |
+| Multi-entity tweets | Low-medium | Currently each tweet has one primary oracle. Multi-entity tweets are the harder real-world case. |
+| Per-vertical performance (pharma, legal, customer support) | High for commercialization | Would require building vertical alias maps and running the bench per-vertical. Pharma especially: brand-generic + FDA Orange Book. |
 
-3. **Scale stress test.** Synthesize a 100k-entry workload (could just be 100x the existing synth) and run v0.4.4. Measure consolidate latency, memory consumption, whether cadence invariance survives. Surfaces operational ceilings before they bite in production.
+### Open gaps in the methodology
 
-4. **Multi-tenant Tier B fixture.** Same idea as the existing Tier B but cross-source: pairs where sales' and ops' canonicals should NOT merge despite surface similarity. Tests v0.4.x more rigorously than the workload metric alone.
+| Gap | Severity | Path to close |
+|---|---|---|
+| Semantic-similarity-tolerant metric (vs exact-string) | Medium | Frontier-model verbosity is penalized as hard as wrong-entity errors. A softer metric (cosine ≥ threshold = match) might shift rankings. |
+| Always-valid CIs (§5.5 of experiments.md) | Low | Needed once gauntlet runs on hundreds of pairs per night. Fixed-N bootstrap is sufficient at current scale. |
+| SAFFRON ledger fully implemented | Low | Only the recommendation gate exists. Needed when rolling 30d null proportion approaches 0.7. |
+| Pre-registration log at `runs/registry.md` | Low | Process hygiene. Not load-bearing for current claims. |
+| Cache-warmed Mem0 A/B for true latency overhead | Low-medium | Current Mem0 latency comparison was confounded by cold/warm cache. ~30 min to re-run with explicit warming. |
 
-5. **A second real multi-tenant dataset.** Not synthetic. Maybe Slack open-source data with channel as source_id, or Stack Overflow with tag as source_id. Removes the selection-effect concern.
+### Open gaps in the production story
 
-Items 1 and 2 alone would change the project's status from "well-instrumented prototype" to "defensible technical artifact."
+| Gap | Severity | Path to close |
+|---|---|---|
+| No live customer deployment | **High for commercialization** | Pilot with a real fintech / pharma / customer-support customer. Converts "rigorous prototype" to "production-validated middleware." |
+| Vertical alias map at scale (>500 entities for pharma, etc.) | High for commercial moat | The actual defensible asset isn't the proxy code; it's the maintained alias map. Building one is real domain work. |
+| Memory store auditor tooling | Medium | "Diagnose fragmentation in your existing memory store" land-and-expand product. Not built. |
+| Open-source community + brand | High for distribution | Datadog/Sentry-style infrastructure brand requires sustained community effort. Not started. |
 
-## Results from running items 1-5 (added 2026-06-06)
+## What we've explicitly proven we CANNOT do
 
-After this audit was first written, items 1-5 were attempted in one session. Results updated the picture substantially:
+These are negative results documented across the project. Treat them as boundary markers — they prevent overselling.
 
-- **Item 1 (Mem0 head-to-head):** Not possible as designed. Mem0 v3 OSS produces extracted natural-language facts ("User mentioned X as Y"), not canonical entity IDs. The two systems address different problems. See `docs/finding-mem0-comparison.md`.
+| Cannot do | Evidence | Implication |
+|---|---|---|
+| Long-form conversational memory clustering | `docs/finding-longmemeval-regression.md` — all variants regress p=1.0 | Don't claim "agent memory" broadly; this is entity normalization |
+| Help via co-reference preprocessing | `docs/finding-coref-doesnt-help.md` — -0.024 F1 regression | LLMs do co-ref internally; don't add another step |
+| Acronym ↔ expansion canonicalization without alias map | `docs/finding-unseen-entity.md` — embedding misses AAPL ↔ Apple Inc | Need explicit alias maps for these pairs |
+| Beat frontier on canonical accuracy at substantial N | `docs/finding-substantial-N-revision.md` — ties not wins | Revised commercial claim to "competitive at fraction of cost" |
+| Sentence-level paraphrase clustering | `docs/finding-neural-ceiling.md` — bigger embedders don't help | Need fine-tuned model or different mechanism |
 
-- **Item 2 (Real UC-4.7 with LongMemEval):** Adapted the dataset for clustering eval. **All variants regressed against b-raw with statistical significance (p=1.0000, BLOCK_PR).** The proxies' algorithms (token overlap, short-text embedding) do not generalize to long-form conversational text. See `docs/finding-longmemeval-regression.md`.
+## What this audit tells you about the project state
 
-- **Item 3 (Scale stress test):** Tested at 10k and 100k entries.
-  - At 10k workload (K=1616 canonicals): cadence invariance HOLDS, 139 writes/sec, 1.8s final consolidate, F1=0.717.
-  - At 100k workload (K=16262 canonicals): **ingestion throughput collapses from 139 writes/sec to 16 writes/sec.** Total ingestion took 1h 43min. Final consolidate 120s. F1=0.746. **The inner variant's O(K) cosine search becomes the bottleneck at scale.** The UC-4.6 latency claim ("p99 27ms") is only valid at the K under which it was measured (~300). Production scale needs an approximate nearest neighbor index (FAISS/Annoy/ScaNN) cutting O(K) to O(log K) or O(sqrt K). See `docs/finding-scale-stress.md`.
+- The original "Items 1-5" gaps from the first audit (Mem0 comparison, real UC-4.7, scale stress, Tier B, real MT data) are ALL closed.
+- The biggest gap discovered by closing them was the small-N tail-bias overclaim, now corrected in stage 4.
+- The remaining open gaps are smaller, more specific, and have clear paths to close.
+- The discipline of documenting closed gaps AND new gaps surfaced is itself the credibility-bearing artifact — the project doesn't hide what didn't work.
 
-- **Item 4 (Multi-tenant Tier B fixture):** Built mining tool + scorer. **Surfaced two real bugs in the variants.** Bug 1: `HashedTokenEmbedder(dim=256)` has hash collisions ("account"/"vendor" collide), causing 2.5% false merges in v0.4.1/v0.4.2/v0.4.3 on SYNTH MT Tier B. Bug 2: v0.4.4 aggressive mode (min_overlap=1) produces 100% false merges on SYNTH MT Tier B. v0.4.4's earlier UC-4.1 wins on SYNTH were essentially correct global-stratum merges WITH catastrophic cross-source false merges that B-cubed averaged out. See `docs/finding-multitenant-tier-b.md`.
+## Recommended next experiments (in priority order)
 
-- **Item 5 (Stack Overflow real multi-tenant):** Built W-STACKOVERFLOW-MT (211 entries, 6 language sources, 145 oracle canonicals). **All variants regress against b-raw** (-0.04 to -0.13 B-cubed). The workload is dominated by singleton clusters; b-raw's identity-clustering trivially gets cross-source identity matches; proxies over-isolate. See `docs/finding-stackoverflow-mt.md`.
+1. **Complete the substantial-N ladder.** Run Opus + Gemini Pro/Flash at N=836. ~$50, 30 min. Locks in the revised ranking across all four frontier providers.
+2. **Apply the framework to a second vertical.** Build a pharma alias map (brand-generic + FDA Orange Book) and run the same evaluation. Demonstrates the framework's reusability AND tests whether the cost-efficiency story holds in a different domain.
+3. **Live customer pilot.** Pick a fintech or customer-support company with high-volume entity-extraction load. Deploy the proxy + a curated alias map. Measure cost savings vs their current LLM bill.
+4. **Memory store auditor tool.** Build a diagnostic that scans an existing Mem0/Graphiti/Cognee store, reports fragmentation per entity, and proposes alias-map additions. Land-and-expand wedge.
+5. **Apply the framework to a different AI/ML opportunity entirely.** The meta-value of this repo is the framework, not the proxy. Pick the next opportunity, run it through the same four stages.
 
-## What the items 1-5 results tell us
+## What this audit does NOT cover
 
-The wedge thesis claim needs SIGNIFICANT narrowing after running these:
-
-  Original: "deterministic schema-alignment proxy that out-competes Mem0's
-            LLM-in-extraction-prompt approach on agent memory graphs"
-  
-  After Items 1-5: "deterministic schema-alignment proxy for entity and
-                    relation name normalization in property graphs, when
-                    each entity has multiple alias surface forms within
-                    each source"
-
-Three workloads the proxies don't help on:
-- LongMemEval (long-form conversation text): proxies over-cluster on template similarity
-- Stack Overflow MT (singleton-heavy multi-tenant): proxies under-cluster on global stratum because the aggressive signal is absent
-- SYNTH MT Tier B (surface-form collisions across sources): v0.4.4 aggressive mode 100% false-merges; v0.4.1-v0.4.3 false-merge 2.5% via hash collision
-
-One workload the proxies DO help on:
-- WikiData-PROPS (single-tenant, multi-alias per entity): v0.3.1 statistically beats b-raw
-
-The harness, the statistical framework, the iteration record, and the variant-evolution narrative are intact. But the wedge ambition needs to be expressed precisely as "multi-alias entity normalization" rather than the broader "agent memory" framing.
-
-A v0.5.x track would need to address the singleton-heavy case (Stack Overflow style) and the bug fixes from Item 4 (hash collision dim, tighten v0.4.4 aggressive).
+- Code quality / maintainability of the proxy itself. (See test suite — 194 tests, mostly green; no formal coverage report.)
+- License implications for commercial deployment. (See LICENSE — FSL-1.1-ALv2; 2-year window before Apache 2.0 conversion.)
+- Comparison against academic entity-resolution literature (Senzing, Dedupe.io, py_entitymatching, etc.). The project focuses on the LLM-pipeline use case; classical ER tools are orthogonal.
+- Long-term operational concerns (alias-map drift, multi-region deployment, compliance for regulated industries). Out of scope until there's a live deployment.
