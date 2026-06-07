@@ -25,10 +25,11 @@ m.add("Bought AAPL last week and watching MSFT", user_id="trader1")
 Two ways to integrate:
 
 1. `EntityNormalizer` service API: wrap any of the bundled variants behind a stable `normalize(surface, context) -> canonical` interface. Drop into your own write path or query rewriter.
-2. `Mem0PreNormalized` wrapper: drop-in middleware over a Mem0 v3 OSS client. Pre-normalizes entity mentions in input text before forwarding to Mem0. Reduces store fragmentation without changing Mem0 itself.
-3. `GraphitiPreNormalized` wrapper (v0.6.0): same pattern over a Graphiti graph-memory client. Preserves the async `add_episode` / `add_episode_bulk` contract.
+2. `Mem0PreNormalized` wrapper: drop-in middleware over a Mem0 v3 OSS client. Sync `add()`. Per-user via `user_id`.
+3. `GraphitiPreNormalized` wrapper (v0.6.0): same pattern over a Graphiti graph-memory client. Async `add_episode` / `add_episode_bulk`. Per-tenant via `group_id`.
+4. `CogneePreNormalized` wrapper (v0.6.0): same pattern over Cognee's module-level async API. Async `add()` + `cognify()`. Per-tenant via `dataset_name`.
 
-Cognee and other memory frameworks can be added behind the same `mention_map` / `mention_extractor` contract; see `runner/service/integrations/` for the wrapper template.
+The three wrappers cover Mem0's sync-client, Graphiti's async-client, and Cognee's async-module API shapes. Any memory framework that exposes a text-ingestion entry point can be added behind the same `mention_map` / `mention_extractor` contract; see `runner/service/integrations/` for the three reference implementations.
 
 ## What problem this addresses
 
