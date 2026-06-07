@@ -4,7 +4,7 @@
 
 This repository is two interlocking artifacts:
 
-1. **An evaluation framework** for assessing whether a given AI/ML/LLM opportunity is real — a four-stage progression (theoretical landscape scan → synthetic data → real data → substantial real data), a statistical harness (LORD++ online FDR, paired bootstrap, CUPED variance reduction, CI gates), a multi-model ladder runner that auto-routes to Anthropic / OpenAI / Google / Ollama, and a finding-doc culture where every claim — including negative results — gets a dated doc. See [`FRAMEWORK.md`](FRAMEWORK.md) for the full framework narrative and reusable component inventory.
+1. **An evaluation framework** for assessing whether a given AI/ML/LLM opportunity is real, a four-stage progression (theoretical landscape scan → synthetic data → real data → substantial real data), a statistical harness (LORD++ online FDR, paired bootstrap, CUPED variance reduction, CI gates), a multi-model ladder runner that auto-routes to Anthropic / OpenAI / Google / Ollama, and a finding-doc culture where every claim, including negative results, gets a dated doc. See [`FRAMEWORK.md`](FRAMEWORK.md) for the full framework narrative and reusable component inventory.
 
 2. **The schema-alignment proxy** as the first opportunity tested through it. Drop-in middleware that canonicalizes entity surface forms before the LLM extraction call, so the downstream memory system stores consistent canonicals instead of fragmenting into one entry per alias. Integrations for Mem0, Graphiti, and Cognee shipped.
 
