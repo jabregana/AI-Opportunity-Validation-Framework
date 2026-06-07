@@ -2,7 +2,7 @@
 
 **A process for testing whether an AI or ML opportunity is actually worth building.**
 
-We started by looking at agent memory tools. That work surfaced one specific opportunity, an entity-normalization proxy. We built this framework to test that opportunity properly. The framework worked. It is now reusable for the next opportunity.
+I started by looking at agent memory tools. That work surfaced one specific opportunity, an entity-normalization proxy. I built this framework to test that opportunity properly. The framework worked. It is now reusable for the next opportunity.
 
 This README has five parts:
 
@@ -16,7 +16,7 @@ This README has five parts:
 
 ## 1. How this started: an agent memory competitive analysis
 
-We spent 90 days studying the agent memory tools: Mem0, Graphiti, Cognee, Neo4j Agent Memory, Memgraph. They all share the same five problems:
+I spent 90 days studying the agent memory tools: Mem0, Graphiti, Cognee, Neo4j Agent Memory, Memgraph. They all share the same five problems:
 
 1. Fragmented extraction (every chunk gets its own LLM call, the graph never converges)
 2. Graph explosion (no pruning, retrieval drags in junk edges)
@@ -26,7 +26,7 @@ We spent 90 days studying the agent memory tools: Mem0, Graphiti, Cognee, Neo4j 
 
 You don't have to rebuild any of these tools to fix those problems. You can sit in front of them as middleware. That's a real opening.
 
-We picked four candidate wedges and checked each one against what the incumbents already shipped:
+I picked four candidate wedges and checked each one against what the incumbents already shipped:
 
 | Wedge | What it would do | Already taken? |
 |---|---|---|
@@ -35,7 +35,7 @@ We picked four candidate wedges and checked each one against what the incumbents
 | 3. Real-time graph GC | Reference-counted middleware that prunes dead nodes | **Not yet,** but the operational definition is fuzzy. |
 | 4. Schema alignment proxy | Vector-match relation writes and auto-alias them before they hit the graph | **Not yet, and the signal is strong.** Mem0 maintainer rejected this approach on the record (issue #4896, April 2026). |
 
-**We picked Niche 4.** When the closest incumbent's maintainer says "we will not build this," that is the cleanest signal you can get for a wedge. The full reasoning had four parts:
+**I picked Niche 4.** When the closest incumbent's maintainer says "we will not build this," that is the cleanest signal you can get for a wedge. The full reasoning had four parts:
 
 **1. The problem is concrete and expensive.** When you feed text into Mem0, Graphiti, or Cognee, an LLM extracts entities and writes them to a graph. The same entity arrives under multiple surface forms over time. "AAPL" today, "Apple Inc" tomorrow, "Apple Computer" in an older email. Each variant creates a separate node. A query for "Apple Inc" misses the memories stored under "AAPL." The system you built to remember things forgets them inconsistently.
 
@@ -47,7 +47,7 @@ We picked four candidate wedges and checked each one against what the incumbents
 
 The risk now: pick the right wedge, build a quick demo, run one benchmark, declare victory. The benchmark is secretly too small or too easy. You publish a claim that falls apart the first time a customer presses on it.
 
-Our response: **build the testing framework before building the proxy.** The first commit was the harness, not a proxy. That decision is why this repo became a reusable framework instead of a one-off code drop.
+My response: **build the testing framework before building the proxy.** The first commit was the harness, not a proxy. That decision is why this repo became a reusable framework instead of a one-off code drop.
 
 Full landscape scan: [`docs/opportunity.md`](docs/opportunity.md).
 
@@ -73,7 +73,7 @@ wedge pick      workloads                            workloads
 
 **Stage 2: Synthetic data.** Build the simplest variant of your idea. Run it against a controlled workload where you know the right answer. Iterate. Use a real statistical harness so you catch your own bugs. Most of the work happens here.
 
-**Stage 3: Real data, small N.** Hook up the variant to a real downstream system (in our case, the LLM extraction pipeline). Run it against real text. Use a small sample first. Run it against many different models. This is where synthetic-vs-real ranking flips show up.
+**Stage 3: Real data, small N.** Hook up the variant to a real downstream system (in my case, the LLM extraction pipeline). Run it against real text. Use a small sample first. Run it against many different models. This is where synthetic-vs-real ranking flips show up.
 
 **Stage 4: Substantial real data.** Scale the real-data benchmark up 5x to 10x. Use a more diverse workload. Re-run. Either confirm your stage 3 headline or correct it. This is the most important stage because this is where small-benchmark overclaims die.
 
@@ -97,25 +97,25 @@ Full framework narrative and the reusable component inventory: [`FRAMEWORK.md`](
 
 ## 3. What the process found about the entity-normalization proxy
 
-We ran all four stages on Niche 4 (the schema-alignment proxy). Here is what each stage produced.
+I ran all four stages on Niche 4 (the schema-alignment proxy). Here is what each stage produced.
 
 ### Stage 1: wedge picked, defensible
 
 Niche 4 was the only candidate where the incumbent had publicly said "we will not build this." Stage 1 output was a clean go.
 
-### Stage 2: the harness caught our own bias
+### Stage 2: the harness caught my own bias
 
-We built four versions of the proxy (v0.1.0 token-only, v0.2.0 neural, v0.3.0 hybrid, v0.3.1 hybrid plus structural filter). On synthetic ConceptNet data, v0.3.0 looked like the winner.
+I built four versions of the proxy (v0.1.0 token-only, v0.2.0 neural, v0.3.0 hybrid, v0.3.1 hybrid plus structural filter). On synthetic ConceptNet data, v0.3.0 looked like the winner.
 
-Then we added real WikiData property aliases. The ranking flipped. v0.2.0 won the main metric on real data but failed the false-merge safety gate at 100%. If we had only tested on synthetic data, we would have shipped the wrong variant.
+Then I added real WikiData property aliases. The ranking flipped. v0.2.0 won the main metric on real data but failed the false-merge safety gate at 100%. If I had only tested on synthetic data, I would have shipped the wrong variant.
 
 The harness also caught a bug in its own statistical bootstrap. The bootstrap was producing impossible confidence intervals because of a duplicate-pair pathology in the metric. Caught during pilot, fixed before any claim was published.
 
-Stage 2 output: v0.3.1 became the single-tenant GA candidate. We later extended to multi-tenant (v0.4.0 through v0.5.7), including an ANN index for scale.
+Stage 2 output: v0.3.1 became the single-tenant GA candidate. I later extended to multi-tenant (v0.4.0 through v0.5.7), including an ANN index for scale.
 
 ### Stage 3: the small-N "3B beats frontier" headline
 
-We built integration shims for Mem0, Graphiti, and Cognee. Then we ran a 14-model ladder (10 local + 4 frontier APIs) on 227 real Twitter Financial News tweets.
+I built integration shims for Mem0, Graphiti, and Cognee. Then I ran a 14-model ladder (10 local + 4 frontier APIs) on 227 real Twitter Financial News tweets.
 
 | Rank at N=227 | Model | With-proxy accuracy |
 |---|---|---|
@@ -125,13 +125,13 @@ We built integration shims for Mem0, Graphiti, and Cognee. Then we ran a 14-mode
 | ... | ... | ... |
 | 10 | claude-opus-4-7 (Anthropic) | 0.758 |
 
-We published this as: **"free local 3B + proxy beats every frontier API."**
+I published this as: **"free local 3B + proxy beats every frontier API."**
 
 It was statistically significant (p < 0.0001). It was consistent across providers. And it was wrong at scale.
 
 ### Stage 4: substantial-N revision, the headline collapsed
 
-We expanded the alias map from 34 aliases over 10 entities to **416 aliases over 125 entities**. We pulled **836 matching tweets** from the same Twitter validation split, instead of 227. Then we re-ran the local 10-model ladder + gpt-4o.
+I expanded the alias map from 34 aliases over 10 entities to **416 aliases over 125 entities**. I pulled **836 matching tweets** from the same Twitter validation split, instead of 227. Then I re-ran the local 10-model ladder + gpt-4o.
 
 The numbers moved a lot.
 
@@ -142,7 +142,7 @@ The numbers moved a lot.
 | qwen2.5vl:7b + proxy | 0.819 | **0.773** | -4.6 pp |
 | **gpt-4o + proxy** | **0.828** | **0.773** | **-5.5 pp** |
 
-Smaller models drop more at scale (10 to 11 points) than frontier models (5 to 6 points). The reason: frontier models have wider world knowledge for long-tail entities like regional banks, ETFs, and abstract concepts like "Federal Reserve." Our small benchmark was tail-biased to famous brands. It made the small models look better than they actually are.
+Smaller models drop more at scale (10 to 11 points) than frontier models (5 to 6 points). The reason: frontier models have wider world knowledge for long-tail entities like regional banks, ETFs, and abstract concepts like "Federal Reserve." My small benchmark was tail-biased to famous brands. It made the small models look better than they actually are.
 
 The revised ranking at substantial N:
 
@@ -162,7 +162,7 @@ The framework catching its own overclaim before it shipped to a customer is the 
 
 | Where the proxy buys you something real | Where it does not |
 |---|---|
-| Financial news and trading alert routing | General conversational AI (the LLM does coreference on its own, we proved this) |
+| Financial news and trading alert routing | General conversational AI (the LLM does coreference on its own, I proved this) |
 | Drug name normalization in clinical NLP | Long-form text understanding (LongMemEval regression) |
 | Per-tenant memory for AI assistants on Mem0, Graphiti, or Cognee | Open-ended entity discovery beyond surface-form variation |
 | CRM auto-tagging from emails and calls | Situations where you already run heavyweight ER tools like Senzing or Tilores |

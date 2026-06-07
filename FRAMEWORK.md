@@ -1,6 +1,6 @@
 # A framework for evaluating AI/ML/LLM opportunities
 
-This repo is at its core **a reusable framework for testing whether an AI/ML/LLM opportunity is real**. The schema-alignment proxy is the first opportunity we tested with it. The framework works the same way on the next one.
+This repo is at its core **a reusable framework for testing whether an AI/ML/LLM opportunity is real**. The schema-alignment proxy is the first opportunity I tested with it. The framework works the same way on the next one.
 
 This doc explains what is in the framework, why it is structured this way, and what it produced.
 
@@ -42,7 +42,7 @@ Output: `docs/opportunity.md` and any supporting landscape notes.
 
 Spend a few days reading the incumbent space. Find every shipped solution that overlaps your wedge. Kill any wedge that an incumbent already shipped or will likely ship in the next quarter. Pick one with on-record evidence the incumbent will not build it.
 
-For us: 90-day scan of agent memory tools (Mem0, Graphiti, Cognee, Neo4j Agent Memory, Memgraph). 4 candidate wedges. 3 killed because the work was already done or in progress. Picked Niche 4 (schema alignment proxy) because the Mem0 maintainer publicly rejected that approach on issue #4896.
+For me: 90-day scan of agent memory tools (Mem0, Graphiti, Cognee, Neo4j Agent Memory, Memgraph). 4 candidate wedges. 3 killed because the work was already done or in progress. Picked Niche 4 (schema alignment proxy) because the Mem0 maintainer publicly rejected that approach on issue #4896.
 
 Cost: about 1 day of focused research. Saves you months of work on a closed wedge.
 
@@ -52,13 +52,13 @@ Output: pilot variants of your mechanism, the statistical harness (LORD++ FDR, p
 
 Build a controlled workload where you know the right answer. Iterate variants of your idea against statistical gates. Most of the work happens here.
 
-For us: built ConceptNet relation synonyms and WikiData property aliases as controlled workloads. Iterated 4 variant generations:
+For me: built ConceptNet relation synonyms and WikiData property aliases as controlled workloads. Iterated 4 variant generations:
 - Token-overlap alone (v0.1.0) catches case and underscore variants but misses paraphrases
 - Neural embedder alone (v0.2.0) catches paraphrases but fails the false-merge safety gate
 - Hybrid concat (v0.3.0) won on ConceptNet but failed WikiData Tier B
 - Structural filter on top (v0.3.1) was the first variant to pass both gates
 
-This stage caught two important things. First, a bug in our own bootstrap design that produced impossible confidence intervals. We found it because the harness flagged the impossibility. Second, the real WikiData data flipped the ranking we had from synthetic ConceptNet. Without that flip we would have shipped the wrong variant.
+This stage caught two important things. First, a bug in my own bootstrap design that produced impossible confidence intervals. I found it because the harness flagged the impossibility. Second, the real WikiData data flipped the ranking I had from synthetic ConceptNet. Without that flip I would have shipped the wrong variant.
 
 ### Stage 3: Real data, small N
 
@@ -66,11 +66,11 @@ Output: integration shims for the downstream systems (Mem0, Graphiti, Cognee), p
 
 Hook your variant up to a real downstream system. Run it on real text. Use a small sample first (200 to 300 items). Run it across many different LLMs from many providers.
 
-For us: built integration shims for all three memory frameworks. Ran 30-utterance synthetic LLM benchmarks first, then 10-conversation multi-turn benchmarks, then 227 real Twitter Financial News tweets. Tested across 14 models from 5 providers (1B to 32B local + Anthropic Opus + OpenAI gpt-4o + Google Gemini Pro and Flash).
+For me: built integration shims for all three memory frameworks. Ran 30-utterance synthetic LLM benchmarks first, then 10-conversation multi-turn benchmarks, then 227 real Twitter Financial News tweets. Tested across 14 models from 5 providers (1B to 32B local + Anthropic Opus + OpenAI gpt-4o + Google Gemini Pro and Flash).
 
 The pattern looked strong. The proxy lifted everyone. Local 3B with proxy was beating frontier APIs. Cost analysis suggested 1000x savings over frontier API at equal or better accuracy.
 
-**We were one finding doc away from a strong commercial pitch.** The framework's discipline made us run one more stage.
+**I was one finding doc away from a strong commercial pitch.** The framework's discipline made me run one more stage.
 
 ### Stage 4: Substantial real data
 
@@ -78,7 +78,7 @@ Output: a scaled benchmark that 5x to 10x the previous N, with a more diverse en
 
 This stage is the most important. This is where small-benchmark overclaims die.
 
-For us: expanded the alias map from 34 aliases over 10 entities to 416 aliases over 125 entities. Pulled 836 matching tweets from the same Twitter validation split. Re-ran the local 10-model ladder + gpt-4o.
+For me: expanded the alias map from 34 aliases over 10 entities to 416 aliases over 125 entities. Pulled 836 matching tweets from the same Twitter validation split. Re-ran the local 10-model ladder + gpt-4o.
 
 The headline collapsed:
 - Small local 3B models dropped 10 to 11 percentage points
@@ -99,7 +99,7 @@ The revised commercial claim is **"competitive with frontier at fraction of cost
 | **Multi-model ladder runner** (`experiments/ladder_sweep_real_data.py`) | Auto-routes to Anthropic, OpenAI, Google, or Ollama by model name prefix | Yes. Works for any LLM eval. |
 | **Bootstrap + CI gates** (`runner/metrics/stats.py`) | Paired diff bootstrap with one and two-sided p-values | Yes. |
 | **Findings culture** (`docs/finding-*.md`, 24 docs) | Every claim, including the negative ones, gets a dated doc | Yes. Discipline, not code. |
-| **Integration shim pattern** (`runner/service/integrations/`) | Wrap any external system behind a common contract | Yes. We have three reference implementations (Mem0, Graphiti, Cognee). |
+| **Integration shim pattern** (`runner/service/integrations/`) | Wrap any external system behind a common contract | Yes. I have three reference implementations (Mem0, Graphiti, Cognee). |
 | **Statistical rigor spec** (`docs/experiments.md`) | Pre-registered tests, non-inferiority margins, INCONCLUSIVE-is-FAIL on fast tier | Yes. |
 
 The proxy variants themselves (the `embed-proxy-*` family) are specific to this opportunity. Everything else is general infrastructure.
@@ -136,12 +136,12 @@ The framework will:
 
 **Total cost: 4 to 6 weeks per opportunity, ending in a defensible go/no-go decision backed by data.**
 
-That is what the framework is worth. The schema-alignment proxy was the first opportunity we ran through it. The framework outlived the original headline claim. That is what a good framework does.
+That is what the framework is worth. The schema-alignment proxy was the first opportunity I ran through it. The framework outlived the original headline claim. That is what a good framework does.
 
 ## How to read this repo
 
 - **If you are an engineer:** read `runner/` for the harness, `runner/variants/` for the variant pattern, `runner/service/integrations/` for the three integration shims.
-- **If you are evaluating the proxy opportunity:** start with `docs/finding-substantial-N-revision.md` (the latest honest read), then `docs/finding-full-ladder-sweep.md` (initial broad sweep), then `GAPS-AND-LIMITATIONS.md` (what we explicitly have not proven).
+- **If you are evaluating the proxy opportunity:** start with `docs/finding-substantial-N-revision.md` (the latest honest read), then `docs/finding-full-ladder-sweep.md` (initial broad sweep), then `GAPS-AND-LIMITATIONS.md` (what I explicitly have not proven).
 - **If you are evaluating the framework:** read this doc, then `docs/experiments.md` (statistical spec), then `docs/finding-*.md` in chronological order. The progression of findings IS the framework working.
 - **If you want to apply the framework to a new opportunity:** the harness and integration shim patterns drop in clean. The findings culture is the harder part. You have to commit to writing the negative-result docs.
 

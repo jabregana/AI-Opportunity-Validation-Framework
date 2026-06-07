@@ -4,7 +4,7 @@ A candid audit of what the project does and does not prove. Updated as gaps clos
 
 ## TL;DR after 4 stages of evaluation
 
-We have a well-instrumented prototype with a defensible measurement framework. The proxy is incrementally useful for entity-heavy LLM pipelines. It is NOT a market-defining product. The framework catching its own small-N overclaim in stage 4 is the project's most credibility-bearing artifact.
+I have a well-instrumented prototype with a defensible measurement framework. The proxy is incrementally useful for entity-heavy LLM pipelines. It is NOT a market-defining product. The framework catching its own small-N overclaim in stage 4 is the project's most credibility-bearing artifact.
 
 The remaining gaps are smaller and more specific than the original audit suggested. Many big gaps closed; some new smaller ones surfaced.
 
@@ -82,11 +82,11 @@ These are limits that the gap-closing waves did NOT close. They are smaller and 
 | Memory store auditor tooling | Medium | "Diagnose fragmentation in your existing memory store" land-and-expand product. Not built. |
 | Open-source community + brand | High for distribution | The Datadog/Sentry-style infrastructure brand requires sustained community effort. Not started. |
 
-## What we have explicitly proven we cannot do
+## What I have explicitly proven I cannot do
 
 These are negative results documented across the project. Treat them as boundary markers. They prevent overselling.
 
-| We cannot | Evidence | Implication |
+| I cannot | Evidence | Implication |
 |---|---|---|
 | Cluster long-form conversational memory | `docs/finding-longmemeval-regression.md`. All variants regress, p=1.0. | Do not claim "agent memory" broadly. This is entity normalization. |
 | Help via coreference preprocessing | `docs/finding-coref-doesnt-help.md`. -0.024 F1 regression. | LLMs do coref internally. Do not add another step. |

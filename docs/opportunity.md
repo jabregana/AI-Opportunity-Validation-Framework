@@ -48,7 +48,7 @@ Premise: a proxy in front of any property-graph store that intercepts new relati
 
 Verdict: still open and the strongest signal of all four niches. Five reasons this is the best opportunity:
 
-**1. The pain is concrete and quantifiable.** When agent memory frameworks ingest text, the LLM extracts entities and writes them as graph nodes. Same entity, different surface form (AAPL vs Apple Inc vs Apple Computer), means three separate nodes. A query for "Apple Inc" finds one of three. Downstream retrieval F1 degrades. The user's perception is "the assistant forgets what I told it." We measured this directly in our live Mem0 deployment test: without canonicalization, 0 of 5 memories about Alphabet matched a query for "Alphabet Inc." With canonicalization, 3 of 5 matched. Same store, same memories, different retrieval result.
+**1. The pain is concrete and quantifiable.** When agent memory frameworks ingest text, the LLM extracts entities and writes them as graph nodes. Same entity, different surface form (AAPL vs Apple Inc vs Apple Computer), means three separate nodes. A query for "Apple Inc" finds one of three. Downstream retrieval F1 degrades. The user's perception is "the assistant forgets what I told it." I measured this directly in my live Mem0 deployment test: without canonicalization, 0 of 5 memories about Alphabet matched a query for "Alphabet Inc." With canonicalization, 3 of 5 matched. Same store, same memories, different retrieval result.
 
 **2. The current incumbent fix is structurally bad.** All five memory frameworks handle this with an LLM call inside the write path. Per-call cost ranges from $0.005 (gpt-4o) to $0.05 (Opus). Per-call latency is 500 to 2000 ms. Output is non-deterministic. Audit teams cannot inspect why a specific canonical was chosen. A workload of 1 million entity writes per month costs $5,000 to $50,000 in normalization LLM calls alone. At enterprise scale this becomes a major line item.
 
@@ -112,7 +112,7 @@ The other three niches in this document still bear scrutiny:
 
 - **Niche 1 (LSP code memory).** Still closed by `Jakedismo/codegraph-rust` per the original verification.
 - **Niche 2 (reasoning memory).** Neo4j Agent Memory has continued shipping. The form-factor wedge (embedded SQLite or DuckDB) remains uncontested but narrower than originally framed.
-- **Niche 3 (real-time graph GC).** Still open as of late June 2026, to our knowledge. If the framework is applied to a second opportunity, this is a candidate.
+- **Niche 3 (real-time graph GC).** Still open as of late June 2026, to my knowledge. If the framework is applied to a second opportunity, this is a candidate.
 
 ### The framework's value
 

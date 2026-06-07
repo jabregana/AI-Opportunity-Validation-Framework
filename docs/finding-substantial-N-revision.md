@@ -11,7 +11,7 @@
 
 The prior 14-model ladder (`docs/finding-full-ladder-sweep.md`) used 227 tweets matched against a 34-alias / 10-entity map. The headline claim was "free local 3B model + proxy beats every frontier API."
 
-That claim was an artifact of the small benchmark. When we scaled the alias map to 125 entities (covering S&P 500, ETFs, indices, banks, healthcare, energy, autos, crypto) and pulled 836 matching tweets from the same Twitter dataset, the numbers changed materially.
+That claim was an artifact of the small benchmark. When I scaled the alias map to 125 entities (covering S&P 500, ETFs, indices, banks, healthcare, energy, autos, crypto) and pulled 836 matching tweets from the same Twitter dataset, the numbers changed materially.
 
 ## The revised result
 
@@ -57,9 +57,9 @@ Three structural reasons:
 
 **2. Selection bias of "famous brands."** Apple, Microsoft, and similar names appear in every model's pre-training corpus thousands of times. The LLM has strong, consistent surface-form preferences for them. Less-famous entities do not have that consistency baked in.
 
-**3. Concept-like entities.** Federal Reserve (77 tweets in our workload) is a phrase, not a corporate entity. S&P 500 (60 tweets) is an index, not a company. These do not have ticker normalizations. The small benchmark had none of them.
+**3. Concept-like entities.** Federal Reserve (77 tweets in my workload) is a phrase, not a corporate entity. S&P 500 (60 tweets) is an index, not a company. These do not have ticker normalizations. The small benchmark had none of them.
 
-The N=227 benchmark told us the proxy works on famous companies with rich alias variation. The N=836 benchmark tells us how it performs on the actual long tail of a real workload, which is what production looks like.
+The N=227 benchmark told me the proxy works on famous companies with rich alias variation. The N=836 benchmark tells me how it performs on the actual long tail of a real workload, which is what production looks like.
 
 ## The new defensible commercial story
 
@@ -103,7 +103,7 @@ The small benchmark was not wrong about the proxy lift existing or being statist
 
 The lesson generalizes. **Synthetic and small-N benchmarks reveal direction. Substantial-N real-data benchmarks reveal magnitude and ranking.** The framework should always escalate from small to substantial before publishing competitive claims.
 
-## What we still don't know
+## What I still don't know
 
 - **Opus and Gemini Pro/Flash at N=836.** Could run for another $30 to $50 and 30 minutes. Expectation: they will track gpt-4o roughly, around 0.75 to 0.80 with proxy. Worth doing for the complete revised ladder.
 - **Whether the ceiling extends to N=2000+ via multi-corpus testing.** Could mix Twitter + Reddit + news headlines to test generalization beyond Twitter shape.

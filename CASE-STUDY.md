@@ -1,6 +1,6 @@
 # Case study: applying the framework to an entity-normalization proxy
 
-> **Read this first.** This repo is two things. (1) A reusable framework for testing whether an AI/ML/LLM opportunity is real. (2) The schema-alignment proxy, which is the first opportunity we ran through it. See [`FRAMEWORK.md`](FRAMEWORK.md) for the full framework narrative.
+> **Read this first.** This repo is two things. (1) A reusable framework for testing whether an AI/ML/LLM opportunity is real. (2) The schema-alignment proxy, which is the first opportunity I ran through it. See [`FRAMEWORK.md`](FRAMEWORK.md) for the full framework narrative.
 
 > **Honest read after 4 stages.** Real but narrow value. At substantial N (836 tweets, 125 entities), a free local 7B model + proxy ties gpt-4o + proxy at 0.773 each. That is a cost story, not the "beats frontier" story the small benchmark suggested. The framework catching its own overclaim is the project's most credibility-bearing artifact. See [`docs/finding-substantial-N-revision.md`](docs/finding-substantial-N-revision.md).
 
@@ -41,10 +41,10 @@ Niche 4 (schema alignment) was the only candidate where the closest incumbent ha
 
 ## Stage 2: build the harness, then the variants
 
-We built the harness BEFORE the first variant. The reason: picking a wedge in a moving market is easy to get wrong, and iterating variants without rigorous measurement is how miscalibrated claims compound. The first variant landed against the same gates as every later one.
+I built the harness BEFORE the first variant. The reason: picking a wedge in a moving market is easy to get wrong, and iterating variants without rigorous measurement is how miscalibrated claims compound. The first variant landed against the same gates as every later one.
 
 The harness uses:
-- Per-item B-cubed F1 (Bagga and Baldwin, 1998) as the primary clustering metric, bootstrapped paired against baseline. We replaced an earlier index-resampled pairwise F1 bootstrap that was producing impossible confidence intervals because of a duplicate-pair pathology. The harness caught its own design bug.
+- Per-item B-cubed F1 (Bagga and Baldwin, 1998) as the primary clustering metric, bootstrapped paired against baseline. I replaced an earlier index-resampled pairwise F1 bootstrap that was producing impossible confidence intervals because of a duplicate-pair pathology. The harness caught its own design bug.
 - LORD++ online FDR control (Ramdas et al. 2017) at q=0.10 instead of vanilla Benjamini-Hochberg. Sequential peeking during development does not inflate type-I error.
 - Non-inferiority testing against the previous green commit, with margin tied to MDE per metric (0.25x MDE for nightly, 0.5x MDE for fast PR gates). CUPED variance reduction offsets the resulting sample-size inflation.
 - Three CI/CD guardrails: INCONCLUSIVE-is-FAIL on the fast tier, SAFFRON hot-swap recommendation at high null proportion, 14-day cap on stale baselines.
@@ -59,7 +59,7 @@ Iteration record:
 | v0.3.0 hybrid | Token + neural concat, token-dominant weighting | Won ConceptNet (+0.04 over v0.1.0). Failed WikiData Tier B at 4.3% false merges (above the 1% kill switch). |
 | v0.3.1 hybrid + filter | Adds deterministic structural filter (digit mismatch, trailing preposition asymmetry) | First variant to clear both UC-4.1 superiority and UC-4.4 Tier B kill switch on real WikiData. Single-tenant GA candidate. |
 
-**The most important stage 2 moment** was bringing in the W-WIKIDATA-PROPS workload after starting with synthetic ConceptNet. ConceptNet alone ranked v0.3.0 as the winner. Real WikiData property aliases (2457 surface forms, real paraphrases like `head of government` / `premier` / `PM`) flipped the ranking. v0.2.0 won the main metric on real data but failed the false-merge safety gate at 100%. **Without real data we would have shipped the wrong variant.** This was the first time the framework caught a synthetic-bias overclaim.
+**The most important stage 2 moment** was bringing in the W-WIKIDATA-PROPS workload after starting with synthetic ConceptNet. ConceptNet alone ranked v0.3.0 as the winner. Real WikiData property aliases (2457 surface forms, real paraphrases like `head of government` / `premier` / `PM`) flipped the ranking. v0.2.0 won the main metric on real data but failed the false-merge safety gate at 100%. **Without real data I would have shipped the wrong variant.** This was the first time the framework caught a synthetic-bias overclaim.
 
 **Stage 2 output:** v0.3.1 as the single-tenant GA candidate. Documented findings about the synthetic-to-real ranking flip, the neural-embedder ceiling probe (bigger models do not separate paraphrases from antonyms better), and the structural filter's design.
 
@@ -67,9 +67,9 @@ Iteration record:
 
 ## Stage 3: real data at small N
 
-We built integration shims for three memory frameworks (Mem0, Graphiti, Cognee) covering three different API shapes (sync client, async client, async module). Each shares the same `mention_map` / `mention_extractor` contract.
+I built integration shims for three memory frameworks (Mem0, Graphiti, Cognee) covering three different API shapes (sync client, async client, async module). Each shares the same `mention_map` / `mention_extractor` contract.
 
-We built downstream LLM benchmarks comparing proxy on/off across a model ladder. First on synthetic single-sentence (30 utterances, 6 entities), then multi-turn conversational (10 dialogues), then real Twitter Financial News (initial 30 tweets, then 227 with bootstrap CIs).
+I built downstream LLM benchmarks comparing proxy on/off across a model ladder. First on synthetic single-sentence (30 utterances, 6 entities), then multi-turn conversational (10 dialogues), then real Twitter Financial News (initial 30 tweets, then 227 with bootstrap CIs).
 
 Initial 14-model ladder ranking at N=227 with a 34-alias / 10-entity map:
 
@@ -84,11 +84,11 @@ Initial 14-model ladder ranking at N=227 with a 34-alias / 10-entity map:
 
 **Stage 3 initial headline (overclaim):** free local 3B + proxy beats every frontier API.
 
-This was published in commit history. It was supported by statistical bootstrap CIs at p<0.0001. It was internally consistent across providers. **And it was wrong about magnitude and ranking at scale.** We did not know that yet.
+This was published in commit history. It was supported by statistical bootstrap CIs at p<0.0001. It was internally consistent across providers. **And it was wrong about magnitude and ranking at scale.** I did not know that yet.
 
 ## Stage 4: substantial real data, the headline collapses
 
-We expanded the alias map from 34 aliases / 10 entities to **416 aliases / 125 entities**, covering S&P 500 tech, finance, healthcare, energy, consumer, industrials, indices, ETFs, and fintech. Pulled all matching tweets from the Twitter Financial News validation split: **836 tweets across 103 entities** (3.7x more data, 12x more entities).
+I expanded the alias map from 34 aliases / 10 entities to **416 aliases / 125 entities**, covering S&P 500 tech, finance, healthcare, energy, consumer, industrials, indices, ETFs, and fintech. Pulled all matching tweets from the Twitter Financial News validation split: **836 tweets across 103 entities** (3.7x more data, 12x more entities).
 
 Re-ran the local 10-model ladder + gpt-4o on the substantial workload.
 
@@ -155,7 +155,7 @@ Five moments where the harness changed the outcome. Each one a synthetic or smal
 
 3. **Equal-weight hybrid concat regresses against token-only.** The natural default failed. A parameter sweep found token-dominant weighting (token weight 2, neural weight 1, threshold 0.8) actually beats v0.1.0. Without the harness, a casual "hybrid is better" claim would have been wrong.
 
-4. **WikiData flipped the ranking.** v0.3.0 won on ConceptNet, v0.2.0 won on WikiData. The hybrid was a workload artifact. Without the second workload, we would have shipped v0.3.0 publicly thinking it generalized.
+4. **WikiData flipped the ranking.** v0.3.0 won on ConceptNet, v0.2.0 won on WikiData. The hybrid was a workload artifact. Without the second workload, I would have shipped v0.3.0 publicly thinking it generalized.
 
 5. **Substantial N flipped the headline.** "3B beats frontier" at N=227 became "7B ties frontier" at N=836. Without the four-stage discipline, the original claim would have been published to customers. The framework worked.
 

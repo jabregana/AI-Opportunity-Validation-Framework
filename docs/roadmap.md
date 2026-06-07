@@ -95,7 +95,7 @@ Plus the 24 finding docs, 8+ standalone experiment scripts, the framework refram
 - Coreference resolution. Explicitly a negative result per `docs/finding-coref-doesnt-help.md`.
 - Fine-tuning a custom embedder for paraphrase detection. Outside the wedge thesis. Would require a labeled corpus plus ongoing training.
 - Competing with classical entity resolution tools (Senzing, Tilores, Reltio) on database-style normalization. Different category, different buyer.
-- Building a graph backend. We are middleware to existing graph stores, not a replacement.
+- Building a graph backend. The proxy is middleware to existing graph stores, not a replacement.
 
 ## Decision framework: which path
 
