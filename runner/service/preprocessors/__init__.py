@@ -14,6 +14,7 @@ matches the `mention_extractor` slot on `Mem0PreNormalized`, so any
 preprocessor in this module drops straight in.
 """
 from __future__ import annotations
+from .coref import CorefResolver, FastcorefResolver, LLMCorefResolver
 from .ner import (
     NERPreprocessor,
     RegexNERPreprocessor,
@@ -26,4 +27,7 @@ __all__ = [
     "RegexNERPreprocessor",
     "SpacyNERPreprocessor",
     "TransformersNERPreprocessor",
+    "CorefResolver",
+    "FastcorefResolver",
+    "LLMCorefResolver",
 ]
