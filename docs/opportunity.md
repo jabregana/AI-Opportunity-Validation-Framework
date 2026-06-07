@@ -80,23 +80,23 @@ The repo holds the test workloads, statistical framework, and CI gates that any 
 
 ## Postscript (added 2026-06-07): what the framework found about Niche 4
 
-This document was written at stage 1 (theoretical) of the four-stage evaluation framework. Since then, stages 2-4 ran end-to-end on the schema-alignment proxy. Honest summary of what they found:
+This document was written at stage 1 of the four-stage evaluation framework. Since then, stages 2 through 4 ran end-to-end on the schema-alignment proxy. Here is the honest summary of what they found.
 
 ### Niche 4 is real but narrower than this document framed
 
-The original framing here was "deterministic, no-LLM-in-hot-path schema-alignment proxy that out-competes Mem0's LLM-in-extraction-prompt approach on agent memory graphs." That framing was too broad. After all four stages:
+The original framing was "deterministic, no-LLM-in-hot-path schema-alignment proxy that out-competes Mem0's LLM-in-extraction-prompt approach on agent memory graphs." That framing was too broad. After all four stages:
 
-- **What survived:** The slot exists. The proxy delivers statistically significant accuracy lift across 14 LLMs from 5 providers. Free local 7B model with proxy ties frontier APIs (gpt-4o) at fraction of cost on entity-extraction workloads.
-- **What was narrowed:** "Agent memory" was the wrong scope. The proxy works specifically on **entity normalization where entities appear under multiple alias surface forms in property-graph stores or LLM extraction pipelines**. It does NOT generalize to long-form conversational memory (LongMemEval regression), singleton-heavy workloads (Stack Overflow tags), or general agent reasoning.
-- **What was retracted:** The small-benchmark "free local 3B beats every frontier" headline collapsed at substantial N (836 tweets, 125 entities) to "free local 7B ties frontier at fraction of cost." Smaller models drop more at scale because they have less world knowledge for long-tail entities.
+- **What survived.** The slot exists. The proxy delivers statistically significant accuracy lift across 14 LLMs from 5 providers. A free local 7B model with proxy ties frontier APIs (gpt-4o) at fraction of the cost on entity-extraction workloads.
+- **What was narrowed.** "Agent memory" was the wrong scope. The proxy works specifically on entity normalization where entities appear under multiple alias surface forms in property-graph stores or LLM extraction pipelines. It does NOT generalize to long-form conversational memory (LongMemEval regression), singleton-heavy workloads (Stack Overflow tags), or general agent reasoning.
+- **What was retracted.** The small-benchmark "free local 3B beats every frontier" headline collapsed at substantial N (836 tweets, 125 entities) to "free local 7B ties frontier at fraction of cost." Smaller models drop more at scale because they have less world knowledge for long-tail entities.
 
 ### What this means for the original landscape scan
 
 The other three niches in this document still bear scrutiny:
 
-- **Niche 1 (LSP code memory):** still closed by `Jakedismo/codegraph-rust` per the original verification.
-- **Niche 2 (reasoning memory):** Neo4j Agent Memory has continued shipping; the form-factor wedge (embedded SQLite/DuckDB) remains uncontested but narrower than originally framed.
-- **Niche 3 (real-time graph GC):** still open as of late June 2026 to project knowledge. If the framework is applied to a second opportunity, this is a candidate.
+- **Niche 1 (LSP code memory).** Still closed by `Jakedismo/codegraph-rust` per the original verification.
+- **Niche 2 (reasoning memory).** Neo4j Agent Memory has continued shipping. The form-factor wedge (embedded SQLite or DuckDB) remains uncontested but narrower than originally framed.
+- **Niche 3 (real-time graph GC).** Still open as of late June 2026, to our knowledge. If the framework is applied to a second opportunity, this is a candidate.
 
 ### The framework's value
 
@@ -104,8 +104,8 @@ Whatever the final commercial outcome of the proxy, the framework that evaluated
 
 ### Where to read next
 
-- [`../FRAMEWORK.md`](../FRAMEWORK.md) — the framework meta-narrative
-- [`finding-substantial-N-revision.md`](finding-substantial-N-revision.md) — the headline correction at substantial N
-- [`finding-full-ladder-sweep.md`](finding-full-ladder-sweep.md) — the original 14-model ladder (small N)
-- [`../GAPS-AND-LIMITATIONS.md`](../GAPS-AND-LIMITATIONS.md) — what's closed, what remains
-- [`roadmap.md`](roadmap.md) — what's next, with Path A (proxy as product) vs Path B (framework as asset) split
+- [`../FRAMEWORK.md`](../FRAMEWORK.md). The framework meta-narrative.
+- [`finding-substantial-N-revision.md`](finding-substantial-N-revision.md). The headline correction at substantial N.
+- [`finding-full-ladder-sweep.md`](finding-full-ladder-sweep.md). The original 14-model ladder (small N).
+- [`../GAPS-AND-LIMITATIONS.md`](../GAPS-AND-LIMITATIONS.md). What's closed, what remains.
+- [`roadmap.md`](roadmap.md). What's next, with Path A (proxy as product) vs Path B (framework as asset) split.
