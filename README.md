@@ -1,6 +1,8 @@
-# agent-memory-gaps
+# ai-wedge-harness
 
 **A reusable framework for evaluating AI/ML/LLM opportunities, applied to a deterministic entity-normalization proxy as the first case study.**
+
+*(Originally named `agent-memory-gaps`. Renamed after the four-stage evaluation reframed the project around the framework rather than the specific wedge it was first applied to.)*
 
 This repository is two interlocking artifacts:
 

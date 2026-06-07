@@ -55,7 +55,7 @@ def _fetch_batch(prop_ids: list[str], user_agent: str) -> dict:
 
 def fetch(
     max_pid: int = 1000,
-    user_agent: str = "agent-memory-gaps/0.1 (research; abregana@gmail.com)",
+    user_agent: str = "ai-wedge-harness/0.1 (research; abregana@gmail.com)",
     sleep_between_batches: float = 0.2,
 ) -> list[dict]:
     """Fetch properties P1..P{max_pid} in batches of 50."""

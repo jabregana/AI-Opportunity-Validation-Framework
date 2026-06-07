@@ -1,6 +1,6 @@
 # A framework for evaluating AI/ML/LLM opportunities
 
-The agent-memory-gaps repository is, at the deepest level, **a reusable framework for evaluating whether a given AI/ML/LLM opportunity is real**. The schema-alignment proxy is the first opportunity it was applied to. The framework would work equally well on the next.
+The ai-wedge-harness repository (originally `agent-memory-gaps`) is, at the deepest level, **a reusable framework for evaluating whether a given AI/ML/LLM opportunity is real**. The schema-alignment proxy is the first opportunity it was applied to. The framework would work equally well on the next.
 
 This document explains the framework — what's in it, why it's structured the way it is, and what it produced.
 

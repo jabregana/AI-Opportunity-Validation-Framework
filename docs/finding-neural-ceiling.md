@@ -55,7 +55,7 @@ v0.3.1 (hybrid token + neural model2vec + structural filter) is at or near the c
 
 4. **Accept the ceiling and ship v0.3.1.** Document the antonym/sibling false-positive class as a known limitation. Build the rest of the system (multi-tenant per v0.4.0+, latency optimization, downstream-retrieval integration) on this foundation.
 
-For the agent-memory-gaps project, option 4 is the right call. The wedge thesis is "deterministic, no LLM in the hot path." Distributional neural embeddings give us most of the way there; structural filters close the structural failures; the residual antonym/sibling class is small, known, and would require either fine-tuning or an LLM to solve.
+For this project, option 4 is the right call. The wedge thesis is "deterministic, no LLM in the hot path." Distributional neural embeddings give us most of the way there; structural filters close the structural failures; the residual antonym/sibling class is small, known, and would require either fine-tuning or an LLM to solve.
 
 ## Raw probe data
 

@@ -30,7 +30,7 @@ from pathlib import Path
 
 _DEFAULT_OUT = Path(__file__).resolve().parent.parent / "data" / "stackoverflow_tags.json"
 _API = "https://api.stackexchange.com/2.3"
-_UA = "agent-memory-gaps/0.1 (abregana@gmail.com)"
+_UA = "ai-wedge-harness/0.1 (abregana@gmail.com)"
 
 
 def _api_get(path: str, params: dict) -> dict:

@@ -147,7 +147,7 @@ def fetch_all(curated=None, sleep_between=0.2) -> list[dict]:
     list with actual labels and aliases attached."""
     if curated is None:
         curated = CURATED
-    UA = "agent-memory-gaps/0.1 (research; abregana@gmail.com)"
+    UA = "ai-wedge-harness/0.1 (research; abregana@gmail.com)"
     out = []
     for surface_entry in curated:
         surface = surface_entry["surface"]

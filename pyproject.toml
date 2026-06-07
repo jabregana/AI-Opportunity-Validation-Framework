@@ -3,9 +3,9 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "agent-memory-gaps"
+name = "ai-wedge-harness"
 version = "0.0.1"
-description = "Experimental harness for the agent-memory-gaps proxy/middleware wedges"
+description = "Reusable harness for evaluating AI/ML/LLM opportunities. First case study: deterministic entity-normalization proxy."
 requires-python = ">=3.11"
 dependencies = []
 
