@@ -35,9 +35,17 @@ We picked four candidate wedges and checked each one against what the incumbents
 | 3. Real-time graph GC | Reference-counted middleware that prunes dead nodes | **Not yet,** but the operational definition is fuzzy. |
 | 4. Schema alignment proxy | Vector-match relation writes and auto-alias them before they hit the graph | **Not yet, and the signal is strong.** Mem0 maintainer rejected this approach on the record (issue #4896, April 2026). |
 
-**We picked Niche 4.** When the closest incumbent's maintainer says "we will not build this," that is the cleanest signal you can get for a wedge.
+**We picked Niche 4.** When the closest incumbent's maintainer says "we will not build this," that is the cleanest signal you can get for a wedge. The full reasoning had four parts:
 
-The risk now: pick a wedge, build a quick demo, run one benchmark, declare victory. The benchmark is secretly too small or too easy. You publish a claim that falls apart the first time a customer presses on it.
+**1. The problem is concrete and expensive.** When you feed text into Mem0, Graphiti, or Cognee, an LLM extracts entities and writes them to a graph. The same entity arrives under multiple surface forms over time. "AAPL" today, "Apple Inc" tomorrow, "Apple Computer" in an older email. Each variant creates a separate node. A query for "Apple Inc" misses the memories stored under "AAPL." The system you built to remember things forgets them inconsistently.
+
+**2. The current fix is structurally bad.** All five incumbents handle this with an LLM call inside the write path. Per-call cost is $0.005 to $0.05 depending on the model. Per-call latency is 500 to 2000 ms. Output is non-deterministic, so two writes seconds apart can produce different canonicals. Audit and compliance teams cannot inspect why a specific canonical was chosen. The whole approach scales poorly: 1 million entity writes per month costs $5,000 to $50,000 just for the normalization LLM calls.
+
+**3. A deterministic alternative is structurally better.** Sit in front of the memory framework. Match incoming surface forms against existing canonicals via a regex or embedding lookup. Substitute the canonical before the write hits the framework. Cost per call drops to roughly zero (microseconds of regex). Latency drops to about 30 ms p99. Output is deterministic and auditable. The integrator controls the alias rules, not the LLM.
+
+**4. The strategic position is durable.** Mem0 maintainer kartik-mem0 publicly rejected this approach on issue #4896 (April 2026): "our v3 SDK handles contradictions by design through the extraction prompt and memory linking, not through an explicit UPDATE/conflict resolution code path." That is not a roadmap gap to be filled next quarter. That is a design philosophy difference. An alternative architecture cannot be trivially copied by Mem0 because Mem0 has publicly committed to the opposite design. The same logic applies to Graphiti, Cognee, and Neo4j Agent Memory, all of which use LLM-in-extraction. The wedge is wide (every memory framework user) and the incumbents cannot quickly close it.
+
+The risk now: pick the right wedge, build a quick demo, run one benchmark, declare victory. The benchmark is secretly too small or too easy. You publish a claim that falls apart the first time a customer presses on it.
 
 Our response: **build the testing framework before building the proxy.** The first commit was the harness, not a proxy. That decision is why this repo became a reusable framework instead of a one-off code drop.
 
