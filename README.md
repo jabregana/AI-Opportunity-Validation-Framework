@@ -1,268 +1,176 @@
 # agent-memory-gaps
 
-**A reusable framework for evaluating AI/ML/LLM opportunities, applied to a deterministic entity-normalization proxy as the first case study.** See [`FRAMEWORK.md`](FRAMEWORK.md) for the meta narrative — what the harness is, how the four-stage evaluation progression works, what's reusable for the next opportunity.
+**A reusable framework for evaluating AI/ML/LLM opportunities, applied to a deterministic entity-normalization proxy as the first case study.**
 
-The first opportunity tested: **drop-in entity-normalization middleware for LLM memory systems.** Sits in front of Mem0, Graphiti, Cognee, or any custom store. Canonicalizes entity surface forms on the write path so the downstream memory accumulates a coherent graph instead of fragmenting into one entry per alias. Backed by an evaluation harness with online FDR control, CUPED variance reduction, non-inferiority gates, and adversarial false-merge tests so every shipped variant is measured against the same statistical bar.
+This repository is two interlocking artifacts:
 
-**Honest read on the proxy after 4-stage evaluation (theoretical → synthetic → real → substantial real):** the proxy is incrementally useful for entity-heavy LLM pipelines, NOT a market-defining product. At substantial N (836 real tweets, 125 entities), a free local 7B model with the proxy TIES gpt-4o with proxy at 0.773 accuracy each — a strong cost-efficiency story (~$0 vs ~$5k per million records), not the "beats frontier" claim the small benchmark suggested. See [`docs/finding-substantial-N-revision.md`](docs/finding-substantial-N-revision.md) for the honest correction. The framework catching its own overclaim is the project's most credibility-bearing artifact.
+1. **An evaluation framework** for assessing whether a given AI/ML/LLM opportunity is real — a four-stage progression (theoretical landscape scan → synthetic data → real data → substantial real data), a statistical harness (LORD++ online FDR, paired bootstrap, CUPED variance reduction, CI gates), a multi-model ladder runner that auto-routes to Anthropic / OpenAI / Google / Ollama, and a finding-doc culture where every claim — including negative results — gets a dated doc. See [`FRAMEWORK.md`](FRAMEWORK.md) for the full framework narrative and reusable component inventory.
 
-## What it does
+2. **The schema-alignment proxy** as the first opportunity tested through it. Drop-in middleware that canonicalizes entity surface forms before the LLM extraction call, so the downstream memory system stores consistent canonicals instead of fragmenting into one entry per alias. Integrations for Mem0, Graphiti, and Cognee shipped.
+
+## Honest read after four stages of evaluation
+
+The proxy is **incrementally useful for entity-heavy LLM pipelines, not a market-defining product.** Three findings the framework caught:
+
+| Stage | Headline | Survived substantial-N test? |
+|---|---|---|
+| Stage 2 (synthetic) | Proxy lifts B-cubed F1 from ~0.40 to ~0.95 on small workloads | No — small benchmark was too easy |
+| Stage 3 (real, small N=227) | Free local 3B + proxy beats every frontier API (0.872 vs 0.758-0.828) | No — tail-entity bias in 10-entity map |
+| **Stage 4 (substantial real, N=836)** | **Free local 7B + proxy ties gpt-4o at 0.773 each, at ~1000x lower cost** | **Yes — this is the defensible claim** |
+
+The framework catching its own overclaim in stage 4 is the project's most credibility-bearing artifact. See [`docs/finding-substantial-N-revision.md`](docs/finding-substantial-N-revision.md) for the full correction.
+
+## The substantial commercial story (after the revision)
+
+At N=836 real Twitter Financial News tweets covering 125 entities and 416 aliases, the ranking by with-proxy accuracy:
+
+| Rank | Model | Provider | With-proxy accuracy | Latency / call |
+|---|---|---|---|---|
+| 1= | **qwen2.5vl:7b** | Local (free) | **0.773** | 199 ms |
+| 1= | **gpt-4o** | OpenAI ($) | **0.773** | 588 ms |
+| 3= | llama3.2:3b, qwen2.5:3b, qwen2.5vl:32b | Local (free) | 0.758 | 121–651 ms |
+| 6 | gemma2:9b | Local (free) | 0.757 | 240 ms |
+| 7 | llama3.1:8b | Local (free) | 0.755 | 213 ms |
+| 8 | qwen2.5:14b | Local (free) | 0.746 | 281 ms |
+
+A free local 7B model EXACTLY ties gpt-4o. Six local models cluster at 0.755-0.773. The proxy lifts everyone to a workload-imposed ceiling around 0.77.
+
+**Cost per million records:** ~$0 (self-hosted 7B) vs ~$5,000 (gpt-4o) vs ~$10,000 (Claude Opus at prior small-N test).
+
+**Latency per call:** local 7B is 3-8× faster than frontier APIs (no cloud RTT).
+
+The defensible commercial pitch is **"competitive with frontier at fraction of cost"** — not "beats frontier." Useful for high-volume entity-extraction pipelines where the 1000× cost differential matters more than ~1.5pp accuracy.
+
+## Where the proxy actually buys you something real
+
+| Scenario | Why proxy helps | Realistic value |
+|---|---|---|
+| Financial news/trading alert routing | Subscribers want alerts on "Tesla" — feed says "TSLA"/"$TSLA"/"Tesla Motors". Proxy normalizes for direct match | Mid: cleaner ops |
+| Drug name normalization (clinical NLP) | LLM extracts "Lipitor" — system needs "atorvastatin". Orange Book alias map IS the value | High: safety + compliance; **moat is in the map, not the code** |
+| CRM auto-tagging from emails/calls | Sales note says "spoke with Citi" — CRM wants Citigroup record | Mid: fewer manual corrections |
+| Per-tenant memory for AI assistants (Mem0/Graphiti/Cognee) | Cross-session entity continuity — user's "Acme deal" today links to "Sarah at Acme" 3 weeks ago | Real but smaller than initial claim — shared-store Mem0 does some dedup itself |
+| Internal knowledge search | Pre-normalize entity mentions for consistent search index | Low-mid: precision improvement |
+
+## Where the proxy is NOT useful
+
+- General conversational AI (LLM does co-reference internally — proven negative result)
+- One-off extraction (setup cost > value if you do it a few times — just call frontier)
+- Already running heavyweight entity resolution (Senzing/Tilores/Reltio at the data layer)
+- Long-form text understanding (LongMemEval regression — proxy is for entity names, not paragraph clustering)
+- Open-ended entity discovery (embedding fallback misses acronym-expansion pairs like AAPL ↔ Apple Inc)
+
+## How to use the proxy
+
+Three integration patterns covering different downstream framework shapes:
 
 ```python
-from runner.service import EntityNormalizer
-from runner.service.integrations import Mem0PreNormalized
-from mem0 import Memory
+# Pattern 1: as a service in your own pipeline
+from runner.service import EntityNormalizer, AdvisoryConsolidator
 
-# Build the proxy (single-tenant) and wrap your existing Mem0 client
-norm = EntityNormalizer("embed-proxy-v0.3.1")
-m = Mem0PreNormalized(
-    Memory(),
-    norm,
-    mention_map={"AAPL": "Apple Inc.", "MSFT": "Microsoft Corporation"},
-)
+norm = EntityNormalizer("embed-proxy-v0.3.1")          # single-tenant
+canonical = norm.normalize("Apple Inc")
+batch = norm.batch_normalize(["AAPL", "Apple Computer", "Apple Inc."])
 
-# Use Mem0 normally; entity aliases get canonicalized BEFORE Mem0's
-# LLM sees the text. Net effect: smaller, more consistent memory graph.
-m.add("Bought AAPL last week and watching MSFT", user_id="trader1")
+# Multi-tenant variant with per-source disambiguation + lazy consolidation
+norm = EntityNormalizer("embed-proxy-v0.5.3-singleton-aware")
+canonical = norm.normalize("Apple", context={"source_id": "finance"})
+
+# AdvisoryConsolidator schedules cross-source merges off the hot path
+consolidator = AdvisoryConsolidator(norm, schedule_every_n_writes=1000)
+if consolidator.schedule_required():
+    consolidator.run()
 ```
 
-Two ways to integrate:
+```python
+# Pattern 2: drop-in middleware for Mem0 (sync client; per-user via user_id)
+from mem0 import Memory
+from runner.service import EntityNormalizer
+from runner.service.integrations import Mem0PreNormalized
 
-1. `EntityNormalizer` service API: wrap any of the bundled variants behind a stable `normalize(surface, context) -> canonical` interface. Drop into your own write path or query rewriter.
-2. `Mem0PreNormalized` wrapper: drop-in middleware over a Mem0 v3 OSS client. Sync `add()`. Per-user via `user_id`.
-3. `GraphitiPreNormalized` wrapper (v0.6.0): same pattern over a Graphiti graph-memory client. Async `add_episode` / `add_episode_bulk`. Per-tenant via `group_id`.
-4. `CogneePreNormalized` wrapper (v0.6.0): same pattern over Cognee's module-level async API. Async `add()` + `cognify()`. Per-tenant via `dataset_name`.
+norm = EntityNormalizer("embed-proxy-v0.3.1")
+m = Mem0PreNormalized(Memory(), norm, mention_map={"AAPL": "Apple Inc", "MSFT": "Microsoft"})
+m.add("Bought AAPL today", user_id="trader1")
+```
 
-The three wrappers cover Mem0's sync-client, Graphiti's async-client, and Cognee's async-module API shapes. Any memory framework that exposes a text-ingestion entry point can be added behind the same `mention_map` / `mention_extractor` contract; see `runner/service/integrations/` for the three reference implementations.
+```python
+# Pattern 3: drop-in middleware for Graphiti (async client; per-tenant via group_id)
+from graphiti_core import Graphiti
+from runner.service.integrations import GraphitiPreNormalized
 
-## What problem this addresses
+g = GraphitiPreNormalized(Graphiti(...), norm, mention_map={...})
+await g.add_episode(name="ep-1", episode_body="...", group_id="tenant_a")
+```
 
-LLM memory systems hit a shared problem: the same underlying entity gets written under multiple surface forms. `AAPL`, `Apple Inc`, `Apple Computer` become three separate memory entries even though they reference the same company. Property-graph systems (Graphiti, Cognee, Neo4j Agent Memory) hit the same problem on the relation side: `WORKS_AT`, `EMPLOYED_BY`, `JOB_AT` become three separate edge types pointing at one conceptual relation.
+Cognee has its own wrapper (`CogneePreNormalized`) covering its async module-level API. All three share the same `mention_map` / `mention_extractor` contract; new memory frameworks plug in with ~50 lines of adapter code following the reference implementations in `runner/service/integrations/`.
 
-Mem0's stated stance (per maintainer comment on [issue #4896](https://github.com/mem0ai/mem0/issues/4896), April 2026) is to handle this via the LLM extraction prompt rather than a deterministic write-path resolver. Mem0 also removed graph memory from the OSS distribution in v2.0.0 / v3.0.0. That leaves a slot for a deterministic, fast pre-normalization layer that sits in front of those systems: vector-matches incoming surface forms against existing canonicals and aliases near-duplicates before the write commits. No LLM in the hot path; downstream system stores fewer duplicate entries; canonicals stay stable across reads.
+## The four-stage progression (the framework's heart)
 
-A 90-day scan of the surrounding landscape is in [docs/opportunity.md](docs/opportunity.md). It records why three adjacent niches (LSP-driven code memory, reasoning-memory event sourcing, real-time graph GC) were either already shipped, partially closed, or deferred.
+```
+THEORETICAL  →  SYNTHETIC DATA  →  REAL DATA  →  SUBSTANTIAL REAL DATA
+   ↓               ↓                 ↓              ↓
+landscape       pilot variants    small benchmarks   scaled benchmarks
+scan +          on contrived      on actual text     on production-shape
+wedge pick      workloads                            workloads
+   ↓               ↓                 ↓              ↓
+"is there       "does the         "does it work     "what's the actual
+ a slot?"        mechanism         on real text?"    magnitude and
+                 work?"                              ranking at scale?"
+```
 
-## Where the middleware adds value (and where it doesn't)
+Each stage catches errors the previous missed. **Stage 4 caught stage 3's overclaim** (and stage 2's was caught by stage 3 already). The framework's discipline forces escalation from synthetic toward substantial real data before any competitive claim ships.
 
-The harness has now evaluated the variants on six workloads spanning synthetic, KG-grounded, conversational, and real multi-tenant data. The candid summary:
+See [`FRAMEWORK.md`](FRAMEWORK.md) for the full meta-narrative, the reusable component inventory, and the trajectory through the framework on this opportunity.
 
-| Workload shape | Proxy adds value | Notes |
-|---|---|---|
-| Single-tenant entity aliases with multiple surface forms (WikiData property labels) | Yes, statistically significant | v0.3.1 PASS_AND_MERGE vs no-proxy baseline |
-| Multi-tenant with source-conditional disambiguation (WikiData entity disambiguation) | Yes | v0.5.3 +0.075 B-cubed over baseline |
-| Multi-tenant singleton-heavy (Stack Overflow tags) | Marginally trails baseline | b-raw's identity-clustering is hard to beat when each input is globally unique |
-| Multi-tenant with explicit strata (synthetic) | Marginally trails baseline at safe settings | Aggressive settings trade Tier B safety for B-cubed wins |
-| Long-form conversational text (LongMemEval-S adapted) | No, regresses | Proxy is for entity names, not paragraph clustering |
-| Mem0 v3 OSS comparison (head-to-head) | Not directly comparable | Mem0 OSS outputs natural-language facts, not canonical IDs |
+## Statistical framework, in one paragraph
 
-The product fit is **alias normalization for short surface forms in multi-alias entity stores**. For workloads outside that shape, the proxy adds friction without payoff. The harness gates catch this so it cannot ship unnoticed.
-
-### Downstream LLM coherence: the original headline number (since revised — see note below)
-
-Across a 1.2B → 3.2B → 14.8B model ladder (Ollama), pre-normalizing entity aliases before the LLM's extraction call delivers a consistent ~0.95 B-cubed F1 on a small synthetic workload (30 utterances, 6 entities). Without the proxy, baseline coherence DROPS as model size grows (the 14B model faithfully echoes every surface variant back, hitting 0.3968). The proxy's absolute quality lift on that small benchmark is largest at the biggest tier:
-
-| LLM | no proxy | with proxy | Δ B-cubed | per-call latency |
-|---|---|---|---|---|
-| 1.2B (llama3.2:1b) | 0.6448 | 0.8724 | +0.2275 | 83 ms → 83 ms |
-| 3.2B (llama3.2:3b) | 0.4921 | 0.9464 | +0.4544 | 153 ms → 104 ms |
-| 8.0B (llama3.1:8b) | 0.4067 | **1.0000** | +0.5933 | 206 ms → 145 ms |
-| 14.8B (qwen2.5:14b) | 0.3968 | 0.9464 | +0.5496 | 572 ms → 200 ms |
-| 33.5B (qwen2.5vl:32b) | 0.4550 | **1.0000** | +0.5450 | 764 ms → 382 ms |
-| frontier (claude-opus-4-7, API) | 0.5284 | 0.9630 | +0.4345 | 1192 ms → 1035 ms |
-
-A 3B model with the proxy beats a 14B model without it. The 8B and 32B both reach PERFECT 1.0 coherence with the proxy and beat frontier-tier Opus without it.
-
-**Real-data confirmation across 14 models from 5 providers** ([`docs/finding-full-ladder-sweep.md`](docs/finding-full-ladder-sweep.md)): on 227 real Twitter Financial News tweets, **no frontier API matches qwen2.5:3b (free local 3B) + proxy on entity-normalization accuracy**:
-
-| Rank | Model | With-proxy accuracy | Latency |
-|---|---|---|---|
-| 1 | **qwen2.5:3b** (free local) | **0.872** | 119 ms |
-| 2 | llama3.2:3b (free local) | 0.855 | 121 ms |
-| 3 | gpt-4o (OpenAI) | 0.828 | 912 ms |
-| 7 | gemini-2.5-flash (Google) | 0.802 | 587 ms |
-| 9 | gemini-2.5-pro (Google) | 0.775 | 1804 ms |
-| 10 | claude-opus-4-7 (Anthropic) | 0.758 | 1617 ms |
-
-**IMPORTANT REVISION (June 2026):** this ranking was at N=227 with a 10-entity alias map. At substantial N=836 with a 125-entity map, the ranking changes materially. Small models drop more than frontier models. The corrected headline:
-
-| Rank at N=836 | Model | With-proxy accuracy | Latency |
-|---|---|---|---|
-| 1= | **qwen2.5vl:7b** (free local 7B) | **0.773** | 199 ms |
-| 1= | **gpt-4o** (OpenAI) | **0.773** | 588 ms |
-| 3= | llama3.2:3b / qwen2.5:3b / qwen2.5vl:32b (local) | 0.758 | 121-651 ms |
-
-At substantial N, a free local 7B model **ties** gpt-4o exactly. Six local models cluster at 0.755-0.773. Cost per million records: ~$0 (self-hosted) vs ~$5k (gpt-4o). The revised commercial claim is "competitive with frontier at 1000x lower cost," not "beats frontier." See [`docs/finding-substantial-N-revision.md`](docs/finding-substantial-N-revision.md) for the full revised ladder and the lessons about benchmark scale.
-
-### When to use this middleware
-
-Good fit:
-- Your memory store accumulates short entity references (people, companies, products, tickers, SKUs, place names, technical terms) where the same thing arrives under multiple aliases.
-- You can tolerate eventual consistency on cross-tenant canonicalization (the v0.4.2+ lazy consolidation pattern decouples the write path from the merge phase).
-- You are paying a per-write LLM tax today for entity normalization and want to drop the latency and cost.
-
-Bad fit:
-- Long-form conversational memory where the unit of clustering is a paragraph or a fact statement (see the LongMemEval-S finding).
-- Workloads where every input is globally unique (no aliases to canonicalize); the proxy adds cost without benefit (see the Stack Overflow tags finding).
-- Cases where the downstream system needs the raw surface forms retained for provenance; the proxy rewrites them upstream.
-
-## Findings to date
-
-The harness has run four variant generations against two workloads (synthetic ConceptNet and real WikiData property aliases) under two use cases (UC-4.1 clustering quality, UC-4.4 false-merge resistance). Headline numbers:
-
-### UC-4.1 B-cubed F1 (clustering quality, higher is better)
-
-| Variant | Approach | ConceptNet (n=131) | WikiData (n=2457) |
-|---|---|---|---|
-| b-raw-identity | no proxy | 0.407 | 0.197 |
-| embed-proxy-v0.1.0 | token-overlap hash | **0.602** ★ | 0.229 |
-| embed-proxy-v0.2.0 | neural (model2vec + prompt template) | 0.479 (regressed) | **0.355** ★ |
-| embed-proxy-v0.3.0 | hybrid token + neural concat | **0.642** ★ | 0.225 |
-| embed-proxy-v0.3.1 | hybrid + structural filter | 0.605 | 0.226 |
-
-The ranking flipped between synthetic and real data. ConceptNet is dominated by case/underscore variants where token overlap is perfect; WikiData has real paraphrases (`head of government` ↔ `premier` ↔ `PM`) that only the neural embedder catches. Without WikiData, we would have shipped v0.3.0 as the winner. Wrong.
-
-### UC-4.4 Tier B false-merge rate (semantic over-clustering, lower is better)
-
-| Variant | ConceptNet (n=11) | WikiData (n=70) |
-|---|---|---|
-| embed-proxy-v0.1.0 | 0/11 PASS | 20/70 (28.6%) FAIL |
-| embed-proxy-v0.2.0 | 11/11 (100%) FAIL | 70/70 (100%) FAIL |
-| embed-proxy-v0.3.0 | 0/11 PASS | 3/70 (4.3%) FAIL |
-| **embed-proxy-v0.3.1** | **0/11 PASS** | **0/70 PASS** |
-
-UC-4.4 catches what UC-4.1 cannot: a variant that aliases everything semantically similar scores well on clustering but destroys precision on the cases that matter (`ISO 639-1 code` vs `ISO 639-2 code`, `review score` vs `review score by`). v0.2.0 wins UC-4.1 on WikiData decisively, then fails UC-4.4 catastrophically.
-
-### v0.3.1, first variant clearing both gates
-
-v0.3.1 adds a deterministic structural filter on top of v0.3.0's hybrid embedder. Two rules:
-
-- **Digit content differs** → block the merge. Catches ISO codes, version numbers, alpha-N qualifiers.
-- **Trailing closed-class preposition asymmetry** → block. Catches `X` vs `X by`, `X` vs `X for`, etc.
-
-The filter is intentionally narrow. It does not touch semantic similarity; it only refuses merges that violate a structural rule. Both rules were derived directly from observed v0.3.0 failures on the WikiData Tier B fixture.
-
-v0.3.1 is the first variant to pass both UC-4.1 superiority (statistically beats v0.3.0 on WikiData at p=0.0000) and UC-4.4 Tier B (0% false merges on both ConceptNet and WikiData fixtures) on real data. It does not beat v0.2.0 on UC-4.1 raw F1 (0.226 vs 0.355) because v0.2.0's neural-only paraphrase coverage is genuinely stronger. The trade-off is intentional: v0.2.0 gets that coverage by aliasing everything, which is unacceptable on the kill switch.
-
-### What the harness has surfaced (worth keeping in mind)
-
-- A flawed bootstrap design (index-resampled pairwise F1) was caught by the harness producing impossible CIs. Replaced with per-item B-cubed F1 bootstrap.
-- The "more complex is better" pattern fails decisively: v0.2.0 looks like an upgrade but regresses on ConceptNet UC-4.1 and fails UC-4.4 100%.
-- Equal-weight hybrid concat regresses against token-only; the neural cosine acts as a veto on case variants where it is weak. Token-dominant weighting fixed it.
-- Two synthetic-data findings (v0.1.0 best on ConceptNet, v0.3.0 winning the hybrid) both reversed on real data. Synthetic workloads under-test.
-
-## Status
-
-Active iteration. Eleven candidate variants, seven workloads (six implemented, one stubbed pending NER integration), four use-case gates wired (UC-4.1 clustering, UC-4.4 false-merge, UC-4.6 latency, UC-4.7 lite held-out). Public service API (`EntityNormalizer`, `AdvisoryConsolidator`) and a Mem0 v3 integration shim (`Mem0PreNormalized`). 148 tests.
-
-The variant under active iteration is v0.5.3 (singleton-aware with disambig safety check). v0.3.1 remains the single-tenant GA candidate. See `GAPS-AND-LIMITATIONS.md` for the candid view of what is and isn't proven yet.
+The harness uses LORD++ online FDR (Ramdas et al. 2017) at q=0.10 rather than vanilla Benjamini-Hochberg, so sequential peeking during development does not inflate type-I error rate. Each candidate variant is compared against the previous green commit using non-inferiority testing with margin δ tied to MDE per metric (0.25×MDE for nightly, 0.5×MDE for fast PR gates). CUPED variance reduction (using B-VPREV per-item baseline) offsets the resulting sample-size inflation. Three operational guardrails (INCONCLUSIVE-is-FAIL on the fast tier, SAFFRON hot-swap at high null proportion, 14-day cap on stale baselines) protect against common automation failures. Full spec in [`docs/experiments.md`](docs/experiments.md).
 
 ## What's in this repo
 
 ```
-fixtures/
-  manifest.json                              workload registry
-  workloads/
-    w_conceptnet_rel.py                      131 entries (synthetic case-variant baseline)
-    w_wikidata_props.py                      2457 entries from real WikiData property aliases
-    w_multitenant_synth.py                   516-entry multi-tenant with explicit strata
-    w_multitenant_wikidata.py                138-entry KG-grounded multi-tenant
-    w_stackoverflow_multitenant.py           211-entry real multi-tenant from SO tags
-    w_longmemeval_s.py                       1000-entry LongMemEval-S adapted for clustering
-  generators/
-    wikidata_aliases.py                      WikiData property fetcher
-    wikidata_disambiguation.py               disambiguation candidate fetcher
-    stackoverflow_tags.py                    Stack Overflow related-tags fetcher
-    tier_b_adversarials.py                   single-source hard-negative miner
-    multitenant_tier_b.py                    cross-source hard-negative miner
-  adversarials/
-    conceptnet_tier_b.json                   11 single-source pairs
-    wikidata_tier_b.json                     70 single-source pairs
-    multitenant_tier_b_wikidata.json         17 cross-source pairs
-    multitenant_tier_b_synth.json            79 cross-source pairs
-runner/
-  service/                                   public API for integrators
-    normalizer.py                            EntityNormalizer
-    consolidator.py                          AdvisoryConsolidator
-    integrations/mem0.py                     Mem0PreNormalized
-  variants/
-    base.py                                  Variant ABC
-    b_raw.py                                 identity baseline
-    stub_proxy.py                            hash-bucket sanity check
-    embed_proxy.py                           v0.1.0 token, v0.2.0 neural, v0.3.0/v0.3.1 hybrid + filter
-    per_source.py                            v0.4.0 to v0.5.3 (multi-tenant: per-source, eager and lazy consensus, AND-rule, adaptive, singleton-aware)
-    neural_embedder.py                       model2vec adapter with sentence template
-    structural_filter.py                     digit-mismatch and trailing-preposition rules
-  metrics/
-    alignment.py                             pairwise F1, per-item B-cubed F1
-    stats.py                                 paired bootstrap, McNemar
-  fdr.py                                     LORD++ online FDR ledger
-  cuped.py                                   CUPED variance reduction
-  gates.py                                   INCONCLUSIVE-is-FAIL, SAFFRON-swap, B-VPREV-cap
-  artifacts.py                               immutable three-block run-artifact writer
-  runner.py                                  entrypoint with UC-4.1, UC-4.4, UC-4.6, UC-4.7 modes
-experiments/                                 standalone analysis scripts
-  mem0_baseline.py                           Mem0 v3 OSS probe
-  scale_stress.py                            K-scaling latency/quality sweep
-  multitenant_tier_b_score.py                MT Tier B variant scorer
-tests/                                       148 unit tests, all passing
+FRAMEWORK.md                   the framework meta-narrative (start here for the meta)
+CASE-STUDY.md                  tight technical narrative on the proxy specifically
+GAPS-AND-LIMITATIONS.md        candid audit of what is and isn't proven
+
+fixtures/                      workloads + adversarial test sets
+  workloads/                   ConceptNet, WikiData props, multi-tenant variants,
+                               Stack Overflow tags, LongMemEval-S adapted
+  adversarials/                Tier B hard-negative fixtures (single + cross-source)
+  generators/                  fetchers for WikiData, Stack Overflow, Tier B mining
+
+runner/                        the harness + variants + service
+  service/                     PUBLIC API for integrators
+    normalizer.py              EntityNormalizer (the stable contract)
+    consolidator.py            AdvisoryConsolidator (off-hot-path merging)
+    integrations/              Mem0PreNormalized, GraphitiPreNormalized, CogneePreNormalized
+    preprocessors/             NER (regex/spaCy/transformers) + co-reference (LLM/fastcoref)
+  variants/                    13 candidate variants (single-tenant + multi-tenant + ANN)
+  metrics/                     pairwise F1, B-cubed F1, paired bootstrap, McNemar
+  fdr.py, cuped.py, gates.py   LORD++ FDR, CUPED variance reduction, CI gates
+  runner.py                    entrypoint with UC-4.1, UC-4.4, UC-4.6, UC-4.7 modes
+
+experiments/                   standalone analysis scripts (8+ benchmarks)
+  ladder_sweep_real_data.py    14-model ladder runner with auto-routing
+  case_study_expanded.py       125-entity / 416-alias map at substantial N
+  mem0_wrapper_live_bench.py   live Mem0 deployment comparison
+  ...                          (small-LLM quality, conversational, multi-session,
+                                NER, coref, scale stress, etc.)
+
+tests/                         194 unit tests, all passing
+
 docs/
-  opportunity.md                             wedge selection and 90-day landscape scan
-  experiments.md                             test plan and statistical framework
-  roadmap.md                                 v0.4.0+ multi-tenant and other open work
-  finding-*.md                               seven findings (neural ceiling, noise robustness,
-                                             cadence invariance, Mem0 comparison, LongMemEval
-                                             regression, MT Tier B, Stack Overflow MT, scale)
-GAPS-AND-LIMITATIONS.md                      candid audit of what does and does not generalize
-CASE-STUDY.md                                tight technical narrative
+  opportunity.md               90-day landscape scan + wedge selection (stage 1)
+  experiments.md               full statistical framework spec
+  finding-*.md                 24 finding docs (every claim, including negative results)
 ```
 
-## Integration patterns
-
-### Pattern 1: as a service in your own pipeline
-
-```python
-from runner.service import EntityNormalizer, AdvisoryConsolidator
-
-# Single-tenant
-norm = EntityNormalizer("embed-proxy-v0.3.1")
-canonical = norm.normalize("Apple Inc")
-batch = norm.batch_normalize(["AAPL", "Apple Computer", "Apple Inc."])
-
-# Multi-tenant (per-source disambiguation + lazy consolidation)
-norm = EntityNormalizer("embed-proxy-v0.5.3-singleton-aware")
-canonical = norm.normalize("Apple", context={"source_id": "finance"})
-
-# Advisory consolidator schedules cross-source merges off the hot path
-consolidator = AdvisoryConsolidator(norm, schedule_every_n_writes=1000)
-if consolidator.schedule_required():
-    consolidator.run()  # run in a background thread / cron job
-```
-
-### Pattern 2: as middleware in front of Mem0 v3 OSS
-
-```python
-from mem0 import Memory
-from runner.service import EntityNormalizer
-from runner.service.integrations import Mem0PreNormalized
-
-norm = EntityNormalizer("embed-proxy-v0.3.1")
-m = Mem0PreNormalized(
-    Memory(),
-    norm,
-    # Either a static alias map ...
-    mention_map={"AAPL": "Apple Inc.", "MSFT": "Microsoft"},
-    # ... or a callable extractor (spaCy NER, regex, LLM, etc.)
-    # mention_extractor=my_ner_function,
-)
-m.add("Bought AAPL today", user_id="trader1")
-# search / get / delete pass through unchanged
-```
-
-### Pattern 3: head-to-head harness runs
+## Running the harness
 
 ```sh
-# UC-4.1: clustering quality, paired bootstrap vs a baseline
+# Test suite
+.venv/bin/python -m pytest tests/
+
+# A variant comparison (clustering quality, paired bootstrap vs baseline)
 python -m runner.runner \
   --variant embed-proxy-v0.3.1 \
   --baseline embed-proxy-v0.3.0 \
@@ -270,55 +178,45 @@ python -m runner.runner \
   --use-case UC-4.1 \
   --tier fast
 
-# UC-4.4: false-merge rate on the Tier B adversarial fixture
-python -m runner.runner \
-  --variant embed-proxy-v0.3.1 \
-  --use-case UC-4.4 \
-  --tier-b-fixture fixtures/adversarials/wikidata_tier_b.json \
-  --tier fast
+# The substantial-N case study (125 entities, 416 aliases, 836 real tweets)
+.venv/bin/python experiments/case_study_expanded.py --per-entity 1000 \
+  --models qwen2.5:3b,llama3.2:3b,qwen2.5vl:7b
+
+# Full 14-model ladder including frontier APIs
+ANTHROPIC_API_KEY=... OPENAI_API_KEY=... GEMINI_API_KEY=... \
+.venv/bin/python experiments/ladder_sweep_real_data.py --per-entity 30 \
+  --models claude-opus-4-7,gpt-4o,gemini-2.5-pro
 ```
 
-Both write a JSON artifact under `runs/` in the three-block schema described in [docs/experiments.md](docs/experiments.md) section 6.1.
+Outputs land in `runs/` as immutable JSON artifacts in the three-block schema described in [`docs/experiments.md`](docs/experiments.md) §6.1.
 
-Optional: `pip install -e .[neural]` to install model2vec for v0.2.0 / v0.3.0 / v0.3.1 and the multi-tenant variants. v0.1.0 needs no extra deps.
-
-## Tests
+## Optional dependencies
 
 ```sh
-python -m pytest tests/
+pip install -e .[neural]          # model2vec for hybrid + multi-tenant variants
+pip install -e .[ann]             # hnswlib + numpy for the ANN scaling variant
+pip install -e .[ner]             # spaCy NER preprocessor
+pip install -e .[ner-transformers] # HuggingFace transformers NER preprocessor
 ```
 
-148 tests cover the embedders, the variants (single-tenant and multi-tenant), the statistical machinery (LORD++, CUPED, paired bootstrap, McNemar), the three CI/CD gates, the structural filter, the public service API (`EntityNormalizer`, `AdvisoryConsolidator`), the Mem0 middleware shim, and the end-to-end pipeline.
+The core harness, baseline, and stub variants need only stdlib.
 
-## Statistical framework, in one paragraph
+## Status
 
-The harness uses an online FDR procedure (LORD++ at q=0.10) rather than vanilla Benjamini-Hochberg, so that sequential peeking during development does not inflate the type-I error rate. Each candidate proxy version is compared against the previous green commit using non-inferiority testing with a tightened margin (0.25 of MDE for nightly, 0.5 of MDE for fast PR gates). CUPED variance reduction lets the harness afford the tighter margin without quadrupling sample size. Three operational guardrails (INCONCLUSIVE-is-FAIL on the fast tier, SAFFRON hot-swap at high null proportion, 14-day cap on stale baselines) protect the gate from common automation failures. Full spec in [docs/experiments.md](docs/experiments.md).
+Active. **194 tests passing.** 24 documented findings. 13 variants registered (single-tenant + multi-tenant + ANN-backed). Three memory-framework integrations (Mem0, Graphiti, Cognee). One curated 125-entity financial alias map for the case study. Four-stage evaluation progression applied through stage 4.
 
-## Design priority: write latency vs merge accuracy
+GA candidates by use case:
+- **Single-tenant entity normalization:** v0.3.1 (hybrid + structural filter)
+- **Multi-tenant with cross-source consolidation:** v0.5.3 (singleton-aware lazy)
+- **Production K-scaling:** v0.5.5-ann (single-tenant) or v0.5.7-mt-ann (multi-tenant)
 
-The proxy separates two concerns that prior agent-memory frameworks couple together.
+See [`GAPS-AND-LIMITATIONS.md`](GAPS-AND-LIMITATIONS.md) for the candid view of what's still open work.
 
-**Write latency is a hot-path constraint.** Every ingestion pays the inner variant's cost (deterministic embedding plus cosine search): roughly 27 ms p99 today across all variants v0.3.1 through v0.4.2, with a hard 100 ms p99 kill switch. No LLM in the hot path. No cross-source consensus computation on the write itself.
+## Why this exists (and what it isn't)
 
-**Cross-source merge accuracy is a consolidation concern.** Cross-source intelligence (recognizing that sales' "Microsoft" and ops' "Microsoft" mean the same entity) accumulates in a separate consolidation phase. Run it every 100 writes, every shift, every night. Whatever cadence matches operational tolerance for eventual consistency.
+**What this is:** A rigorous answer to "is the schema-alignment opportunity real?" — backed by 4 stages of evaluation, 194 tests, 24 finding docs, 14 models tested across 5 providers, and one published self-correction when the small benchmark turned out to be misleading. Also: a reusable framework that could be re-applied to the next AI/ML/LLM opportunity in ~4-6 weeks.
 
-This separation is the wedge against LLM-in-the-loop designs (Mem0 v3): they pay 500-2000 ms per write for what we accumulate offline. The trade-off we accept is that two writes minutes apart may see different merge states until the next consolidation runs. For agent memory the trade is correct. Write velocity matters; instant cross-source unification does not.
-
-Concretely, the variants implement this:
-
-| Variant | Write path | Merge timing |
-|---|---|---|
-| v0.4.0 per-source | inner variant only | never (no merge) |
-| v0.4.1 consensus (eager) | inner + O(K) Jaccard scan | every write |
-| **v0.4.2 lazy consensus** | **inner only** | **explicit `consolidate()` call** |
-
-v0.4.2 is the production-shape design: write path serves online traffic at v0.3.1 latency; `consolidate()` runs as a background job on a configurable cadence. The harness implements this by running `consolidate()` between pass 1 (ingest) and pass 2 (re-query). A `drift_rate` metric reports the fraction of writes whose pre-consolidation canonical differs from the post-consolidation canonical, so the operational cost of lazy consolidation is always visible.
-
-## Why this exists before the proxy does
-
-Picking a wedge in a moving competitive landscape is easy to get wrong. The opportunity scan and the harness are deliberate sequencing: first establish that the niche is real and unoccupied, then put the measurement infrastructure in place, then build the proxy. The first real candidate variant landed against the same gates as every later iteration, so progress (and the two genuine reversals when real data flipped synthetic results) is unambiguous.
-
-For a tighter narrative of the project (problem framing, decision sequencing, iteration record, known limits, what the harness was actually worth), see [`CASE-STUDY.md`](CASE-STUDY.md). For a candid audit of what the current state does and does not prove, see [`GAPS-AND-LIMITATIONS.md`](GAPS-AND-LIMITATIONS.md).
+**What this isn't:** A $1B startup. The proxy code is ~50 lines of regex with an alias map; any competent engineer can reproduce it in a day. The defensible commercial assets (if any) are the vertical alias maps (data subscription business), the integration shim maintenance, and the brand/distribution of being the entity-normalization-people. Treat this repo as a portfolio piece + reference architecture, not as a product roadmap.
 
 ## License
 
