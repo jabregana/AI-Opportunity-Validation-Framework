@@ -1,6 +1,10 @@
-# Case Study: Entity-Normalization Middleware for LLM Memory Systems
+# Case Study: A Framework for Evaluating AI/ML/LLM Opportunities, Applied to an Entity-Normalization Proxy
 
-A technical writeup of how this project was built, what it surfaced, what the harness was worth, and how the framing shifted from "alternative to Mem0" to "drop-in middleware in front of Mem0 and any similar store." Written for an outside reader (PM lead, infra eng, or technical hiring panel) who wants the story without the full repo dive.
+> **Project shape:** This repository is two artifacts. (1) A reusable **evaluation framework** for assessing whether a given AI/ML/LLM opportunity is real — landscape scan, statistical harness, multi-stage synthetic-to-real progression, multi-model ladder, transparent finding-doc culture. (2) The **schema-alignment proxy** as the first opportunity tested through it. See [`FRAMEWORK.md`](FRAMEWORK.md) for the meta narrative on the framework itself.
+
+> **Honest read on the proxy after 4 stages of evaluation:** real but narrow value. At substantial N=836 with 125 entities, a free local 7B model + proxy TIES gpt-4o + proxy at 0.773 each — a strong cost-efficiency story, not the "beats frontier" the small benchmark suggested. The framework caught its own overclaim. That's the project's most credibility-bearing artifact.
+
+A technical writeup of how this project was built, what it surfaced, what the harness was worth, how the framing shifted (from "alternative to Mem0" to "drop-in middleware" to "honest competitive at fraction of cost"), and what the framework would do on the next opportunity. Written for an outside reader (PM lead, infra eng, or technical hiring panel) who wants the story without the full repo dive.
 
 ## Problem framing
 
@@ -84,21 +88,27 @@ Gauntlet pass status (single-tenant):
 
 v0.3.1 is the first variant to pass all UC-4.x gates simultaneously on real WikiData. v0.1.0 wins UC-4.7 held-out generalization (28.4%) because its lower threshold catches more near-matches; v0.3.1 trades that for Tier B safety.
 
-### THE FLAGSHIP NUMBER — Free local 3B + proxy beats every frontier API
+### THE FLAGSHIP NUMBER — initial result at small N, then revised at substantial N
 
-Full 14-model ladder on 227 real Twitter Financial News tweets, 4 frontier providers + 10 local model families (`docs/finding-full-ladder-sweep.md`). Top of the ranking by with-proxy accuracy:
+**Initial finding (small N=227, 10-entity alias map):** "free local 3B + proxy beats every frontier API." Top of the ranking:
 
-| Rank | Model | Type | With-proxy accuracy | Latency / call |
-|---|---|---|---|---|
-| 1 | **qwen2.5:3b** | Local 3.1B (free) | **0.872** | 119 ms |
-| 2 | llama3.2:3b | Local 3.2B (free) | 0.855 | 121 ms |
-| 3 | gpt-4o | OpenAI frontier | 0.828 | 912 ms |
-| 4 | qwen2.5vl:7b | Local 8.3B (free) | 0.819 | 178 ms |
-| 7 | gemini-2.5-flash | Google frontier | 0.802 | 587 ms |
-| 9 | gemini-2.5-pro | Google frontier | 0.775 | 1804 ms |
-| 10 | claude-opus-4-7 | Anthropic frontier | 0.758 | 1617 ms |
+| Rank at N=227 | Model | With-proxy accuracy |
+|---|---|---|
+| 1 | qwen2.5:3b (free local 3B) | 0.872 |
+| 3 | gpt-4o (OpenAI) | 0.828 |
+| 10 | claude-opus-4-7 (Anthropic) | 0.758 |
 
-A free local 3B model with our proxy beats every frontier API tested. **qwen2.5:3b WITHOUT proxy (0.789) even beats Opus WITH proxy (0.758).** Cost per million tweets: ~$0 (self-hosted) vs ~$10k (Opus); latency ~14x faster.
+**REVISED at substantial N=836, 125-entity alias map:** the headline collapses. Small models drop 10-11pp at scale; frontier models drop only 5-6pp. The corrected ranking:
+
+| Rank at N=836 | Model | With-proxy accuracy | vs prior |
+|---|---|---|---|
+| 1= | **qwen2.5vl:7b** (free local 7B) | **0.773** | -4.6 pp |
+| 1= | **gpt-4o** (OpenAI) | **0.773** | -5.5 pp |
+| 3= | llama3.2:3b / qwen2.5:3b / qwen2.5vl:32b (local) | 0.758 | -10 pp |
+
+**The honest revised claim:** a free local 7B model TIES frontier API at fraction of cost. Six local models converge to 0.755-0.773 with proxy. Cost per million tweets: ~$0 (self-hosted) vs ~$5k (gpt-4o). Latency: 199ms (qwen2.5vl:7b) vs 588ms (gpt-4o). The proxy is "competitive with frontier at 1000x lower cost," not "beats frontier."
+
+The framework catching its own overclaim **before it shipped to a customer or investor** is the project's most credibility-bearing artifact. See [`docs/finding-substantial-N-revision.md`](docs/finding-substantial-N-revision.md) for the full revision and the lessons about benchmark scale.
 
 ### Downstream LLM quality lift across model sizes (the original finding)
 

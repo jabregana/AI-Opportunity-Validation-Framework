@@ -68,8 +68,33 @@ def _clean(raw: str) -> str:
     return first_line.strip("\"'.,;: \t") or "<EMPTY>"
 
 
+def _post_with_retry(req: urllib.request.Request, timeout_s: float,
+                     max_retries: int = 3, label: str = "API") -> dict:
+    """POST with exponential backoff on transient network errors.
+    HTTPError is propagated (likely a model/auth issue, not transient)."""
+    last_exc = None
+    for attempt in range(max_retries + 1):
+        try:
+            with urllib.request.urlopen(req, timeout=timeout_s) as resp:
+                return json.loads(resp.read().decode("utf-8"))
+        except urllib.error.HTTPError:
+            raise  # do not retry on 4xx/5xx — let caller decide
+        except (urllib.error.URLError, TimeoutError, ConnectionError) as e:
+            last_exc = e
+            if attempt < max_retries:
+                wait = 2 ** attempt  # 1, 2, 4 seconds
+                print(f"  {label} transient error (attempt {attempt + 1}/{max_retries + 1}): "
+                      f"{type(e).__name__}; retrying in {wait}s...")
+                time.sleep(wait)
+                continue
+            raise RuntimeError(
+                f"{label} failed after {max_retries + 1} attempts: "
+                f"{type(last_exc).__name__}: {last_exc}"
+            ) from last_exc
+
+
 def claude_extract(model: str, api_key: str, text: str,
-                   timeout_s: float = 60.0) -> str:
+                   timeout_s: float = 120.0) -> str:
     body = json.dumps({
         "model": model,
         "max_tokens": 30,
@@ -87,8 +112,7 @@ def claude_extract(model: str, api_key: str, text: str,
         method="POST",
     )
     try:
-        with urllib.request.urlopen(req, timeout=timeout_s) as resp:
-            payload = json.loads(resp.read().decode("utf-8"))
+        payload = _post_with_retry(req, timeout_s, label="Anthropic")
     except urllib.error.HTTPError as e:
         body_text = e.read().decode("utf-8", errors="replace")
         raise RuntimeError(f"Anthropic API HTTP {e.code}: {body_text}") from e
@@ -98,7 +122,7 @@ def claude_extract(model: str, api_key: str, text: str,
 
 
 def openai_extract(model: str, api_key: str, text: str,
-                   timeout_s: float = 60.0) -> str:
+                   timeout_s: float = 120.0) -> str:
     body = json.dumps({
         "model": model,
         "max_tokens": 30,
@@ -116,8 +140,7 @@ def openai_extract(model: str, api_key: str, text: str,
         method="POST",
     )
     try:
-        with urllib.request.urlopen(req, timeout=timeout_s) as resp:
-            payload = json.loads(resp.read().decode("utf-8"))
+        payload = _post_with_retry(req, timeout_s, label="OpenAI")
     except urllib.error.HTTPError as e:
         body_text = e.read().decode("utf-8", errors="replace")
         raise RuntimeError(f"OpenAI API HTTP {e.code}: {body_text}") from e
@@ -128,7 +151,7 @@ def openai_extract(model: str, api_key: str, text: str,
 
 
 def gemini_extract(model: str, api_key: str, text: str,
-                   timeout_s: float = 60.0) -> str:
+                   timeout_s: float = 120.0) -> str:
     url = GEMINI_URL_TEMPLATE.format(model=model, key=api_key)
     # Gemini 2.5 Pro REQUIRES thinking mode (the API rejects
     # thinkingBudget=0 with "This model only works in thinking mode").
@@ -156,8 +179,7 @@ def gemini_extract(model: str, api_key: str, text: str,
         method="POST",
     )
     try:
-        with urllib.request.urlopen(req, timeout=timeout_s) as resp:
-            payload = json.loads(resp.read().decode("utf-8"))
+        payload = _post_with_retry(req, timeout_s, label="Gemini")
     except urllib.error.HTTPError as e:
         body_text = e.read().decode("utf-8", errors="replace")
         raise RuntimeError(f"Gemini API HTTP {e.code}: {body_text}") from e

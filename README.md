@@ -1,6 +1,10 @@
 # agent-memory-gaps
 
-**Drop-in entity-normalization middleware for LLM memory systems.** Sits in front of Mem0, Graphiti, Cognee, or any custom store. Canonicalizes entity surface forms on the write path so the downstream memory accumulates a coherent graph instead of fragmenting into one entry per alias. Backed by an evaluation harness with online FDR control, CUPED variance reduction, non-inferiority gates, and adversarial false-merge tests so every shipped variant is measured against the same statistical bar.
+**A reusable framework for evaluating AI/ML/LLM opportunities, applied to a deterministic entity-normalization proxy as the first case study.** See [`FRAMEWORK.md`](FRAMEWORK.md) for the meta narrative — what the harness is, how the four-stage evaluation progression works, what's reusable for the next opportunity.
+
+The first opportunity tested: **drop-in entity-normalization middleware for LLM memory systems.** Sits in front of Mem0, Graphiti, Cognee, or any custom store. Canonicalizes entity surface forms on the write path so the downstream memory accumulates a coherent graph instead of fragmenting into one entry per alias. Backed by an evaluation harness with online FDR control, CUPED variance reduction, non-inferiority gates, and adversarial false-merge tests so every shipped variant is measured against the same statistical bar.
+
+**Honest read on the proxy after 4-stage evaluation (theoretical → synthetic → real → substantial real):** the proxy is incrementally useful for entity-heavy LLM pipelines, NOT a market-defining product. At substantial N (836 real tweets, 125 entities), a free local 7B model with the proxy TIES gpt-4o with proxy at 0.773 accuracy each — a strong cost-efficiency story (~$0 vs ~$5k per million records), not the "beats frontier" claim the small benchmark suggested. See [`docs/finding-substantial-N-revision.md`](docs/finding-substantial-N-revision.md) for the honest correction. The framework catching its own overclaim is the project's most credibility-bearing artifact.
 
 ## What it does
 
@@ -54,9 +58,9 @@ The harness has now evaluated the variants on six workloads spanning synthetic, 
 
 The product fit is **alias normalization for short surface forms in multi-alias entity stores**. For workloads outside that shape, the proxy adds friction without payoff. The harness gates catch this so it cannot ship unnoticed.
 
-### Downstream LLM coherence: the flagship commercialization number
+### Downstream LLM coherence: the original headline number (since revised — see note below)
 
-Across a 1.2B → 3.2B → 14.8B model ladder (Ollama), pre-normalizing entity aliases before the LLM's extraction call delivers a consistent ~0.95 B-cubed F1. Without the proxy, baseline coherence DROPS as model size grows (the 14B model faithfully echoes every surface variant back, hitting 0.3968). The proxy's absolute quality lift is therefore largest at the biggest tier:
+Across a 1.2B → 3.2B → 14.8B model ladder (Ollama), pre-normalizing entity aliases before the LLM's extraction call delivers a consistent ~0.95 B-cubed F1 on a small synthetic workload (30 utterances, 6 entities). Without the proxy, baseline coherence DROPS as model size grows (the 14B model faithfully echoes every surface variant back, hitting 0.3968). The proxy's absolute quality lift on that small benchmark is largest at the biggest tier:
 
 | LLM | no proxy | with proxy | Δ B-cubed | per-call latency |
 |---|---|---|---|---|
@@ -80,7 +84,15 @@ A 3B model with the proxy beats a 14B model without it. The 8B and 32B both reac
 | 9 | gemini-2.5-pro (Google) | 0.775 | 1804 ms |
 | 10 | claude-opus-4-7 (Anthropic) | 0.758 | 1617 ms |
 
-qwen2.5:3b WITHOUT proxy (0.789) even beats Opus WITH proxy (0.758). Cost per million records: ~$0 (self-hosted) vs ~$10k (Opus). See the [full 14-model ladder](docs/finding-full-ladder-sweep.md) for details.
+**IMPORTANT REVISION (June 2026):** this ranking was at N=227 with a 10-entity alias map. At substantial N=836 with a 125-entity map, the ranking changes materially. Small models drop more than frontier models. The corrected headline:
+
+| Rank at N=836 | Model | With-proxy accuracy | Latency |
+|---|---|---|---|
+| 1= | **qwen2.5vl:7b** (free local 7B) | **0.773** | 199 ms |
+| 1= | **gpt-4o** (OpenAI) | **0.773** | 588 ms |
+| 3= | llama3.2:3b / qwen2.5:3b / qwen2.5vl:32b (local) | 0.758 | 121-651 ms |
+
+At substantial N, a free local 7B model **ties** gpt-4o exactly. Six local models cluster at 0.755-0.773. Cost per million records: ~$0 (self-hosted) vs ~$5k (gpt-4o). The revised commercial claim is "competitive with frontier at 1000x lower cost," not "beats frontier." See [`docs/finding-substantial-N-revision.md`](docs/finding-substantial-N-revision.md) for the full revised ladder and the lessons about benchmark scale.
 
 ### When to use this middleware
 
