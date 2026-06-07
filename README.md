@@ -2,8 +2,6 @@
 
 **A reusable framework for evaluating AI/ML/LLM opportunities, applied to a deterministic entity-normalization proxy as the first case study.**
 
-*(Originally named `agent-memory-gaps`. Renamed after the four-stage evaluation reframed the project around the framework rather than the specific wedge it was first applied to.)*
-
 This repository is two interlocking artifacts:
 
 1. **An evaluation framework** for assessing whether a given AI/ML/LLM opportunity is real — a four-stage progression (theoretical landscape scan → synthetic data → real data → substantial real data), a statistical harness (LORD++ online FDR, paired bootstrap, CUPED variance reduction, CI gates), a multi-model ladder runner that auto-routes to Anthropic / OpenAI / Google / Ollama, and a finding-doc culture where every claim — including negative results — gets a dated doc. See [`FRAMEWORK.md`](FRAMEWORK.md) for the full framework narrative and reusable component inventory.
