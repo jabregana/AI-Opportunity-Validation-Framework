@@ -46,13 +46,46 @@ from experiments.gc_retrieval_f1_benchmark import (
 from runner.gc_runner import compute_retrieval_gate
 
 
-def _build_graphiti(uri: str, user: str, password: str):
+def _build_graphiti(uri: str, user: str, password: str,
+                    llm_provider: str = "openai",
+                    ollama_base: str = "http://localhost:11434/v1",
+                    ollama_llm_model: str = "phi3:mini",
+                    ollama_embed_model: str = "all-minilm:latest",
+                    ollama_embed_dim: int = 384):
+    """Build a Graphiti client.
+
+    llm_provider='openai'  -> default OpenAI client (needs OPENAI_API_KEY)
+    llm_provider='ollama'  -> openai_generic_client pointed at local Ollama
+                              (works with same Ollama mem0_retrieval_f1
+                              benchmark uses; no API key needed)
+    """
     try:
         from graphiti_core import Graphiti
     except ImportError as e:
         raise ImportError(
             "graphiti-core not installed. Run: pip install graphiti-core"
         ) from e
+
+    if llm_provider == "ollama":
+        from graphiti_core.llm_client.openai_generic_client import OpenAIGenericClient
+        from graphiti_core.llm_client.config import LLMConfig
+        from graphiti_core.embedder.openai import OpenAIEmbedder, OpenAIEmbedderConfig
+        llm_client = OpenAIGenericClient(config=LLMConfig(
+            api_key="ollama",
+            model=ollama_llm_model,
+            base_url=ollama_base,
+            temperature=0.0,
+        ))
+        embedder = OpenAIEmbedder(config=OpenAIEmbedderConfig(
+            api_key="ollama",
+            embedding_model=ollama_embed_model,
+            base_url=ollama_base,
+            embedding_dim=ollama_embed_dim,
+        ))
+        return Graphiti(
+            uri=uri, user=user, password=password,
+            llm_client=llm_client, embedder=embedder,
+        )
     return Graphiti(uri=uri, user=user, password=password)
 
 
@@ -116,6 +149,13 @@ def main():
     p.add_argument("--neo4j-user", default="neo4j")
     p.add_argument("--neo4j-password", default="changeme")
     p.add_argument("--rebuild-indices", action="store_true")
+    p.add_argument("--llm-provider", choices=["openai", "ollama"], default="openai",
+                   help="LLM client to wire into Graphiti (ollama = local, "
+                        "needs Ollama running with the embed + llm models pulled)")
+    p.add_argument("--ollama-base", default="http://localhost:11434/v1")
+    p.add_argument("--ollama-llm-model", default="phi3:mini")
+    p.add_argument("--ollama-embed-model", default="all-minilm:latest")
+    p.add_argument("--ollama-embed-dim", type=int, default=384)
     p.add_argument("--out", type=str, default=None)
     args = p.parse_args()
 
@@ -133,6 +173,11 @@ def main():
         graphiti = _build_graphiti(
             uri=args.neo4j_uri, user=args.neo4j_user,
             password=args.neo4j_password,
+            llm_provider=args.llm_provider,
+            ollama_base=args.ollama_base,
+            ollama_llm_model=args.ollama_llm_model,
+            ollama_embed_model=args.ollama_embed_model,
+            ollama_embed_dim=args.ollama_embed_dim,
         )
     except ImportError as e:
         print(f"  {e}")
