@@ -137,6 +137,94 @@ def test_search_with_no_matches_does_not_inflate_counts():
     assert mw.stats().n_queries == 0
 
 
+class _FakeMem0V2Strict:
+    """Mimics Mem0 v2's strict rejection of top-level entity kwargs.
+
+    Real Mem0 v2 raises:
+        ValueError: Top-level entity parameters frozenset({'user_id'})
+        are not supported in search(). Use filters={'user_id': '...'}
+        instead.
+
+    The default FakeMem0 in this file is permissive (accepts both
+    shapes) which masks bugs in the adapter's kwarg translation.
+    This strict variant exists specifically to catch that class of bug.
+    """
+
+    def __init__(self):
+        self._mems: dict = {}
+        self._next_id = 0
+
+    def add(self, messages, *, user_id=None, **kwargs):
+        self._next_id += 1
+        mid = f"v2_{self._next_id:04d}"
+        self._mems[mid] = {"id": mid, "memory": str(messages), "user_id": user_id}
+        return {"results": [{"id": mid, "memory": str(messages), "event": "ADD"}]}
+
+    def search(self, query, *, top_k=20, filters=None, **kwargs):
+        # Reject top-level entity kwargs the way Mem0 v2 does
+        forbidden = {k for k in kwargs if k in ("user_id", "agent_id", "run_id")}
+        if forbidden:
+            raise ValueError(
+                f"Top-level entity parameters {forbidden} are not supported "
+                f"in search(). Use filters={{'user_id': '...'}} instead."
+            )
+        if not filters:
+            raise ValueError(
+                "filters must contain at least one of: user_id, agent_id, run_id"
+            )
+        user_id = filters.get("user_id")
+        hits = [
+            {"id": mid, "memory": m["memory"]}
+            for mid, m in self._mems.items()
+            if (user_id is None or m["user_id"] == user_id)
+            and query.lower() in m["memory"].lower()
+        ]
+        return {"results": hits[:top_k]}
+
+    def get(self, mid): return self._mems.get(str(mid))
+    def get_all(self, **k): return {"results": list(self._mems.values())}
+    def update(self, mid, d, **k):
+        if mid in self._mems: self._mems[mid]["memory"] = d
+        return self._mems.get(mid)
+    def delete(self, mid): return self._mems.pop(mid, None)
+
+
+def test_search_translates_top_level_user_id_to_filters():
+    """Regression: the adapter must translate top-level user_id into
+    Mem0 v2's filters={'user_id': ...} format. The previous adapter
+    passed user_id through as-is, which Mem0 v2 rejects with
+    ValueError. The bug was invisible in mem0_retrieval_f1_benchmark
+    because the benchmark's try/except swallowed the error and
+    returned predicted=empty, producing F1=0 for every query."""
+    mw = Mem0GCMiddleware(_FakeMem0V2Strict())
+    mw.add("User likes coffee", user_id="u1")
+    # If translation works, this returns 1 hit; if broken, raises
+    result = mw.search("coffee", top_k=20, user_id="u1")
+    assert len(result["results"]) == 1
+    assert result["results"][0]["memory"] == "User likes coffee"
+
+
+def test_search_passes_filters_dict_through_unchanged():
+    """If caller already passes filters={...}, the adapter must not
+    double-wrap or drop it."""
+    mw = Mem0GCMiddleware(_FakeMem0V2Strict())
+    mw.add("Some memory", user_id="u1")
+    result = mw.search("memory", top_k=20, filters={"user_id": "u1"})
+    assert len(result["results"]) == 1
+
+
+def test_search_merges_top_level_and_filters():
+    """If caller passes both filters AND a top-level entity kwarg,
+    the top-level kwarg should be merged into filters."""
+    mw = Mem0GCMiddleware(_FakeMem0V2Strict())
+    mw.add("a memory", user_id="u_target")
+    mw.add("another memory", user_id="u_other")
+    # user_id="u_target" should win (no agent_id collision)
+    result = mw.search("memory", user_id="u_target", filters={})
+    assert len(result["results"]) == 1
+    assert result["results"][0]["memory"] == "a memory"
+
+
 # ---------------- get() / update() / delete() ----------------
 
 

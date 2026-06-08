@@ -113,7 +113,20 @@ class Mem0GCMiddleware(GCIntegrationShim):
         return result
 
     def search(self, query: str, **kwargs) -> Any:
-        """Search via Mem0; record query events against the returned ids."""
+        """Search via Mem0; record query events against the returned ids.
+
+        Mem0 v2 requires entity scoping (user_id/agent_id/run_id) via
+        filters={...} and rejects top-level entity kwargs. The adapter
+        translates top-level entity kwargs into filters for backward
+        compatibility with Mem0 v1 call sites.
+        """
+        entity_keys = ("user_id", "agent_id", "run_id")
+        filters = dict(kwargs.pop("filters", {}) or {})
+        for k in entity_keys:
+            if k in kwargs:
+                filters[k] = kwargs.pop(k)
+        if filters:
+            kwargs["filters"] = filters
         result = self.memory.search(query, **kwargs)
         now = _time.time()
         # Mem0 v2 search returns {"results": [{"id": ...}, ...]}
