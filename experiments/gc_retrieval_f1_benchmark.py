@@ -59,6 +59,59 @@ class RetrievalF1Result:
     zero_recall_pct: float  # fraction with recall == 0
 
 
+def _load_squad_corpus(
+    n_pairs: int = 200,
+    aged_fraction: float = 0.4,
+    seed: int = 42,
+) -> tuple[list[tuple[str, str, bool]], list[QAItem]]:
+    """Load a SQuAD subset as a real-data corpus.
+
+    SQuAD's shape: each example has (id, question, context, answers).
+    For the F1 benchmark: deduplicated contexts become memories; each
+    question becomes a query whose ground truth is the contexts that
+    contain its answer.
+
+    SQuAD is a single-hop QA dataset, which makes ground truth direct
+    (one context per question). HotpotQA would be multi-hop but is
+    currently broken on HF (ValueError on load).
+
+    Returns (memories, qa_items) in the same shape as
+    _generate_synthetic_corpus.
+    """
+    from datasets import load_dataset
+    ds = load_dataset("rajpurkar/squad", split="validation")
+    # Shuffle so we sample diverse contexts (consecutive SQuAD examples
+    # share contexts heavily; the first 50 examples typically come from
+    # 1-2 paragraphs)
+    rng = random.Random(seed)
+    indices = list(range(len(ds)))
+    rng.shuffle(indices)
+
+    context_to_id: dict[str, str] = {}
+    memories: list[tuple[str, str, bool]] = []
+    qa_items: list[QAItem] = []
+    # Stop when the framework has both n_pairs queries AND n_pairs unique
+    # contexts (or runs out of dataset)
+    for idx in indices:
+        if len(qa_items) >= n_pairs and len(memories) >= n_pairs:
+            break
+        ex = ds[int(idx)]
+        context = ex["context"]
+        if context not in context_to_id:
+            mem_id = f"squad_ctx_{len(context_to_id):05d}"
+            context_to_id[context] = mem_id
+            is_aged = rng.random() < aged_fraction
+            memories.append((mem_id, context, is_aged))
+        if len(qa_items) < n_pairs:
+            ctx_id = context_to_id[context]
+            qa_items.append(QAItem(
+                query_id=f"squad_q_{len(qa_items):05d}",
+                query=ex["question"],
+                ground_truth_ids={ctx_id},
+            ))
+    return memories, qa_items
+
+
 def _generate_synthetic_corpus(
     n_memories: int = 200,
     n_queries: int = 50,
@@ -218,6 +271,9 @@ def main():
     p.add_argument("--aged-fraction", type=float, default=0.4,
                    help="Fraction of memories that are 'old' (subject "
                         "to collection); rest are 'fresh' and survive")
+    p.add_argument("--use-squad", action="store_true",
+                   help="Use SQuAD validation subset for real-data Q&A "
+                        "instead of synthetic corpus")
     p.add_argument("--seed", type=int, default=42)
     p.add_argument("--out", type=str, default=None)
     args = p.parse_args()
@@ -229,15 +285,24 @@ def main():
     print(f"Variants: {args.variants}")
     print()
 
-    memories, qa_items = _generate_synthetic_corpus(
-        n_memories=args.n_memories, n_queries=args.n_queries,
-        seed=args.seed, aged_fraction=args.aged_fraction,
-    )
+    if args.use_squad:
+        memories, qa_items = _load_squad_corpus(
+            n_pairs=args.n_queries, aged_fraction=args.aged_fraction,
+            seed=args.seed,
+        )
+        print(f"Corpus: SQuAD validation subset, {len(memories)} unique "
+              f"contexts, {len(qa_items)} queries")
+    else:
+        memories, qa_items = _generate_synthetic_corpus(
+            n_memories=args.n_memories, n_queries=args.n_queries,
+            seed=args.seed, aged_fraction=args.aged_fraction,
+        )
+        print(f"Corpus: synthetic ({args.n_memories} memories, "
+              f"{args.n_queries} queries)")
     memory_text = {mid: text for mid, text, _ in memories}
     n_aged = sum(1 for _, _, is_aged in memories if is_aged)
-    print(f"Corpus: {args.n_memories} memories, {n_aged} aged "
-          f"({100*n_aged/args.n_memories:.0f}%), "
-          f"{args.n_memories - n_aged} fresh")
+    print(f"  {n_aged} aged ({100*n_aged/max(1, len(memories)):.0f}%), "
+          f"{len(memories) - n_aged} fresh")
 
     variant_ids = [v.strip() for v in args.variants.split(",") if v.strip()]
 

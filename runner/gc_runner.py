@@ -361,3 +361,47 @@ def compute_uc_gates(
             "reason": uc5_reason,
         },
     }
+
+
+def compute_retrieval_gate(
+    f1_before: float,
+    f1_after: float,
+    store_reduction_pct: float,
+    *,
+    min_f1_preservation_pct: float = 80.0,
+) -> dict:
+    """UC-GC-RETRIEVAL: retrieval-quality F1 preservation after sweep.
+
+    Computes the F1 preservation ratio (f1_after / f1_before * 100)
+    and emits a PASS / FAIL verdict against the minimum threshold.
+
+    Independent of the other UC-GC gates because retrieval requires a
+    retriever (Mem0/Graphiti/Cognee search) that lives outside the
+    in-memory GC runner. Callers compute f1_before + f1_after via
+    the adapter's search() method, then pass them here.
+
+    Returns the same {name, value, threshold, status, reason} shape
+    as the other gates so the result can be merged into the gate
+    table emitted by compute_uc_gates.
+    """
+    if f1_before <= 0:
+        return {
+            "name": "retrieval F1 preservation",
+            "value": 0.0,
+            "threshold": min_f1_preservation_pct,
+            "status": "NA",
+            "reason": "baseline F1 was zero; cannot measure preservation",
+        }
+    preservation_pct = 100.0 * f1_after / f1_before
+    passed = preservation_pct >= min_f1_preservation_pct
+    return {
+        "name": "retrieval F1 preservation",
+        "value": round(preservation_pct, 2),
+        "threshold": min_f1_preservation_pct,
+        "status": "PASS" if passed else "FAIL",
+        "reason": (
+            f"F1 went {f1_before:.3f} -> {f1_after:.3f} "
+            f"({preservation_pct:.1f}% preserved at {store_reduction_pct:.1f}% "
+            f"store reduction; need >= {min_f1_preservation_pct}%)"
+        ),
+    }
