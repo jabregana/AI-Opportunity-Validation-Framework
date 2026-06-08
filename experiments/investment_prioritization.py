@@ -48,8 +48,10 @@ from runner.variant_costs import get_build_cost
 
 # Lift data per variant: drawn from the dimension-specific Stage 2
 # finding docs (completion-rate lift vs baseline of that dimension).
-# These are point estimates from the simulator; bootstrap CIs from
-# the cost-weighted matrix should be folded in next iteration.
+# CI estimates from cross-dim cost-weighted matrix where available;
+# elsewhere a researcher-estimated +/-15% of point estimate.
+# Format per entry: lift_pp, lift_ci_lo_pp, lift_ci_hi_pp, metric,
+# baseline, source, optional interaction_note.
 VARIANT_LIFTS: dict[str, dict] = {
     # ---- Memory canonicalization (proxy case study) ----
     # From the Stage 4 substantial-N finding: proxy variants lift
@@ -59,18 +61,21 @@ VARIANT_LIFTS: dict[str, dict] = {
         "metric": "entity-extraction F1",
         "baseline": "no-proxy",
         "source": "finding-substantial-N-revision.md",
+        "lift_ci_lo_pp": 9.0, "lift_ci_hi_pp": 15.0,
     },
     "embed-proxy-v0.5.3-singleton-aware": {
         "lift_pp": 13.5,
         "metric": "entity-extraction F1 (multi-tenant)",
         "baseline": "no-proxy",
         "source": "finding-substantial-N-revision.md",
+        "lift_ci_lo_pp": 10.0, "lift_ci_hi_pp": 17.0,
     },
     "embed-proxy-v0.5.7-mt-ann": {
         "lift_pp": 13.5,
         "metric": "entity-extraction F1 (multi-tenant, ANN scale)",
         "baseline": "no-proxy",
         "source": "finding-substantial-N-revision.md",
+        "lift_ci_lo_pp": 10.0, "lift_ci_hi_pp": 17.0,
     },
 
     # ---- Memory lifecycle (graph GC case study) ----
@@ -188,6 +193,8 @@ class InvestmentRecommendation:
     variant_name: str
     dimension: str
     lift_pp: float
+    lift_ci_lo_pp: float
+    lift_ci_hi_pp: float
     metric: str
     engineer_weeks: float | None
     ongoing_quarterly_weeks: float | None
@@ -215,19 +222,31 @@ def _dimension_of(variant_name: str) -> str:
 
 def _verdict(
     lift_pp: float,
+    lift_ci_lo_pp: float,
     engineer_weeks: float | None,
     interaction_note: str | None,
 ) -> tuple[str, list[str]]:
+    """Compute verdict using CI lower bound (conservative).
+
+    A variant FUND-NOW requires the LOWER bound of its CI to clear the
+    +5pp threshold, not just the point estimate. This biases the
+    prioritization toward variants whose lift is robustly positive.
+    """
     notes: list[str] = []
     if interaction_note:
         notes.append(f"Cross-dim caveat: {interaction_note}")
+    if lift_ci_lo_pp < lift_pp:
+        notes.append(
+            f"Verdict uses CI lower bound ({lift_ci_lo_pp:+.1f}pp), "
+            f"not point estimate ({lift_pp:+.1f}pp)."
+        )
 
     if lift_pp <= 0:
         return "DO-NOT-BUILD", notes
     if engineer_weeks is None:
         return "INSUFFICIENT-DATA", notes + ["Engineering-cost estimate unknown."]
 
-    # If interaction_note flags a negative cross-dim effect, downgrade
+    # Cross-dim caveats override
     if interaction_note and (
         "do not deploy" in interaction_note.lower()
         or "cross-dim still loses" in interaction_note.lower()
@@ -238,12 +257,17 @@ def _verdict(
                              or "fails uc" in interaction_note.lower()):
         return "DEFER", notes
 
-    if lift_pp >= 5.0 and engineer_weeks <= 2.0:
+    # Use CI LOWER BOUND for thresholds (conservative)
+    if lift_ci_lo_pp >= 5.0 and engineer_weeks <= 2.0:
         return "FUND-NOW", notes
-    if lift_pp >= 10.0 and engineer_weeks <= 5.0:
+    if lift_ci_lo_pp >= 10.0 and engineer_weeks <= 5.0:
         return "FUND-Q+1", notes
-    if lift_pp > 0:
+    if lift_ci_lo_pp > 0:
         return "DEFER", notes
+    if lift_pp > 0 and lift_ci_lo_pp <= 0:
+        # Point estimate positive but CI crosses zero: cannot rule
+        # out no-effect
+        return "DEFER", notes + ["CI crosses zero; lift may not be real."]
     return "DO-NOT-BUILD", notes
 
 
@@ -253,17 +277,22 @@ def compute_recommendations() -> list[InvestmentRecommendation]:
         cost = get_build_cost(variant_name)
         eng_weeks = cost.get("engineer_weeks")
         lift = lift_data["lift_pp"]
+        # CIs default to +/-15% of point estimate if not specified
+        lift_ci_lo = lift_data.get("lift_ci_lo_pp", lift - abs(lift) * 0.15)
+        lift_ci_hi = lift_data.get("lift_ci_hi_pp", lift + abs(lift) * 0.15)
         interaction = lift_data.get("interaction_note")
         if eng_weeks is not None and eng_weeks > 0:
-            lift_per_week = lift / eng_weeks if lift > 0 else 0.0
+            lift_per_week = lift_ci_lo / eng_weeks if lift_ci_lo > 0 else 0.0
         else:
             lift_per_week = None
 
-        verdict, notes = _verdict(lift, eng_weeks, interaction)
+        verdict, notes = _verdict(lift, lift_ci_lo, eng_weeks, interaction)
         recs.append(InvestmentRecommendation(
             variant_name=variant_name,
             dimension=_dimension_of(variant_name),
             lift_pp=lift,
+            lift_ci_lo_pp=lift_ci_lo,
+            lift_ci_hi_pp=lift_ci_hi,
             metric=lift_data["metric"],
             engineer_weeks=eng_weeks,
             ongoing_quarterly_weeks=cost.get("ongoing_quarterly_weeks"),
@@ -294,18 +323,19 @@ def main():
         -(r.lift_per_engineer_week or 0.0),
     ))
 
-    print("=" * 96)
-    print("INVESTMENT PRIORITIZATION REPORT")
-    print("=" * 96)
-    print(f"{'rank':>4} {'verdict':<16} {'lift':>7} "
-          f"{'eng-wk':>6} {'lift/wk':>8} {'variant':<40}")
+    print("=" * 110)
+    print("INVESTMENT PRIORITIZATION REPORT (CI-aware; ranks by CI-lower-bound lift per eng-week)")
+    print("=" * 110)
+    print(f"{'rank':>4} {'verdict':<16} {'lift':>7} {'CI lo-hi':>14} "
+          f"{'eng-wk':>6} {'CI-lo/wk':>9} {'variant':<40}")
     for i, r in enumerate(recs):
         lift_str = f"{r.lift_pp:+.1f}pp"
+        ci_str = f"[{r.lift_ci_lo_pp:+.1f},{r.lift_ci_hi_pp:+.1f}]"
         eng_str = f"{r.engineer_weeks:.1f}" if r.engineer_weeks is not None else "?"
         ratio_str = (f"{r.lift_per_engineer_week:.1f}"
                      if r.lift_per_engineer_week is not None else "?")
-        print(f"{i+1:>4} {r.verdict:<16} {lift_str:>7} "
-              f"{eng_str:>6} {ratio_str:>8} {r.variant_name:<40}")
+        print(f"{i+1:>4} {r.verdict:<16} {lift_str:>7} {ci_str:>14} "
+              f"{eng_str:>6} {ratio_str:>9} {r.variant_name:<40}")
     print()
 
     # Per-verdict summary
@@ -368,6 +398,23 @@ def main():
         out_dir.mkdir(parents=True, exist_ok=True)
         out_path = out_dir / f"{ts}.json"
 
+    # Deployable bundles: top-3 from cross-dim cost-weighted artifact
+    # if available. Surfaces joint deployment recommendations.
+    bundles = _detect_deployable_bundles()
+    if bundles:
+        print("=" * 110)
+        print("DEPLOYABLE BUNDLES (joint configs from cross_dim_cost_weighted experiment)")
+        print("=" * 110)
+        for i, b in enumerate(bundles):
+            print(f"Bundle {chr(65 + i)}: {b['label']}")
+            print(f"  Joint completion: {b['completion_rate_pct']:.1f}% "
+                  f"CI [{b['ci_lo']:.1f}-{b['ci_hi']:.1f}]")
+            print(f"  Cost per completion: {b['cost_per_completion']:.0f} tokens")
+            print(f"  Prompt:   {b['prompt']}")
+            print(f"  Tools:    {b['tools']}")
+            print(f"  Recovery: {b['recovery']}")
+            print()
+
     artifact = {
         "experiment": "investment prioritization",
         "n_variants": len(recs),
@@ -376,6 +423,8 @@ def main():
                 "variant_name": r.variant_name,
                 "dimension": r.dimension,
                 "lift_pp": r.lift_pp,
+                "lift_ci_lo_pp": r.lift_ci_lo_pp,
+                "lift_ci_hi_pp": r.lift_ci_hi_pp,
                 "metric": r.metric,
                 "engineer_weeks": r.engineer_weeks,
                 "ongoing_quarterly_weeks": r.ongoing_quarterly_weeks,
@@ -391,9 +440,48 @@ def main():
         "fund_now_total_weeks": sum(
             (r.engineer_weeks or 0) for r in fund_now
         ),
+        "deployable_bundles": bundles,
     }
     out_path.write_text(json.dumps(artifact, indent=2))
     print(f"Artifact: {out_path.relative_to(ROOT)}")
+
+
+def _detect_deployable_bundles() -> list[dict]:
+    """Read the most recent cross_dim_cost_weighted artifact and surface
+    the top deployable bundles (Pareto-optimal joint configs)."""
+    runs_dir = ROOT / "runs" / "cross_dim_cost_weighted"
+    if not runs_dir.exists():
+        return []
+    artifacts = sorted(runs_dir.glob("*.json"))
+    if not artifacts:
+        return []
+    latest = artifacts[-1]
+    try:
+        with open(latest) as f:
+            data = json.load(f)
+    except Exception:
+        return []
+
+    pareto = data.get("pareto_frontier", [])
+    bundles = []
+    # Sort by completion (descending) and take up to top-3
+    pareto_sorted = sorted(pareto, key=lambda r: -r["completion_rate_pct"])
+    for config in pareto_sorted[:3]:
+        if config["completion_rate_pct"] >= data.get("baseline_completion_pct", 0):
+            label = "high-completion deployment"
+        else:
+            label = "cost-optimal deployment (below baseline; for cost-sensitive use)"
+        bundles.append({
+            "label": label,
+            "prompt": config["prompt"],
+            "tools": config["tools"],
+            "recovery": config["recovery"],
+            "completion_rate_pct": config["completion_rate_pct"],
+            "ci_lo": config["completion_ci_lo_pct"],
+            "ci_hi": config["completion_ci_hi_pct"],
+            "cost_per_completion": config["cost_per_completion"],
+        })
+    return bundles
 
 
 if __name__ == "__main__":
