@@ -102,11 +102,11 @@ The bigger claim is more interesting. **An agent system has six measurable dimen
 1. **Model**: which LLM, which size tier (covered: 14-model ladder across 5 providers)
 2. **Prompt**: system prompts, instructions, output-format contracts (scaffolded: `PromptVariant` ABC + noop baseline in `runner/dimensions/prompt/`)
 3. **Tools**: which tools the agent calls and how it selects and arguments them (scaffolded: `ToolVariant` ABC + noop baseline in `runner/dimensions/tools/`)
-4. **Memory**: what is stored, how it is canonicalized, how it is pruned (covered: proxy + graph-GC)
+4. **Memory**: what is stored, how it is canonicalized, how it is pruned (covered: proxy at Stage 4; graph-GC at Stage 3 PASS, integrated runtime next)
 5. **Execution policy**: ReAct vs plan-and-execute vs reflection loops vs handoff (scaffolded: `PolicyVariant` ABC + noop baseline in `runner/dimensions/policy/`)
-6. **Recovery behavior**: retry, fallback, refusal handling, partial-result semantics (scaffolded: `RecoveryVariant` ABC + noop baseline in `runner/dimensions/recovery/`)
+6. **Recovery behavior**: retry, fallback, refusal handling, partial-result semantics (in progress: Stage 1 wedge picked, Stage 2 Day 1-2 done with synthetic failure-injection workload + verified incumbent gap; Days 3-5 pending)
 
-Coverage today: 2 strong (model + memory), 4 scaffolded with stubs. The four new dimension ABCs each ship with a no-op baseline and pass tests; real variants drop in behind them using the same four-step recipe documented in [`docs/six-dimensions-architecture.md`](docs/six-dimensions-architecture.md). Most agent-eval tools today either record traces (LangSmith, Langfuse, Arize Phoenix) or test a single axis (Pydantic Evals, Inspect AI). The shape this framework is built for, **the same statistical discipline applied across every dimension that defines an agent system**, does not yet exist as one tool.
+Coverage today: 2 strong (model + memory), 1 in-progress (recovery at Stage 2 Day 1-2), 3 scaffolded with stubs. The recovery dimension is actively advancing through the same four-stage discipline that produced the two memory case studies. Most agent-eval tools today either record traces (LangSmith, Langfuse, Arize Phoenix) or test a single axis (Pydantic Evals, Inspect AI). The shape this framework is built for, **the same statistical discipline applied across every dimension that defines an agent system**, does not yet exist as one tool.
 
 Full framework narrative, reusable component inventory, and the six-dimension scorecard: [`FRAMEWORK.md`](FRAMEWORK.md).
 
