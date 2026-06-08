@@ -138,13 +138,21 @@ Scorecard: 2 strong (model + memory), 1 Stage 3 ROBUST-PASS (recovery), 3 Stage 
 
 ### Cross-dimension orchestration
 
-The framework runs **cross-dimension experiments** that walk scenarios through one variant of each of three dimensions simultaneously and measure interaction effects. Two findings so far:
+The framework runs **cross-dimension experiments** that walk scenarios through one variant of each of three dimensions simultaneously and measure interaction effects. Four findings so far:
 
 1. **Single-config experiment** (`experiments/cross_dim_stage2.py` -> `docs/finding-cross-dim-interaction.md`): combining the best individual-dimension variants produces a config 12pp WORSE than all-baselines because `tool-v0.1.1-intent-classified`'s 83% recall multiplies through every other dimension.
 
-2. **Full-matrix experiment** (`experiments/cross_dim_full_matrix.py` -> `docs/finding-cross-dim-full-matrix.md`): 72 configs (6 prompt x 4 tools x 3 recovery). 75% lose vs baseline; top-10 ALL use baseline tools. **The framework now recommends a specific deployment** (cot-plus-structured + b-allow-all-tools + fallback-chain, ~60% completion, +23pp over baseline) and explicitly blocks tools variants from rollout.
+2. **Full-matrix experiment** (`experiments/cross_dim_full_matrix.py` -> `docs/finding-cross-dim-full-matrix.md`): 72 configs (6 prompt x 4 tools x 3 recovery). 75% lose vs baseline; top-10 ALL use baseline tools.
 
-**This is the value proposition of the six-dimension architecture made operationally concrete: cross-dim is a deployment-decision mechanism, not just an organizing convenience.** Single-dim Stage 2 findings would have recommended shipping a tools variant; the cross-dim matrix refused. That recommendation difference is the entire point of the architecture.
+3. **Cost-weighted matrix with bootstrap CIs** (`experiments/cross_dim_cost_weighted.py` -> `docs/finding-cross-dim-cost-weighted.md`): same 72 configs, plus per-config cost tracking and 95% CIs. 6 of top-10 are statistically indistinguishable from #1; the recommendation refines to `cot-plus-structured + b-allow-all-tools + fallback-chain` (statistically tied with few-shot-3 and slightly cheaper).
+
+4. **Real-LLM Stage 3 scaffold** (`experiments/cross_dim_real_llm_stage3.py` -> `docs/finding-cross-dim-real-llm-stage3-scaffold.md`): end-to-end driver that runs the recommended config against a pluggable LLM client. Stub client ships; real client (Anthropic / OpenAI / Ollama) is a documented wiring task pending API access.
+
+**This is the value proposition of the six-dimension architecture made operationally concrete: cross-dim is a deployment-decision mechanism, not just an organizing convenience.** Single-dim Stage 2 findings would have recommended shipping a tools variant; the cross-dim matrix refused. The cost-weighted CIs further refine that decision to a specific variant trio with calibrated confidence intervals.
+
+### Strategic positioning: from research framework to decision tool
+
+An analyst review reshaped how this framework should be positioned. The framework excels at mechanism evaluation + statistical effect size; it does NOT yet provide engineering-cost estimates or business-KPI overlays. The strongest future version connects all four layers. See [`docs/strategic-framing-decision-tool.md`](docs/strategic-framing-decision-tool.md) for the concrete proposals (engineering-cost fields per variant, business-KPI mapping docs per opportunity, investment-prioritization tool, per-audience report templates, reframed README/FRAMEWORK). The cost-weighted matrix experiment is the first step in that direction; the rest is the next iteration.
 
 ### Why the framework's mechanisms generalize to the other dimensions
 
