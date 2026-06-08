@@ -35,7 +35,11 @@ from dataclasses import dataclass, field
 
 @dataclass
 class GraphEvent:
-    """A single operation in the workload stream."""
+    """A single operation in the workload stream.
+
+    The optional tenant_id carries multi-tenant attribution when the
+    workload was generated with n_tenants > 1. None when single-tenant.
+    """
 
     op: str  # "add_node" | "add_edge" | "remove_edge" | "pin" | "query"
     timestamp: float  # seconds since workload start
@@ -43,6 +47,7 @@ class GraphEvent:
     node_kind: str | None = None  # "entity" | "fact" (only for add_node)
     edge_src: str | None = None
     edge_dst: str | None = None
+    tenant_id: str | None = None  # set when workload has n_tenants > 1
 
 
 @dataclass
@@ -54,6 +59,11 @@ class ChurnWorkload:
     expected_survivors: set[str] = field(default_factory=set)
     n_entities: int = 0
     n_facts: int = 0
+    # Extensions for v0.1.3-v0.1.5 differentiation (all default empty)
+    n_tenants: int = 1
+    tenant_assignments: dict[str, str] = field(default_factory=dict)  # entity_id -> tenant_id
+    dormant_entity_ids: set[str] = field(default_factory=set)  # entities with zero queries
+    collected_fact_query_targets: list[str] = field(default_factory=list)  # facts queried after collection
 
 
 def generate_churn_workload(
@@ -64,27 +74,44 @@ def generate_churn_workload(
     query_fraction: float = 0.10,  # queries per fact write
     edges_per_fact: tuple[int, int] = (1, 3),  # uniform[1, 3]
     seed: int = 0,
+    # Extension params for v0.1.3-v0.1.5 differentiation (defaults preserve
+    # existing behavior; opt-in via non-default values):
+    total_period_days: float = 30.0,
+    n_tenants: int = 1,
+    dormant_entity_fraction: float = 0.0,
+    collected_fact_query_fraction: float = 0.0,
 ) -> ChurnWorkload:
     """Generate a deterministic churn workload.
 
-    Timing model:
-      - All n_entities are added at t=0 to t=10 seconds (effectively up
-        front).
+    Core timing model (unchanged from prior versions):
+      - All n_entities are added at t=0 to t=10 seconds.
       - n_facts are added uniformly across the simulated period
-        (~30 days by default).
+        (total_period_days, default 30 days).
       - Each fact's edges are added at the same timestamp as the fact.
       - At timestamp = fact_added + fact_lifetime_seconds, the fact's
-        edges are removed (mimicking supersession). The fact node itself
-        stays in the graph (it represents historical truth) but its
-        outgoing edges to entities are gone.
-      - A pin_fraction of entities is pinned (cannot be collected).
-      - query_fraction * n_facts random queries hit random entities,
-        updating their last_access. Spread across the period.
+        edges are removed.
+      - A pin_fraction of entities is pinned.
+      - query_fraction * n_facts random queries hit random entities.
+
+    Extension params (default 0 / 1 = off):
+      total_period_days: simulated workload duration. Default 30. Set
+        higher (e.g., 90) to exercise v0.1.4-conservative-entity's
+        60-day-unaccessed threshold.
+      n_tenants: assigns entities round-robin to tenants via tenant_id
+        on entity-add events. Default 1 (single-tenant).
+      dormant_entity_fraction: fraction of entities that receive ZERO
+        queries (excluded from query-target sampling). Their
+        last_access stays at added_at; v0.1.4 can detect them when
+        their edges also age out and duration is long enough.
+      collected_fact_query_fraction: fraction of facts whose
+        remove_edge is followed (in 1-2 days) by a query against the
+        fact node itself. These queries fail at runtime in v0.1.2
+        (the fact is gone) but v0.1.3-tombstone can recover them.
 
     Returns a workload whose `events` are chronologically sorted.
     """
     rng = random.Random(seed)
-    total_period = 30 * 86400.0  # 30 simulated days
+    total_period = total_period_days * 86400.0
 
     # Allocate ids
     entity_ids = [f"e{i:04d}" for i in range(n_entities)]
@@ -94,13 +121,29 @@ def generate_churn_workload(
     n_pinned = max(0, int(round(n_entities * pin_fraction)))
     pinned_nodes = set(rng.sample(entity_ids, n_pinned))
 
+    # Tenant assignment: round-robin entities -> tenants
+    tenant_assignments: dict[str, str] = {}
+    if n_tenants > 1:
+        for i, eid in enumerate(entity_ids):
+            tenant_assignments[eid] = f"tenant_{i % n_tenants:03d}"
+
+    # Dormant entities: a fraction that NEVER receive queries
+    n_dormant = max(0, int(round(n_entities * dormant_entity_fraction)))
+    # Sample dormant entities deterministically; bias toward later
+    # entity indices so the pinned-entity sampling above is independent
+    dormant_pool = [eid for eid in entity_ids if eid not in pinned_nodes]
+    dormant_entity_ids = set(
+        rng.sample(dormant_pool, min(n_dormant, len(dormant_pool)))
+    )
+
     events: list[GraphEvent] = []
 
-    # Phase 1: add all entities at t=0..10s
+    # Phase 1: add all entities at t=0..10s (with tenant_id when set)
     for i, eid in enumerate(entity_ids):
         events.append(GraphEvent(
             op="add_node", timestamp=float(i) * 0.5,
             node_id=eid, node_kind="entity",
+            tenant_id=tenant_assignments.get(eid),
         ))
 
     # Phase 2: pin events right after entity adds
@@ -144,14 +187,42 @@ def generate_churn_workload(
             ))
             entity_references[entity_target] -= 1
 
-    # Phase 4: queries against random entities
+    # Phase 4: queries against random entities (excluding dormants)
+    queryable_entities = [eid for eid in entity_ids
+                          if eid not in dormant_entity_ids]
     n_queries = int(n_facts * query_fraction)
-    for _ in range(n_queries):
-        t = rng.uniform(fact_start, total_period)
-        eid = rng.choice(entity_ids)
-        events.append(GraphEvent(
-            op="query", timestamp=t, node_id=eid,
-        ))
+    if queryable_entities:
+        for _ in range(n_queries):
+            t = rng.uniform(fact_start, total_period)
+            eid = rng.choice(queryable_entities)
+            events.append(GraphEvent(
+                op="query", timestamp=t, node_id=eid,
+            ))
+
+    # Phase 5: queries against just-collected facts (v0.1.3 tombstone
+    # differentiator). Sample a fraction of facts; for each, emit a
+    # query 1-2 days after its remove_edge timestamp.
+    collected_fact_query_targets: list[str] = []
+    if collected_fact_query_fraction > 0.0:
+        n_target = int(n_facts * collected_fact_query_fraction)
+        target_facts = rng.sample(fact_ids, min(n_target, len(fact_ids)))
+        # Look up each target's remove_edge time from existing events
+        remove_times: dict[str, float] = {}
+        for ev in events:
+            if ev.op == "remove_edge" and ev.edge_src in target_facts:
+                # Use the LATEST remove_edge for the fact (when all its
+                # edges have been removed)
+                cur = remove_times.get(ev.edge_src, 0.0)
+                if ev.timestamp > cur:
+                    remove_times[ev.edge_src] = ev.timestamp
+        for fid in target_facts:
+            if fid in remove_times:
+                # Query 1-2 days after collection eligibility
+                query_t = remove_times[fid] + rng.uniform(86400, 2 * 86400)
+                events.append(GraphEvent(
+                    op="query", timestamp=query_t, node_id=fid,
+                ))
+                collected_fact_query_targets.append(fid)
 
     # Sort by timestamp (stable; ties broken by insertion order)
     events.sort(key=lambda e: e.timestamp)
@@ -174,4 +245,8 @@ def generate_churn_workload(
         expected_survivors=expected_survivors,
         n_entities=n_entities,
         n_facts=n_facts,
+        n_tenants=n_tenants,
+        tenant_assignments=tenant_assignments,
+        dormant_entity_ids=dormant_entity_ids,
+        collected_fact_query_targets=collected_fact_query_targets,
     )

@@ -237,7 +237,14 @@ def main():
           f"{len(workload.expected_survivors)} expected survivors")
     print()
 
-    variant_ids = ["b-raw-no-gc", "gc-v0.1.2-fact-only"]
+    variant_ids = [
+        "b-raw-no-gc",
+        "gc-v0.1.2-fact-only",
+        "gc-v0.1.3-fact-only-tombstone",
+        "gc-v0.1.4-conservative-entity-plus-fact",
+        "gc-v0.1.5-fact-only-tenant-pinning",
+        "gc-v0.1.6-comprehensive",
+    ]
     results = {}
     timings = {}
     for vid in variant_ids:
