@@ -38,30 +38,137 @@ from runner.dimensions.recovery import (
 
 
 # Simulation probabilities: P(recovery action resolves failure of kind).
-# Stage 2 hard-codes these; Stage 3 should replace with measured values
-# from real LLM tool-use traces.
-P_RESOLVE_BY_ACTION_AND_KIND: dict[tuple[str, str], float] = {
-    # retry: cheap, only helps with transient kinds
+# Stage 2 used the "optimistic" table; Stage 3 sensitivity analysis
+# evaluates the same variants under multiple plausible tables to see
+# whether the UC gate verdicts hold. Real measurement from LLM tool-
+# use traces is deferred to Stage 3.5 / 4.
+#
+# Table-naming convention:
+#   optimistic     - the Stage 2 baseline values; transient kinds
+#                    recover well, fallback strategies are reasonably
+#                    effective
+#   pessimistic    - half the recovery probability for retry, 70 percent
+#                    of fallback's; models a world where failures are
+#                    less transient than expected
+#   small-model    - retry slightly weaker (small model less robust);
+#                    larger-model fallback highly effective; alternate-
+#                    tool fallback similar
+#   large-model    - retry similar to optimistic; larger-model fallback
+#                    weaker (no model to escalate to); other fallbacks
+#                    similar
+#   hostile        - all probabilities cut, models a worst-case workload
+
+P_RESOLVE_OPTIMISTIC: dict[tuple[str, str], float] = {
     ("retry", "tool_error"): 0.70,
     ("retry", "timeout"): 0.50,
     ("retry", "validation_failure"): 0.30,
     ("retry", "model_refusal"): 0.10,
-    # fallback: more expensive, more effective on the right kind
-    ("fallback", "tool_error"): 0.45,         # alternate tool
-    ("fallback", "timeout"): 0.65,            # faster tool
-    ("fallback", "validation_failure"): 0.85, # structured-output guard
-    ("fallback", "model_refusal"): 0.60,      # larger model
-    # ask_user: high probability but not implemented in pilot variants
+    ("fallback", "tool_error"): 0.45,
+    ("fallback", "timeout"): 0.65,
+    ("fallback", "validation_failure"): 0.85,
+    ("fallback", "model_refusal"): 0.60,
     ("ask_user", "tool_error"): 0.50,
     ("ask_user", "timeout"): 0.50,
     ("ask_user", "validation_failure"): 0.50,
     ("ask_user", "model_refusal"): 0.50,
-    # abort: by definition does not resolve
     ("abort", "tool_error"): 0.0,
     ("abort", "timeout"): 0.0,
     ("abort", "validation_failure"): 0.0,
     ("abort", "model_refusal"): 0.0,
 }
+
+P_RESOLVE_PESSIMISTIC: dict[tuple[str, str], float] = {
+    ("retry", "tool_error"): 0.35,
+    ("retry", "timeout"): 0.25,
+    ("retry", "validation_failure"): 0.15,
+    ("retry", "model_refusal"): 0.05,
+    ("fallback", "tool_error"): 0.32,
+    ("fallback", "timeout"): 0.45,
+    ("fallback", "validation_failure"): 0.60,
+    ("fallback", "model_refusal"): 0.42,
+    ("ask_user", "tool_error"): 0.40,
+    ("ask_user", "timeout"): 0.40,
+    ("ask_user", "validation_failure"): 0.40,
+    ("ask_user", "model_refusal"): 0.40,
+    ("abort", "tool_error"): 0.0,
+    ("abort", "timeout"): 0.0,
+    ("abort", "validation_failure"): 0.0,
+    ("abort", "model_refusal"): 0.0,
+}
+
+P_RESOLVE_SMALL_MODEL: dict[tuple[str, str], float] = {
+    ("retry", "tool_error"): 0.55,
+    ("retry", "timeout"): 0.40,
+    ("retry", "validation_failure"): 0.20,
+    ("retry", "model_refusal"): 0.05,
+    # alternate_tool: similar to optimistic
+    ("fallback", "tool_error"): 0.45,
+    ("fallback", "timeout"): 0.60,
+    # structured_output_guard: helps a lot for small model
+    ("fallback", "validation_failure"): 0.80,
+    # larger_model: highly effective (small can escalate)
+    ("fallback", "model_refusal"): 0.85,
+    ("ask_user", "tool_error"): 0.50,
+    ("ask_user", "timeout"): 0.50,
+    ("ask_user", "validation_failure"): 0.50,
+    ("ask_user", "model_refusal"): 0.50,
+    ("abort", "tool_error"): 0.0,
+    ("abort", "timeout"): 0.0,
+    ("abort", "validation_failure"): 0.0,
+    ("abort", "model_refusal"): 0.0,
+}
+
+P_RESOLVE_LARGE_MODEL: dict[tuple[str, str], float] = {
+    ("retry", "tool_error"): 0.75,
+    ("retry", "timeout"): 0.55,
+    ("retry", "validation_failure"): 0.35,
+    ("retry", "model_refusal"): 0.12,
+    ("fallback", "tool_error"): 0.45,
+    ("fallback", "timeout"): 0.65,
+    ("fallback", "validation_failure"): 0.85,
+    # larger_model: weaker (no model to escalate to)
+    ("fallback", "model_refusal"): 0.20,
+    ("ask_user", "tool_error"): 0.50,
+    ("ask_user", "timeout"): 0.50,
+    ("ask_user", "validation_failure"): 0.50,
+    ("ask_user", "model_refusal"): 0.50,
+    ("abort", "tool_error"): 0.0,
+    ("abort", "timeout"): 0.0,
+    ("abort", "validation_failure"): 0.0,
+    ("abort", "model_refusal"): 0.0,
+}
+
+P_RESOLVE_HOSTILE: dict[tuple[str, str], float] = {
+    ("retry", "tool_error"): 0.20,
+    ("retry", "timeout"): 0.15,
+    ("retry", "validation_failure"): 0.10,
+    ("retry", "model_refusal"): 0.03,
+    ("fallback", "tool_error"): 0.20,
+    ("fallback", "timeout"): 0.30,
+    ("fallback", "validation_failure"): 0.40,
+    ("fallback", "model_refusal"): 0.30,
+    ("ask_user", "tool_error"): 0.30,
+    ("ask_user", "timeout"): 0.30,
+    ("ask_user", "validation_failure"): 0.30,
+    ("ask_user", "model_refusal"): 0.30,
+    ("abort", "tool_error"): 0.0,
+    ("abort", "timeout"): 0.0,
+    ("abort", "validation_failure"): 0.0,
+    ("abort", "model_refusal"): 0.0,
+}
+
+P_RESOLVE_TABLES: dict[str, dict[tuple[str, str], float]] = {
+    "optimistic": P_RESOLVE_OPTIMISTIC,
+    "pessimistic": P_RESOLVE_PESSIMISTIC,
+    "small-model": P_RESOLVE_SMALL_MODEL,
+    "large-model": P_RESOLVE_LARGE_MODEL,
+    "hostile": P_RESOLVE_HOSTILE,
+}
+
+# Backward-compat alias: the Stage 2 baseline used this name. Keep it
+# pointing at the optimistic table so existing benchmark output stays
+# reproducible.
+P_RESOLVE_BY_ACTION_AND_KIND = P_RESOLVE_OPTIMISTIC
 
 
 # Cost units per action kind (Stage 2 simplification).
@@ -117,11 +224,10 @@ def _simulate_resolution(
     action: RecoveryAction,
     failure_kind: str,
     rng: random.Random,
+    p_table: dict[tuple[str, str], float],
 ) -> bool:
     """Did this recovery action resolve the failure?"""
-    p = P_RESOLVE_BY_ACTION_AND_KIND.get(
-        (action.kind, failure_kind), 0.0,
-    )
+    p = p_table.get((action.kind, failure_kind), 0.0)
     return rng.random() < p
 
 
@@ -130,6 +236,7 @@ def _run_scenario(
     variant: RecoveryVariant,
     rng: random.Random,
     max_attempts_per_step: int,
+    p_table: dict[tuple[str, str], float],
 ) -> tuple[bool, float, float, int, dict[str, int]]:
     """Walk one scenario. Return (completed, total_cost, total_steps,
     max_attempts_this_scenario, action_kind_counts)."""
@@ -189,7 +296,7 @@ def _run_scenario(
                 n_ask_user += 1
 
             # Simulate whether the action resolved the failure
-            if _simulate_resolution(action, failure.kind, rng):
+            if _simulate_resolution(action, failure.kind, rng, p_table):
                 resolved = True
                 break
 
@@ -210,14 +317,21 @@ def run_recovery(
     *,
     seed: int = 0,
     max_attempts_per_step: int = 5,
+    p_resolve_table: dict[tuple[str, str], float] | None = None,
 ) -> RecoveryRunResult:
-    """Run the variant over every scenario and aggregate the metrics."""
+    """Run the variant over every scenario and aggregate the metrics.
+
+    p_resolve_table defaults to the Stage 2 optimistic table; pass
+    one of the named tables in P_RESOLVE_TABLES for sensitivity
+    analysis (Stage 3).
+    """
     rng = random.Random(seed)
     n_completed = 0
     total_cost = 0.0
     latencies: list[float] = []
     max_attempts = 0
     aggregate_actions: dict[str, int] = {}
+    p_table = p_resolve_table if p_resolve_table is not None else P_RESOLVE_OPTIMISTIC
 
     # Per-failure-kind accounting: how many scenarios with each kind
     # completed
@@ -225,7 +339,7 @@ def run_recovery(
 
     for scenario in workload.scenarios:
         ok, cost, steps, attempts, actions = _run_scenario(
-            scenario, variant, rng, max_attempts_per_step,
+            scenario, variant, rng, max_attempts_per_step, p_table,
         )
         total_cost += cost
         latencies.append(steps)
