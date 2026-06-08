@@ -101,12 +101,16 @@ The bigger claim is more interesting. **An agent system has six measurable dimen
 
 1. **Model**: which LLM, which size tier (strong: 14-model ladder across 5 providers)
 2. **Prompt**: system prompts, instructions, output-format contracts (Stage 2 baseline PASS: cot-plus-structured wins at +10.50pp / 1.32x cost; see `docs/finding-prompt-stage2-baseline.md`)
-3. **Tools**: which tools the agent calls and how it selects and arguments them (Stage 2 baseline PARTIAL-PASS: intent-classified passes 3/4 gates, budget-bucketed catastrophic; see `docs/finding-tools-stage2-baseline.md`)
+3. **Tools**: which tools the agent calls and how it selects and arguments them (Stage 2 v0.1.2 revision still PARTIAL-PASS; recall 89.82% < 90% threshold; cross-dim blocks rollout; see `docs/finding-tools-v0.1.2-revision.md`)
 4. **Memory**: what is stored, how it is canonicalized, how it is pruned (strong: proxy at Stage 4; graph-GC at Stage 4 ARCH-PASS with integration-shim contract)
-5. **Execution policy**: ReAct vs plan-and-execute vs reflection loops vs handoff (Stage 1 wedge picked: policy-comparison benchmark with model x policy interaction; see `docs/opportunity-policy.md`)
+5. **Execution policy**: ReAct vs plan-and-execute vs reflection loops vs handoff (Stage 2 baseline PARTIAL-PASS: handoff passes 4/4 at +19.25pp / 1.32x cost; multi-step variants fail cost+latency; see `docs/finding-policy-stage2-baseline.md`)
 6. **Recovery behavior**: retry, fallback, refusal handling, partial-result semantics (Stage 3 ROBUST-PASS: both pilot variants pass all 4 UC-REC gates across 5 probability tables; see `docs/finding-recovery-stage3-sensitivity.md`)
 
-Coverage today: 2 strong (model + memory), 1 Stage 3 ROBUST-PASS (recovery), 2 Stage 2 baseline (prompt PASS, tools PARTIAL-PASS), 1 Stage 1 wedge-picked (policy). **Five of six dimensions have completed Stage 2 or later.** Plus a first cross-dimension experiment (`experiments/cross_dim_stage2.py`) that surfaces sub-additive interaction effects across prompt + tools + recovery; see `docs/finding-cross-dim-interaction.md`. Most agent-eval tools today either record traces (LangSmith, Langfuse, Arize Phoenix) or test a single axis (Pydantic Evals, Inspect AI). The shape this framework is built for, **the same statistical discipline applied across every dimension that defines an agent system, with cross-dimension interactions as first-class artifacts**, does not yet exist as one tool.
+Coverage today: 2 strong (model + memory), 1 Stage 3 ROBUST-PASS (recovery), 3 Stage 2 baseline (prompt PASS, tools PARTIAL, policy PARTIAL). **All six dimensions have completed Stage 2 or later.**
+
+Plus a **full-matrix cross-dimension experiment** (`experiments/cross_dim_full_matrix.py`, 72 configs): 75% of "obvious" variant combinations LOSE vs baseline; top-10 ALL use baseline tools. The framework now recommends shipping `prompt-v0.1.4-cot-plus-structured + b-allow-all-tools + recovery-v0.1.1-fallback-chain` (~60% completion, +23pp over baseline) and explicitly blocks any tools variant from rollout. See `docs/finding-cross-dim-full-matrix.md`.
+
+Most agent-eval tools today either record traces (LangSmith, Langfuse, Arize Phoenix) or test a single axis (Pydantic Evals, Inspect AI). The shape this framework is built for, **the same statistical discipline applied across every dimension that defines an agent system, with cross-dimension interactions as first-class artifacts and a concrete deployment recommendation emerging from the joint experiment**, does not yet exist as one tool.
 
 Full framework narrative, reusable component inventory, and the six-dimension scorecard: [`FRAMEWORK.md`](FRAMEWORK.md).
 
