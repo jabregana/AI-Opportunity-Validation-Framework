@@ -27,6 +27,7 @@ VARIANT_IDS = [
     "b-allow-all-tools",
     "tool-v0.1.0-budget-bucketed",
     "tool-v0.1.1-intent-classified",
+    "tool-v0.1.2-intent-plus-helper",
 ]
 
 
