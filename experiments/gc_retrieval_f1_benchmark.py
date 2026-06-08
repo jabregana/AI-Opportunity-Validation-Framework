@@ -63,33 +63,45 @@ def _generate_synthetic_corpus(
     n_memories: int = 200,
     n_queries: int = 50,
     seed: int = 42,
-) -> tuple[list[tuple[str, str]], list[QAItem]]:
+    aged_fraction: float = 0.4,
+) -> tuple[list[tuple[str, str, bool]], list[QAItem]]:
     """Generate (memories, qa_items) with known ground-truth links.
 
-    Each memory has a deterministic ID. Each QA item has a query and
-    a set of "correct" memory IDs that should be retrieved.
+    Each memory has (id, text, is_aged) where is_aged marks the ones
+    that will be backdated to trigger GC collection. Ground truth for
+    each query includes BOTH aged and recent memories of its topic;
+    F1 preservation after sweep measures how well the GC variant
+    preserved the recent (non-aged) memories of each topic.
 
-    For realistic ground-truth modeling: memories cluster by topic;
-    queries target a specific cluster; the correct memories are those
-    in the target cluster.
+    `aged_fraction` is the proportion of each topic's memories that
+    will be marked aged. Default 0.4 (40 percent aged, 60 percent
+    recent). Real benchmarks tune to the deployment's actual age
+    distribution.
     """
     rng = random.Random(seed)
     topics = ["coffee", "engineering", "meetings", "travel", "books",
               "music", "fitness", "cooking"]
-    memories: list[tuple[str, str]] = []  # (id, text)
+    memories: list[tuple[str, str, bool]] = []  # (id, text, is_aged)
     topic_memberships: dict[str, list[str]] = {t: [] for t in topics}
+    topic_aged: dict[str, list[str]] = {t: [] for t in topics}
 
     for i in range(n_memories):
         topic = topics[i % len(topics)]
         mem_id = f"mem_{i:05d}"
         text = f"Memory about {topic}: synthetic content {i}"
-        memories.append((mem_id, text))
+        # Mark roughly aged_fraction of each topic's memories as aged
+        is_aged = rng.random() < aged_fraction
+        memories.append((mem_id, text, is_aged))
         topic_memberships[topic].append(mem_id)
+        if is_aged:
+            topic_aged[topic].append(mem_id)
 
     qa_items: list[QAItem] = []
     for i in range(n_queries):
         topic = topics[i % len(topics)]
-        # Ground truth = all memories of this topic
+        # Ground truth: ALL memories of this topic (aged + recent).
+        # F1 preservation after sweep measures how many of these the
+        # GC variant kept retrievable.
         qa_items.append(QAItem(
             query_id=f"q_{i:05d}",
             query=f"Tell me about {topic}",
@@ -98,33 +110,52 @@ def _generate_synthetic_corpus(
     return memories, qa_items
 
 
-def _populate_state(memories: list[tuple[str, str]]) -> GraphState:
-    """Build a GraphState from the memory corpus (each memory is a fact).
+STOPWORDS = {
+    "tell", "me", "about", "what", "is", "the", "a", "an", "and", "or",
+    "of", "to", "in", "on", "for", "show", "any", "give",
+}
 
-    Mimics what a memory framework would have stored. Uses age=0 for
-    all (caller can backdate to test sweep semantics).
+
+def _populate_state(
+    memories: list[tuple[str, str, bool]],
+    backdate_seconds: float,
+) -> GraphState:
+    """Build a GraphState from the memory corpus.
+
+    Recent memories use added_at=now (won't be collected at min_age=1d).
+    Aged memories use added_at=now-backdate_seconds (will be collected
+    if backdate exceeds the variant's min_age).
     """
     state = GraphState()
-    for mem_id, text in memories:
-        state.nodes[mem_id] = {"kind": "fact", "added_at": 0.0}
+    now = time.time()
+    for mem_id, text, is_aged in memories:
+        added = now - backdate_seconds if is_aged else now
+        state.nodes[mem_id] = {"kind": "fact", "added_at": added}
         state.in_degree[mem_id] = 0
         state.out_degree[mem_id] = 0
-        state.last_access[mem_id] = 0.0
+        state.last_access[mem_id] = added
         state.query_count[mem_id] = 0
     return state
 
 
 def _retrieve(query: str, state: GraphState,
-              memory_text: dict[str, str], top_k: int = 5) -> list[str]:
-    """Naive retrieval: substring match against memory text.
-
-    Real version plugs into Mem0/Graphiti search. The scaffold uses
-    substring matching so the metric calculation is verified.
+              memory_text: dict[str, str],
+              top_k: int = 20) -> list[str]:
+    """Retrieval with stopword filtering. Matches on remaining content
+    words after removing common English stopwords. Closer to what a
+    real semantic search would produce on this corpus.
     """
-    query_lower = query.lower()
-    hits = [(mid, text) for mid, text in memory_text.items()
-            if mid in state.nodes
-            and any(word in text.lower() for word in query_lower.split())]
+    content_words = [
+        w for w in query.lower().split()
+        if w not in STOPWORDS and len(w) > 1
+    ]
+    if not content_words:
+        return []
+    hits = [
+        (mid, text) for mid, text in memory_text.items()
+        if mid in state.nodes
+        and any(w in text.lower() for w in content_words)
+    ]
     return [mid for mid, _ in hits[:top_k]]
 
 
@@ -183,7 +214,10 @@ def main():
     p.add_argument("--n-queries", type=int, default=50)
     p.add_argument("--variants", default="gc-v0.1.2-fact-only,gc-v0.1.8-comprehensive-tuned")
     p.add_argument("--backdate-days", type=float, default=10.0,
-                   help="Backdate memories so they meet min_age for GC")
+                   help="Backdate the AGED subset of memories")
+    p.add_argument("--aged-fraction", type=float, default=0.4,
+                   help="Fraction of memories that are 'old' (subject "
+                        "to collection); rest are 'fresh' and survive")
     p.add_argument("--seed", type=int, default=42)
     p.add_argument("--out", type=str, default=None)
     args = p.parse_args()
@@ -196,14 +230,19 @@ def main():
     print()
 
     memories, qa_items = _generate_synthetic_corpus(
-        n_memories=args.n_memories, n_queries=args.n_queries, seed=args.seed,
+        n_memories=args.n_memories, n_queries=args.n_queries,
+        seed=args.seed, aged_fraction=args.aged_fraction,
     )
-    memory_text = {mid: text for mid, text in memories}
+    memory_text = {mid: text for mid, text, _ in memories}
+    n_aged = sum(1 for _, _, is_aged in memories if is_aged)
+    print(f"Corpus: {args.n_memories} memories, {n_aged} aged "
+          f"({100*n_aged/args.n_memories:.0f}%), "
+          f"{args.n_memories - n_aged} fresh")
 
     variant_ids = [v.strip() for v in args.variants.split(",") if v.strip()]
 
     # BEFORE-SWEEP baseline (same for all variants since no GC has happened)
-    state = _populate_state(memories)
+    state = _populate_state(memories, backdate_seconds=args.backdate_days * 86400)
     before = _run_retrieval_eval(state, memory_text, qa_items, when="before_sweep")
     print(f"BEFORE GC: precision={before.avg_precision:.3f}, "
           f"recall={before.avg_recall:.3f}, F1={before.avg_f1:.3f}, "
@@ -213,12 +252,10 @@ def main():
     # For each variant, run a sweep and re-evaluate
     per_variant: dict[str, dict] = {}
     for vid in variant_ids:
-        # Backdate all memories so they meet min_age
-        state = _populate_state(memories)
-        backdate = time.time() - args.backdate_days * 86400
-        for mem_id in state.nodes:
-            state.nodes[mem_id]["added_at"] = backdate
-            state.last_access[mem_id] = backdate
+        # Fresh state with the same aged/fresh split as the baseline
+        state = _populate_state(
+            memories, backdate_seconds=args.backdate_days * 86400,
+        )
 
         variant_cls = FACTORIES[vid]
         try:
