@@ -51,6 +51,7 @@ def _run_eval_via_mem0(
     qa_items: list[QAItem],
     when: str,
     top_k: int = 20,
+    user_id: str = "f1_user",
 ) -> RetrievalF1Result:
     """Run all queries through Mem0; compute F1 against ground truth."""
     precisions, recalls, f1s = [], [], []
@@ -58,7 +59,9 @@ def _run_eval_via_mem0(
     n_zero = 0
     for qa in qa_items:
         try:
-            result = mw.search(qa.query, top_k=top_k)
+            # user_id is required by Mem0 v2; the adapter translates
+            # it into filters={'user_id': ...} per its search() contract
+            result = mw.search(qa.query, top_k=top_k, user_id=user_id)
             hits = result.get("results", []) if isinstance(result, dict) else []
             # Mem0 returns memory dicts with our doc_id stored in
             # metadata.user_id... actually Mem0's id is the Mem0 memory_id,
