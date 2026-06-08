@@ -155,6 +155,12 @@ BUILD_COST_ESTIMATES: dict[str, dict] = {
         "confidence": "medium",
         "notes": "v0.1.4 + query_count secondary gate to reduce over-collection.",
     },
+    "gc-v0.1.8-comprehensive-tuned": {
+        "engineer_weeks": 3.5, "ongoing_quarterly_weeks": 1.0,
+        "infra_cost_per_million_calls_usd": 0.0,
+        "confidence": "medium",
+        "notes": "Bundle of v0.1.3 + v0.1.5 + v0.1.7 (NOT v0.1.4). Production-ready full feature set without v0.1.6's over-collection issue.",
+    },
 
     # ---- Prompt dimension ----
     "b-default-prompt": {

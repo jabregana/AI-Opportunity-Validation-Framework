@@ -126,6 +126,14 @@ VARIANT_LIFTS: dict[str, dict] = {
         "lift_ci_lo_pp": 80.0, "lift_ci_hi_pp": 90.0,
         "interaction_note": "Adds query_count secondary gate to v0.1.4; over-collection improves marginally (74% to 76% recall); needs deployment-specific threshold tuning.",
     },
+    "gc-v0.1.8-comprehensive-tuned": {
+        "lift_pp": 84.96,
+        "metric": "store-size reduction + tombstone + tenant + tuned entity",
+        "baseline": "b-raw-no-gc",
+        "source": "finding-gc-cadence-matrix.md",
+        "lift_ci_lo_pp": 80.0, "lift_ci_hi_pp": 90.0,
+        "interaction_note": "Production-ready bundle (v0.1.3 + v0.1.5 + v0.1.7). Tombstone recovery hits 95.5% at sweep cadence 100; 100% at cadence 10. Multi-tenant + tuned entity rule. Replaces v0.1.6.",
+    },
 
     # ---- Prompt dimension ----
     "prompt-v0.1.0-cot": {
