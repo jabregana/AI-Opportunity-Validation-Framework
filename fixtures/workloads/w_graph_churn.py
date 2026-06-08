@@ -146,11 +146,13 @@ def generate_churn_workload(
             tenant_id=tenant_assignments.get(eid),
         ))
 
-    # Phase 2: pin events right after entity adds
+    # Phase 2: pin events right after entity adds (tenant-scoped when
+    # the entity has a tenant assignment)
     pin_t = 11.0
     for pid in sorted(pinned_nodes):
         events.append(GraphEvent(
             op="pin", timestamp=pin_t, node_id=pid,
+            tenant_id=tenant_assignments.get(pid),
         ))
         pin_t += 0.1
 
@@ -227,17 +229,20 @@ def generate_churn_workload(
     # Sort by timestamp (stable; ties broken by insertion order)
     events.sort(key=lambda e: e.timestamp)
 
-    # Expected survivors: every entity node (conservative-survival
-    # philosophy). Entities are the long-lived, semantically meaningful
-    # nodes; the workload narrative is "entities persist, facts churn."
-    # Pinned nodes are a strict subset (and so already included). Facts
-    # are explicitly NOT survivors: they are the write-stream record
-    # whose edges age out, and a correct GC should be free to collect
-    # them once all their outgoing edges have been removed.
-    # The earlier strict-survival philosophy (survivors == pinned only)
-    # was found to contradict UC-GC-2's baseline-comparison logic; see
-    # docs/finding-gc-stage2-baseline.md for the analysis.
-    expected_survivors = set(entity_ids)
+    # Expected survivors: every entity node by default (conservative-
+    # survival philosophy). Entities are the long-lived, semantically
+    # meaningful nodes.
+    #
+    # Exception: when dormant_entity_fraction > 0, dormant entities are
+    # EXCLUDED from expected_survivors. v0.1.4-conservative-entity is
+    # designed to collect them; counting that as 'false collection' would
+    # penalize the variant for doing exactly what it should. Pinned
+    # dormants stay protected because the dormant pool was sampled from
+    # non-pinned.
+    if dormant_entity_fraction > 0.0:
+        expected_survivors = set(entity_ids) - dormant_entity_ids
+    else:
+        expected_survivors = set(entity_ids)
 
     return ChurnWorkload(
         events=events,

@@ -412,9 +412,10 @@ def test_uc_gates_pass_on_baseline():
     w = generate_churn_workload(n_entities=10, n_facts=50, seed=0)
     baseline = run_gc(build("b-raw-no-gc"), w)
     gates = compute_uc_gates(baseline, baseline)
-    # Against itself, everything passes
+    # Against itself, everything passes (UC-GC-5 is NA without
+    # collected_fact_query_targets)
     for uc, info in gates.items():
-        assert info["status"] == "PASS", f"{uc} failed unexpectedly: {info}"
+        assert info["status"] in ("PASS", "NA"), f"{uc} failed unexpectedly: {info}"
 
 
 def test_uc_gates_structure():
@@ -422,10 +423,10 @@ def test_uc_gates_structure():
     baseline = run_gc(build("b-raw-no-gc"), w)
     gc = run_gc(build("gc-v0.1.0-ref-count"), w)
     gates = compute_uc_gates(gc, baseline)
-    assert set(gates) == {"UC-GC-1", "UC-GC-2", "UC-GC-3", "UC-GC-4"}
+    assert set(gates) == {"UC-GC-1", "UC-GC-2", "UC-GC-3", "UC-GC-4", "UC-GC-5"}
     for uc, info in gates.items():
         assert "status" in info
-        assert info["status"] in ("PASS", "FAIL")
+        assert info["status"] in ("PASS", "FAIL", "NA")
         assert "value" in info
         assert "threshold" in info
         assert "reason" in info

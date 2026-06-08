@@ -53,6 +53,16 @@ class GCRunResult:
     # original entity id; downstream can compute UC-GC-2 by comparing
     # against the b-raw baseline.
     surviving_entity_ids: list[str] = field(default_factory=list)
+    # UC-GC-5: tombstone-recovery rate. For workloads with
+    # collected_fact_query_targets, what fraction does the variant's
+    # was_recently_collected() correctly identify? Non-tombstone
+    # variants report 0.
+    n_tombstone_query_targets: int = 0
+    n_tombstone_recoveries: int = 0
+    tombstone_recovery_rate_pct: float = 0.0
+    # Multi-tenant accounting (when workload n_tenants > 1)
+    n_tenant_pins_applied: int = 0
+    n_tenants_swept: int = 0
 
 
 def _apply_event(event: GraphEvent, state: GraphState) -> None:
@@ -100,6 +110,8 @@ def _apply_event(event: GraphEvent, state: GraphState) -> None:
                 event.node_id, 0) + 1
     elif event.op == "pin":
         state.pinned.add(event.node_id)
+    # query and pin handled above; tenant-aware pin routing happens in
+    # run_gc, not here, because it requires the variant reference
 
 
 def run_gc(
@@ -112,6 +124,17 @@ def run_gc(
     Sweeps happen on a cadence (every sweep_every_n_events) and once at
     the end. The cadence-based sweep is what makes this a "real-time"
     GC; a pure end-only sweep would be a batch collector.
+
+    Multi-tenant support: when the workload has n_tenants > 1 AND the
+    variant exposes pin_for_tenant(), pin events with a tenant_id route
+    to the variant's tenant-pin API instead of state.pinned. This lets
+    v0.1.5 / v0.1.6 demonstrate measurable tenant-scoped behavior.
+
+    Tombstone-recovery (UC-GC-5): for workloads with
+    collected_fact_query_targets AND variants with
+    was_recently_collected(), the runner counts how many of those
+    targets the variant can recover via the tombstone API. Non-
+    tombstone variants report 0.
     """
     state = GraphState()
     write_latencies: list[float] = []
@@ -121,11 +144,24 @@ def run_gc(
     falsely_collected: list[str] = []
     sweep_seconds = 0.0
     last_event_time = 0.0
+    n_tenant_pins_applied = 0
+
+    # Detect variant capabilities
+    has_tenant_pin = hasattr(variant, "pin_for_tenant")
+    has_tombstone = hasattr(variant, "was_recently_collected")
 
     for i, event in enumerate(workload.events):
         last_event_time = event.timestamp
         t0 = time.perf_counter()
-        _apply_event(event, state)
+        # Route pin events: if tenant_id is set AND variant supports
+        # tenant pinning, use the variant's API instead of state.pinned
+        if (event.op == "pin"
+                and event.tenant_id is not None
+                and has_tenant_pin):
+            variant.pin_for_tenant(event.tenant_id, event.node_id)
+            n_tenant_pins_applied += 1
+        else:
+            _apply_event(event, state)
         # Trigger variant hooks
         if event.op == "add_edge":
             variant.on_write_edge(
@@ -178,6 +214,25 @@ def run_gc(
     n_added_safe = max(1, n_nodes_added)
     reduction_pct = 100.0 * n_nodes_collected / n_added_safe
 
+    # UC-GC-5: tombstone recovery for collected_fact_query_targets
+    n_tombstone_targets = len(workload.collected_fact_query_targets)
+    n_tombstone_recoveries = 0
+    if has_tombstone and n_tombstone_targets > 0:
+        for fid in workload.collected_fact_query_targets:
+            # Query at the last_event_time; production code would
+            # query at the actual query timestamp
+            if variant.was_recently_collected(fid, last_event_time):
+                n_tombstone_recoveries += 1
+    tombstone_recovery_rate_pct = (
+        100.0 * n_tombstone_recoveries / n_tombstone_targets
+        if n_tombstone_targets > 0 else 0.0
+    )
+
+    # Multi-tenant accounting
+    n_tenants_swept = 0
+    if has_tenant_pin:
+        n_tenants_swept = len(getattr(variant, "tenant_pins", {}))
+
     return GCRunResult(
         variant=variant.name,
         n_events=len(workload.events),
@@ -193,6 +248,11 @@ def run_gc(
         write_p99_ms=p99,
         sweep_seconds=sweep_seconds,
         surviving_entity_ids=surviving_entities,
+        n_tombstone_query_targets=n_tombstone_targets,
+        n_tombstone_recoveries=n_tombstone_recoveries,
+        tombstone_recovery_rate_pct=tombstone_recovery_rate_pct,
+        n_tenant_pins_applied=n_tenant_pins_applied,
+        n_tenants_swept=n_tenants_swept,
     )
 
 
@@ -204,11 +264,16 @@ def compute_uc_gates(
     uc_gc_2_min_recall_vs_baseline: float = 0.95,
     uc_gc_3_max_false_rate_pct: float = 1.0,
     uc_gc_4_max_p99_ms: float = 10.0,
+    uc_gc_5_min_tombstone_recovery_pct: float = 80.0,
 ) -> dict[str, dict]:
-    """Compute the four UC gates for a variant vs the no-GC baseline.
+    """Compute the GC UC gates for a variant vs the no-GC baseline.
 
-    Returns dict with one entry per UC: status (PASS/FAIL), measured
-    value, threshold, and a brief reason.
+    UC-GC-5 (tombstone recovery) only applies when the workload
+    activated collected_fact_query_targets. When n_tombstone_query_targets
+    is zero, UC-GC-5 reports N/A (status NA).
+
+    Returns dict with one entry per applicable UC: status (PASS/FAIL/NA),
+    measured value, threshold, and a brief reason.
     """
     # UC-GC-1: store size reduction
     delta_size_pct = variant_result.store_size_reduction_pct
@@ -232,6 +297,21 @@ def compute_uc_gates(
     # UC-GC-4: write-path latency
     p99 = variant_result.write_p99_ms
     uc4_pass = p99 <= uc_gc_4_max_p99_ms
+
+    # UC-GC-5: tombstone recovery rate (only when workload activated
+    # collected_fact_query_targets; otherwise status NA)
+    n_targets = variant_result.n_tombstone_query_targets
+    tomb_rate = variant_result.tombstone_recovery_rate_pct
+    if n_targets == 0:
+        uc5_status = "NA"
+        uc5_reason = "workload did not activate collected_fact_query_targets"
+    else:
+        uc5_status = "PASS" if tomb_rate >= uc_gc_5_min_tombstone_recovery_pct else "FAIL"
+        uc5_reason = (
+            f"recovered {variant_result.n_tombstone_recoveries}/"
+            f"{n_targets} ({tomb_rate:.1f}%) via tombstones "
+            f"(need >= {uc_gc_5_min_tombstone_recovery_pct}%)"
+        )
 
     return {
         "UC-GC-1": {
@@ -261,5 +341,12 @@ def compute_uc_gates(
             "threshold": uc_gc_4_max_p99_ms,
             "status": "PASS" if uc4_pass else "FAIL",
             "reason": f"write p99 {p99:.3f}ms (need <= {uc_gc_4_max_p99_ms}ms)",
+        },
+        "UC-GC-5": {
+            "name": "tombstone recovery rate",
+            "value": round(tomb_rate, 3),
+            "threshold": uc_gc_5_min_tombstone_recovery_pct,
+            "status": uc5_status,
+            "reason": uc5_reason,
         },
     }
