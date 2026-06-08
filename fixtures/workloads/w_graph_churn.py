@@ -156,14 +156,17 @@ def generate_churn_workload(
     # Sort by timestamp (stable; ties broken by insertion order)
     events.sort(key=lambda e: e.timestamp)
 
-    # Expected survivors: pinned + entities still referenced after all
-    # fact lifetimes expire. With this generator, every fact's edges
-    # eventually get removed, so by the end of the period the only
-    # entities with incoming edges are those referenced by a fact
-    # whose remove event happens AFTER total_period. Our scheduling
-    # bounds keep remove_t < total_period, so no entity has incoming
-    # edges at the end. Survivors are exactly the pinned nodes.
-    expected_survivors = set(pinned_nodes)
+    # Expected survivors: every entity node (conservative-survival
+    # philosophy). Entities are the long-lived, semantically meaningful
+    # nodes; the workload narrative is "entities persist, facts churn."
+    # Pinned nodes are a strict subset (and so already included). Facts
+    # are explicitly NOT survivors: they are the write-stream record
+    # whose edges age out, and a correct GC should be free to collect
+    # them once all their outgoing edges have been removed.
+    # The earlier strict-survival philosophy (survivors == pinned only)
+    # was found to contradict UC-GC-2's baseline-comparison logic; see
+    # docs/finding-gc-stage2-baseline.md for the analysis.
+    expected_survivors = set(entity_ids)
 
     return ChurnWorkload(
         events=events,

@@ -9,13 +9,14 @@ from typing import Callable
 
 from .base import GCVariant, GraphState
 from .b_raw import BRawNoGC
-from .ref_count import RefCountGC, RefCountUtilityGC
+from .ref_count import FactOnlyGC, RefCountGC, RefCountUtilityGC
 
 
 FACTORIES: dict[str, Callable[[], GCVariant]] = {
     "b-raw-no-gc": BRawNoGC,
     "gc-v0.1.0-ref-count": RefCountGC,
     "gc-v0.1.1-ref-count-utility": RefCountUtilityGC,
+    "gc-v0.1.2-fact-only": FactOnlyGC,
 }
 
 

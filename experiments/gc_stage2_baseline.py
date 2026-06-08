@@ -29,6 +29,7 @@ VARIANT_IDS = [
     "b-raw-no-gc",
     "gc-v0.1.0-ref-count",
     "gc-v0.1.1-ref-count-utility",
+    "gc-v0.1.2-fact-only",
 ]
 
 

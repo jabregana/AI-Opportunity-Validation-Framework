@@ -29,6 +29,7 @@ class GraphState:
       nodes: node_id -> dict with at least "kind" and "added_at"
       edges: (src, dst) -> integer count (multigraph; usually 1)
       in_degree: node_id -> int (number of incoming edges)
+      out_degree: node_id -> int (number of outgoing edges)
       last_access: node_id -> float (timestamp of last query)
       query_count: node_id -> int (cumulative queries hitting this node)
       pinned: set of node_ids that must never be collected
@@ -37,6 +38,7 @@ class GraphState:
     nodes: dict[str, dict] = field(default_factory=dict)
     edges: dict[tuple[str, str], int] = field(default_factory=dict)
     in_degree: dict[str, int] = field(default_factory=dict)
+    out_degree: dict[str, int] = field(default_factory=dict)
     last_access: dict[str, float] = field(default_factory=dict)
     query_count: dict[str, int] = field(default_factory=dict)
     pinned: set[str] = field(default_factory=set)
@@ -108,16 +110,19 @@ class GCVariant(ABC):
         if node_id not in state.nodes:
             return 0
         n_edges_removed = 0
-        # Remove all edges incident to this node and decrement
-        # in-degree of the other endpoint.
+        # Remove all edges incident to this node and decrement the
+        # appropriate degree of the other endpoint.
         for (src, dst) in list(state.edges):
             if src == node_id or dst == node_id:
                 state.edges.pop((src, dst))
                 n_edges_removed += 1
                 if dst != node_id and dst in state.in_degree:
                     state.in_degree[dst] = max(0, state.in_degree[dst] - 1)
+                if src != node_id and src in state.out_degree:
+                    state.out_degree[src] = max(0, state.out_degree[src] - 1)
         state.nodes.pop(node_id, None)
         state.in_degree.pop(node_id, None)
+        state.out_degree.pop(node_id, None)
         state.last_access.pop(node_id, None)
         state.query_count.pop(node_id, None)
         return n_edges_removed

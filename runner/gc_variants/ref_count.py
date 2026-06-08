@@ -1,6 +1,6 @@
 """Reference-counted GC variants.
 
-Two variants in this file:
+Three variants in this file:
 
   v0.1.0 RefCountGC: pure reference counting. Collect an entity node
     when its in_degree is 0 AND the node is older than min_age_seconds.
@@ -11,6 +11,15 @@ Two variants in this file:
     utility score drops below min_utility AND the node has been
     observed for at least min_observation_seconds. Utility combines
     recency, query frequency, and (implicitly) reference count.
+
+  v0.1.2 FactOnlyGC: conservative-survival variant. Entities are
+    NEVER collected (they are the long-lived semantically meaningful
+    nodes). Only facts get collected, and only after all their
+    outgoing edges have been removed AND the node is older than
+    min_age_seconds. Introduced after Stage 2 baseline finding showed
+    v0.1.0 and v0.1.1 collected 90% of entities (UC-GC-2 fail) while
+    leaving facts untouched (only 2.2% store reduction).
+    See docs/finding-gc-stage2-baseline.md for the analysis.
 """
 from __future__ import annotations
 import math
@@ -108,3 +117,51 @@ class RefCountUtilityGC(RefCountGC):
             return False
         u = self.utility(node_id, state, current_time)
         return u < self.min_utility
+
+
+class FactOnlyGC(GCVariant):
+    """v0.1.2: conservative-survival GC that collects facts only.
+
+    Rule: collect a fact node when all of its outgoing edges have been
+    removed (state.out_degree[fact_id] == 0) AND the node is older
+    than min_age_seconds (default 1 day, giving the fact a grace
+    window to be queried before collection).
+
+    Entity nodes are NEVER collected by this variant. The workload's
+    conservative-survival philosophy says entities are the long-lived
+    semantically meaningful nodes that should persist beyond the
+    lifetime of any individual fact about them. A future variant
+    (v0.1.3) can re-introduce entity collection with a tighter rule;
+    v0.1.2 establishes the safe lower bound first.
+
+    Stage 2 baseline finding (docs/finding-gc-stage2-baseline.md)
+    showed that the largest store-reduction lever is fact collection:
+    facts are ~98% of the store on the synthetic workload, and the
+    earlier ref-count variants never collected them.
+    """
+
+    name = "gc-v0.1.2-fact-only"
+
+    def __init__(self, min_age_seconds: float = 86400.0):
+        # Default 1 day: gives the fact a chance to be queried after
+        # its edges age out, before getting swept.
+        self.min_age_seconds = min_age_seconds
+
+    def should_collect(
+        self,
+        node_id: str,
+        state: GraphState,
+        current_time: float,
+    ) -> bool:
+        if node_id in state.pinned:
+            return False
+        node = state.nodes.get(node_id)
+        if node is None:
+            return False
+        if node.get("kind") != "fact":
+            return False
+        age = current_time - node.get("added_at", current_time)
+        if age < self.min_age_seconds:
+            return False
+        out_deg = state.out_degree.get(node_id, 0)
+        return out_deg == 0

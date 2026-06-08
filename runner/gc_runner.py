@@ -67,16 +67,20 @@ def _apply_event(event: GraphEvent, state: GraphState) -> None:
             "added_at": event.timestamp,
         }
         state.in_degree.setdefault(event.node_id, 0)
+        state.out_degree.setdefault(event.node_id, 0)
         state.last_access.setdefault(event.node_id, event.timestamp)
         state.query_count.setdefault(event.node_id, 0)
     elif event.op == "add_edge":
         key = (event.edge_src, event.edge_dst)
         state.edges[key] = state.edges.get(key, 0) + 1
-        # Only count the in-degree on existing nodes (the target may
-        # have been collected earlier in the run)
+        # Only count degree on existing nodes (the endpoints may have
+        # been collected earlier in the run)
         if event.edge_dst in state.nodes:
             state.in_degree[event.edge_dst] = state.in_degree.get(
                 event.edge_dst, 0) + 1
+        if event.edge_src in state.nodes:
+            state.out_degree[event.edge_src] = state.out_degree.get(
+                event.edge_src, 0) + 1
     elif event.op == "remove_edge":
         key = (event.edge_src, event.edge_dst)
         if key in state.edges:
@@ -86,6 +90,9 @@ def _apply_event(event: GraphEvent, state: GraphState) -> None:
                 if event.edge_dst in state.in_degree:
                     state.in_degree[event.edge_dst] = max(
                         0, state.in_degree[event.edge_dst] - 1)
+                if event.edge_src in state.out_degree:
+                    state.out_degree[event.edge_src] = max(
+                        0, state.out_degree[event.edge_src] - 1)
     elif event.op == "query":
         if event.node_id in state.nodes:
             state.last_access[event.node_id] = event.timestamp
