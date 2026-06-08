@@ -15,11 +15,14 @@ Sub-modules:
 from __future__ import annotations
 
 from .base import GCIntegrationShim, IntegrationStats
+from .graphiti_adapter import GraphitiGCMiddleware, GraphitiNodeRecord
 from .mem0_adapter import Mem0GCMiddleware, Mem0MemoryRecord
 from .mock import MockGraphStoreShim
 
 __all__ = [
     "GCIntegrationShim",
+    "GraphitiGCMiddleware",
+    "GraphitiNodeRecord",
     "IntegrationStats",
     "Mem0GCMiddleware",
     "Mem0MemoryRecord",
