@@ -1,62 +1,157 @@
-# AI Wedge Harness
+# AI-Opportunity-Validation-Framework
 
-**The same statistical discipline applied across every dimension of an agent system, with real deployment decisions forced from the results.**
+**A repeatable framework for deciding whether an AI/ML/LLM opportunity is worth building.**
 
-That sentence is the novel part. Most AI evaluation tools either record traces (LangSmith, Langfuse, Phoenix) or test one axis (Inspect AI, Pydantic Evals). This repo runs paired-bootstrap CIs, LORD++ online FDR, and calibrated UC gates across model, prompt, tools, memory, policy, and recovery, then converts the joint result into a specific recommendation a team can deploy this week.
+Most AI teams operate as: idea -> prototype -> launch. By the time the prototype is in front of a customer, the team has already spent months on the wrong shape, the wrong claim, or the wrong wedge. The customer reaction is the first real test.
 
-## Who this is for
+This framework inserts four tests **before** the customer sees anything:
 
-You run an agent system in production. Memory grows unboundedly. Retrieval is getting noisy. The team picks between Mem0, Graphiti, or Cognee but cannot defend the choice with numbers. Cost is creeping up. Your engineering org wants a measured, reproducible answer, not a vendor pitch.
+```
+idea -> kill test -> synthetic validation -> small-N real data -> substantial-N real data -> deployment recommendation
+```
 
-Concretely, this is for:
-- A staff or principal engineer on an AI platform team
-- A CTO or eng lead at a series-A to series-C agent startup
-- An innovation team in a larger company piloting an agent
+Each test catches errors the previous one missed. Most opportunities die at one of the earlier stages, which is the point. The ones that survive arrive at the customer pre-corrected, with a deployment recipe and a measured business outcome the team can defend.
 
-If you only need traces or per-axis tests, the tools above are simpler. If you need to defend "we will ship X and not Y" to a skeptical audience, this is what that looks like.
+The framework is the durable asset. The individual opportunities tested through it are the case studies that show it works.
 
-## What this has produced so far
+## The ambition
 
-Two case studies have run all four stages, and the second is now backed by a real deployable bundle with measured numbers from this week's runs.
+Run any AI/ML/LLM opportunity through this framework in four to six weeks and finish with one of two outcomes:
 
-### Case study 1: Agent Memory Lifecycle Management (the production-ready bundle)
+- **Go**: a specific deployment recipe (variant + config + sweep cadence + rollback signal), backed by measured numbers from real data, with the business-outcome translation written down
+- **No-go**: a documented kill, including which stage caught it and what the evidence was
 
-I built the `Mem0GCMiddleware` + `gc-v0.1.8-comprehensive-tuned` stack and benchmarked it against real Mem0 (Ollama phi3:mini + all-minilm + Qdrant) on two workloads:
+The framework's defensibility comes from doing this **across every dimension of an agent system** (model, prompt, tools, memory, policy, recovery) with the same statistical discipline, and from **forcing deployment decisions** out of the joint result. Most agent-eval tooling stops at "here are the traces" or "here is one axis tested." This one continues to "and so the team should ship X, not Y."
+
+What the framework does NOT do: invent new mechanisms. Entity normalization, graph GC, prompt benchmarking all exist. The novelty is the **same statistical discipline applied uniformly + forced deployment decisions emerging from the data**.
+
+## What the framework consists of
+
+| Layer | What it does | Where it lives |
+|---|---|---|
+| Four-stage progression | Forces theoretical -> synthetic -> small real -> substantial real, in that order | [`FRAMEWORK.md`](FRAMEWORK.md) |
+| Per-experiment UC gates | Calibrated pass/fail thresholds on store reduction, retrieval recall, false-collection, latency, tombstone recovery, retrieval F1 | `runner/gc_runner.py` |
+| Per-variant effect detection | Paired bootstrap (10k resamples), one and two-sided p-values | `runner/metrics/stats.py` |
+| Cross-variant FDR control | LORD++ online FDR ledger (Ramdas et al. 2017) for sequential testing | `runner/fdr.py` |
+| Variance reduction | CUPED (Deng et al. 2013) cuts required N by 20-40% when prior baselines exist | `runner/cuped.py` |
+| Cross-dimension matrix | Joint 72-config experiment across all six dimensions; surfaces interactions | `experiments/cross_dim_full_matrix.py` |
+| Integration shim contract | One ABC adapts any downstream memory framework (Mem0, Graphiti, Cognee) into the gate-tested variant pipeline | `runner/dimensions/memory/lifecycle/integrations/base.py` |
+| Finding-doc discipline | Every claim, including failures and retractions, gets a dated `docs/finding-*.md` | `docs/finding-*.md` (30+) |
+| CI regression gate | Every PR re-runs the F1 benchmark, fails the build if any variant drops below 75% F1 preservation | `.github/workflows/ci.yml` |
+
+## The two opportunities tested through it
+
+I ran two real opportunities through all four stages. Both started from a 90-day landscape scan ([`docs/opportunity.md`](docs/opportunity.md)). Both produced revisable, deployable, measured outcomes.
+
+### Opportunity 1: Schema-alignment proxy (entity normalization middleware)
+
+Sits in front of Mem0, Graphiti, or Cognee. Intercepts entity writes, vector-matches against existing canonicals, substitutes the canonical before the LLM-extraction layer creates a duplicate node. Deterministic, no LLM in the hot path, ~30 ms p99.
+
+### Opportunity 2: Agent Memory Lifecycle Management (graph GC)
+
+Sits behind Mem0, Graphiti, or Cognee. Sweeps stale facts, preserves entities, tracks tombstones for over-collection recovery, supports per-tenant pinning. Eight production-ready policy variants. Drop-in middleware around any of the three frameworks.
+
+## Results: what each produced
+
+### Opportunity 1 results (entity-normalization proxy)
+
+Four stages, four-stage-progression-caught-an-overclaim:
+
+| Stage | Output | What the framework caught |
+|---|---|---|
+| Stage 1 | Wedge picked: Mem0 maintainer publicly rejected this approach on issue #4896 (April 2026) | Killed three other candidate wedges that incumbents had already shipped |
+| Stage 2 | v0.3.1 (hybrid + structural filter) became GA candidate after ranking flipped on real WikiData aliases | Synthetic-data winner v0.3.0 was beaten on real data; framework caught its own statistical bootstrap bug mid-pilot |
+| Stage 3 | At N=227: "free local 3B beats every frontier API" (p < 0.0001) | Headline was statistically significant but wrong |
+| Stage 4 | At N=836 with 416-alias map: ranking collapsed; correct claim is "free local 7B ties gpt-4o at 0.773 with ~1000x lower cost" | Stage 4's 5-10x scale-up caught the small-N tail bias before publication |
+
+The framework catching its own Stage 3 overclaim is the single most credibility-bearing artifact this project produced. Full self-correction: [`docs/finding-substantial-N-revision.md`](docs/finding-substantial-N-revision.md).
+
+### Opportunity 2 results (memory lifecycle management)
+
+Three end-to-end results with real Mem0 (Ollama phi3:mini + all-minilm + Qdrant) this week:
 
 | Workload | What it measures | Result |
 |---|---|---|
-| 2,000 SQuAD-style inputs, sweep every 100 adds | **Steady-state store reduction** | Mem0 LLM extracted 3,363 memories; v0.1.8 collected 3,308 -> **98.4% reduction**, 0 failures over 2-hour run |
-| 50-pair + 200-pair SQuAD F1 benchmark | **Retrieval-quality preservation** | **81.6% F1 preservation at 52% reduction (n=50); 81.8% at 44% reduction (n=200).** Both PASS the >= 80% UC-GC-RETRIEVAL gate. Replicated across two sample sizes; 0.2pp delta is within bootstrap noise. |
+| 2,000 SQuAD-style inputs, sweep every 100 | Steady-state store reduction over a 2-hour run | Mem0 LLM extracted 3,363 memories; v0.1.8 collected 3,308. **98.4% reduction**, 0 failures, clean sawtooth (50-65 surviving, 200-320 pre-sweep) |
+| 50 SQuAD Q&A pairs, F1 preservation before/after sweep | Retrieval quality preservation under GC | **81.6% F1 preservation at 52% reduction**. UC-GC-RETRIEVAL gate (>= 80%) PASS |
+| 200 SQuAD Q&A pairs (4x replication) | Same, larger N | **81.8% F1 preservation at 44% reduction**. PASS. Replication confirms n=50 estimate within 0.2pp |
 
-**The deployable bundle is real.** Eleven lines of code drop the middleware in front of an existing Mem0 v2 instance. The runbook ([`docs/runbook-mem0-v0.1.8-deploy.md`](docs/runbook-mem0-v0.1.8-deploy.md)) covers prereqs, sweep cadence by workload, rollback signals tied to UC gates, and a first-week operational rhythm.
+Plus 14 unit tests on the Graphiti adapter, 13 on the Cognee adapter, 9 cross-adapter consistency tests. All three adapters compose with v0.1.x policies identically.
 
-**Business outcome translation** (estimates pending a customer pilot):
-- **Storage**: 98% smaller memory store = 50x cheaper vector-store bill at the same agent quality
-- **Retrieval cost**: smaller context window assembled per query = ~20% token-spend reduction at typical RAG ratios
-- **Eng time saved**: replaces ad-hoc cleanup scripts at ~16-32 eng-hours/year per deployment
+### Bonus: the cross-dimension result
 
-What's missing from the business case: **a customer who runs this in production for 30 days and reports their actual savings.** That's the next gap (see "Honest gaps" below).
+A 72-config matrix joint experiment across all six dimensions found **75% of "obvious" variant combinations LOSE vs baseline**, and the top-10 all use baseline tools. The framework's current cross-dimension deployment recommendation: `prompt-v0.1.4-cot-plus-structured + b-allow-all-tools + recovery-v0.1.1-fallback-chain`, ~59.6% completion at CI [55.0-63.6], +23pp over baseline. Cost-weighted top-1 and top-2 are statistically indistinguishable, so the cheaper one wins. See [`docs/finding-cross-dim-cost-weighted.md`](docs/finding-cross-dim-cost-weighted.md).
 
-### Case study 2: Entity-normalization proxy (the self-correction)
+## Where each opportunity stands on commercialization
 
-The first opportunity I ran through the framework. The Stage 3 headline at N=227 was "free local 3B model beats every frontier API at entity normalization (p < 0.0001)." It was wrong at scale.
+| Opportunity | Stage | What's deployable today | What's missing for commercialization |
+|---|---|---|---|
+| Entity-norm proxy | 4 (substantial real data) | `embed-proxy-v0.5.7-mt-ann` (multi-tenant, ANN-backed) + drop-in middleware for Mem0/Graphiti/Cognee | Vertical alias maps as a paid subscription (pharma, finance, legal). Without those, the proxy itself is ~50 lines of regex anyone can rewrite. |
+| Memory lifecycle | 5 (real LLM + real adapter at production-realistic scale) | `gc-v0.1.8-comprehensive-tuned` + Mem0/Graphiti/Cognee adapters + production runbook + CI regression gate | One customer running the bundle in production for 30 days. That's the only remaining gap between "research asset" and "product." |
 
-Stage 4 expanded the alias map to 416 aliases over 125 entities and pulled 836 real tweets. Smaller models dropped 9-11 pp; frontier models dropped 5-6. The correct claim collapsed to "free local 7B ties gpt-4o at 0.773 with ~1000x lower cost," and the original ranking flipped.
+Both are within one focused engagement of being commercial. The memory lifecycle work is closer because the deployable bundle has measured numbers from this week's runs and a documented runbook. The entity-norm work needs vertical content (alias maps) to become defensible beyond the harness itself.
 
-The framework catching its own overclaim before it shipped to a customer is the single most credibility-bearing thing this project produced. Full self-correction: [`docs/finding-substantial-N-revision.md`](docs/finding-substantial-N-revision.md).
+What does NOT get added next: more dimensions, more variants, more statistical machinery. The framework has enough. What gets added next: **one customer who runs a recommendation in production and reports their actual business outcome.**
 
-### Cross-dimension result that changed a recommendation
+---
 
-A 72-config matrix across all six agent dimensions showed **75% of "obvious" variant combinations LOSE vs baseline.** Top-10 by completion all use baseline tools (the fancier tools variants underperformed under joint testing). The framework's current deployment recommendation: `prompt-v0.1.4-cot-plus-structured + b-allow-all-tools + recovery-v0.1.1-fallback-chain`, ~59.6% completion at CI [55.0-63.6], +23pp over baseline. Top-1 and top-2 by completion are statistically indistinguishable, so the cheaper one wins. See [`docs/finding-cross-dim-cost-weighted.md`](docs/finding-cross-dim-cost-weighted.md).
+## Opportunity 1 deep dive: schema-alignment proxy
 
-## How to deploy the recommendations today
+### The wedge
 
-### Bundle A: Memory Lifecycle Management (Mem0 + gc-v0.1.8)
+I studied agent memory tools (Mem0, Graphiti, Cognee, Neo4j Agent Memory, Memgraph) for 90 days. They all share five problems: fragmented extraction, graph explosion, schema rigidity, cold extraction tax, no reasoning memory. Sitting in front of them as middleware is the cleanest opening.
+
+I considered four candidate wedges:
+
+| Wedge | Already taken? |
+|---|---|
+| LSP code memory graph | Yes. `Jakedismo/codegraph-rust` (786 stars) ships this exact pipeline |
+| Reasoning memory in SQLite | Mostly. Neo4j Agent Memory shipped 8 PyPI releases in 83 days covering this |
+| Real-time graph GC | Not yet, but the operational definition was fuzzy (became Opportunity 2 below) |
+| Schema-alignment proxy | Not yet, and Mem0 maintainer rejected this approach on the record (issue #4896, April 2026) |
+
+I picked the schema-alignment proxy because the incumbent's public rejection is the cleanest signal a wedge will stay open. Full landscape: [`docs/opportunity.md`](docs/opportunity.md).
+
+### The mechanism
+
+```python
+from runner.service import EntityNormalizer
+from runner.service.integrations import Mem0PreNormalized
+from mem0 import Memory
+
+norm = EntityNormalizer("embed-proxy-v0.5.7-mt-ann")          # multi-tenant ANN-backed
+m = Mem0PreNormalized(Memory(), norm, mention_map={"AAPL": "Apple Inc", "MSFT": "Microsoft"})
+m.add("Bought AAPL today", user_id="trader1")
+```
+
+Same shape for `GraphitiPreNormalized` and `CogneePreNormalized`. All three share a 50-line adapter contract.
+
+### What the proxy buys you
+
+| Where it helps | Where it does not |
+|---|---|
+| Financial news + trading alert routing | General conversational AI (the LLM does coreference on its own) |
+| Drug name normalization in clinical NLP | Long-form text understanding |
+| Per-tenant memory on Mem0 / Graphiti / Cognee | Open-ended entity discovery beyond surface-form variation |
+| CRM auto-tagging | Workloads already running Senzing / Tilores |
+
+### Commercial position
+
+Plausibly a $1M to $10M ARR business. Not a $1B startup. The proxy code is ~50 lines anyone can rewrite. **The moat is curated vertical alias maps (pharma, finance, legal) sold as a subscription**, plus integration-shim maintenance as the upstream APIs evolve. The benchmark methodology and the harness itself are the brand asset, not the code.
+
+## Opportunity 2 deep dive: Agent Memory Lifecycle Management
+
+### The wedge
+
+Same 90-day landscape scan. Real-time graph GC was the second wedge I considered. The operational definition was fuzzy initially (when does "GC" fire? what does it preserve?), but the synthesis became `gc-v0.1.8-comprehensive-tuned`: fact collection + tombstone log + per-tenant pinning + tuned entity rule.
+
+### The mechanism
 
 ```python
 from mem0 import Memory
 from runner.dimensions.memory.lifecycle import build
 from runner.dimensions.memory.lifecycle.integrations import Mem0GCMiddleware
+import time
 
 memory = Memory.from_config(your_config)
 variant = build("gc-v0.1.8-comprehensive-tuned")
@@ -66,76 +161,71 @@ mw = Mem0GCMiddleware(memory)
 mw.add("User likes oat milk", user_id="alice")
 results = mw.search("dietary preferences", user_id="alice")
 
-# Schedule a periodic sweep (every 4 hours is a safe default)
+# Schedule a periodic sweep (every 4 hours is a safe default for < 10K adds/day)
 mw.sweep(variant, current_time=time.time())
 ```
 
-Configure `min_age_seconds`, `min_query_count`, tombstone TTL per the runbook. The middleware degrades to pass-through if you stop calling `sweep()`, so rollback is one line.
+Same shape for `GraphitiGCMiddleware` (graph-native, async) and `CogneeGCMiddleware` (module-level API). Cross-adapter consistency: `tests/test_cross_adapter_consistency.py`.
 
-### Bundles B-D
-
-Same shape for [Graphiti](docs/runbook-mem0-v0.1.8-deploy.md#bundles-b-d) (graph-native, async) and [Cognee](docs/runbook-mem0-v0.1.8-deploy.md#bundles-b-d) (module-level API). All three pass identical contract tests (`tests/test_cross_adapter_consistency.py`).
-
-### Cross-dimension recommendation
-
-Wire `prompt-v0.1.4-cot-plus-structured` into your prompt path, leave tools at baseline, layer `recovery-v0.1.1-fallback-chain` for error handling. The full deployment spec: [`docs/finding-cross-dim-cost-weighted.md`](docs/finding-cross-dim-cost-weighted.md).
-
-## What's NOT here (deliberately)
-
-The analyst feedback that produced this README rewrite called out that the framework was running ahead of its empirical depth. The response is to stop adding things, not add more.
-
-- **No new dimensions.** Six are already enough.
-- **No new variants.** The current 10 GC variants + 4 entity-norm variants + the prompt/tools/policy/recovery variants are enough.
-- **No new statistical machinery.** Paired bootstrap, LORD++, CUPED, UC gates do the work.
-
-What does get added: **proof that the framework's recommendations get followed by real teams and produce measurable business outcomes.** Currently zero customer pilots. That is the gating constraint, not engineering capacity.
-
-## How the framework arrives at recommendations
-
-Compressed (full version in [`FRAMEWORK.md`](FRAMEWORK.md)):
+### Production recipe
 
 ```
-Stage 1 (theoretical)  ->  Stage 2 (synthetic)  ->  Stage 3 (real, small N)  ->  Stage 4 (real, substantial N)
-landscape scan +           variant iteration       integration shim +           5-10x scale-up
-wedge selection            against UC gates        multi-model ladder           confirms or corrects Stage 3
+Variant:          gc-v0.1.8-comprehensive-tuned
+Sweep cadence:    every 4 hours for typical loads (workload-specific in runbook)
+Knobs:
+  min_age_seconds       86400   1 day grace before fact collection
+  min_query_count       3       entities with 3+ queries always survive
+  tombstone_ttl_seconds 604800  7 days "soft delete" window
+Rollback:         stop calling mw.sweep(); middleware degrades to pass-through
 ```
 
-Each stage catches errors the previous one missed. The Stage 3-to-Stage 4 catch on the entity-normalization headline is the canonical example.
+Full operational guide: [`docs/runbook-mem0-v0.1.8-deploy.md`](docs/runbook-mem0-v0.1.8-deploy.md).
 
-Statistical machinery used at each stage:
+### Business-outcome translation (estimates, pending pilot)
 
-| Layer | Purpose | Implementation |
+| Metric | Estimate | Source |
 |---|---|---|
-| Per-sweep gates | "Did this variant cross a red line?" | `runner/gc_runner.py:compute_uc_gates` + `compute_retrieval_gate` (6 gates total) |
-| Per-variant effect detection | "Is the effect real or noise?" | `runner/metrics/stats.py:paired_bootstrap` (10k resamples, percentile CI) |
-| Cross-variant FDR control | "Across N variants tested over time, are my p-values honest?" | `runner/fdr.py` (LORD++, Ramdas et al. 2017) |
-| Variance reduction | "Do I need N=300 or N=500 to detect this effect?" | `runner/cuped.py` (CUPED, Deng et al. 2013) |
+| Memory store size | 80-98% reduction | Stage 3 real-text 84.96%; Stage 5 real-Mem0 98.4% |
+| Retrieval quality preserved | 80-82% F1 | Stage 5 F1 benchmarks (n=50 + n=200, both PASS) |
+| Vector-store storage cost | ~50x cheaper at the same agent quality | derived from store-size reduction |
+| Token-spend reduction | ~20% at typical RAG ratios | smaller context windows per query |
+| Eng-hours saved | 16-32 hours per year per deployment | replaces ad-hoc cleanup scripts |
+| Sweep cost | 0.067-0.245 s per call | sub-linear in store size; measured |
+
+The numbers above are estimates derived from the measured benchmarks. The gap between estimate and verified outcome closes when a customer pilot reports their actual savings.
+
+### Commercial position
+
+This is the more-commercializable of the two opportunities today. The deployable bundle exists, the runbook exists, the regression gate runs on every PR, three downstreams are covered, and the headline numbers came out of THIS week's runs against real LLM extraction. The remaining gap is partnership, not engineering.
+
+---
 
 ## How to apply the framework to your own opportunity
 
-1. **Stage 1** (1-3 days): landscape scan, wedge pick, kill anything already taken
-2. **Stage 2** (1-2 weeks): variant iteration on synthetic workloads against UC gates
-3. **Stage 3** (3-5 days): real-data integration shim + multi-model ladder
-4. **Stage 4** (2-5 days): 5-10x scale-up; confirm or correct Stage 3
+1. **Stage 1, 1-3 days.** Landscape scan. Find the incumbents. Kill any wedge that's already taken. Pick one with on-record evidence the incumbent will not build it.
+2. **Stage 2, 1-2 weeks.** Build the simplest variant behind the variant interface. Run against a synthetic workload where you know the right answer. Iterate against the statistical gates. Write a finding doc per iteration.
+3. **Stage 3, 3-5 days.** Add a real-data integration shim. Run the multi-model ladder. Do NOT publish the headline yet.
+4. **Stage 4, 2-5 days.** Scale the real-data workload 5x to 10x. Use a more diverse entity set. Re-run. Either confirm or correct the Stage 3 headline.
 
 Total: 4-6 weeks per opportunity. Output: go or no-go answer with cited data.
 
-The reusable pieces: `runner/fdr.py`, `runner/cuped.py`, `runner/metrics/stats.py`, the integration-shim ABC (`runner/dimensions/memory/lifecycle/integrations/base.py`), the variant factory pattern (`runner/dimensions/memory/lifecycle/__init__.py`), and the finding-doc structure (`docs/finding-*.md`, 30+ examples).
+Reusable pieces: `runner/fdr.py`, `runner/cuped.py`, `runner/metrics/stats.py`, integration-shim ABC at `runner/dimensions/memory/lifecycle/integrations/base.py`, variant factory pattern at `runner/dimensions/memory/lifecycle/__init__.py`, finding-doc structure across `docs/finding-*.md` (30+ examples).
+
+Full methodology and component inventory: [`FRAMEWORK.md`](FRAMEWORK.md).
 
 ## Honest gaps
 
 What this repo does NOT have, in priority order:
 
-1. **A customer pilot.** Until a real team runs the recommended bundle in production for 30 days and reports their actual storage savings, latency change, and any incidents, the business-outcome claims are estimates. This is the gating constraint between "research asset" and "product."
-2. **Real-calendar-time long-running data.** The 30/60/90-day projections come from a compressed-time simulator (`experiments/gc_long_running_simulation.py`). They are not the same as 8 weeks of real production traffic.
-3. **More vertical corpora.** Twitter Financial News (entity-norm) and SQuAD (F1) are two corpora. A pharma alias map, a legal corpus, or a customer-support corpus would each tighten one of the deployment recommendations.
-4. **A second-language test.** All current corpora are English. The proxy and the GC framework should both work on other languages; that has not been measured.
+1. **A customer pilot for either opportunity.** Until a real team runs a recommended bundle in production for 30 days and reports actual storage savings, latency change, and any incidents, the business-outcome claims are estimates. This is the gating constraint between "research asset" and "product."
+2. **Real-calendar-time long-running data for Opportunity 2.** The 30/60/90-day projections come from a compressed-time simulator. Not the same as 8 weeks of real production traffic.
+3. **More vertical corpora.** Twitter Financial News (entity-norm) and SQuAD (F1) are two corpora. Pharma, legal, customer-support corpora would each tighten one specific deployment recommendation.
+4. **A non-English corpus.** Both opportunities should work on other languages; that has not been measured.
+5. **Empirical depth across all six dimensions.** Memory, model, and recovery have strong evidence; prompt, tools, and policy are at Stage 2 baseline. The framework recognizes the gap; the cross-dim matrix uses what's available.
 
 ## Status
 
-Active. **473 tests passing.** 30+ documented findings. 6 dimensions evaluated, 3 with strong evidence (model, memory, recovery). 3 memory-framework adapters (Mem0, Graphiti, Cognee) with cross-adapter consistency tests. CI on every PR runs the F1 regression gate (`.github/workflows/ci.yml`).
-
-The framework is the durable asset. The Memory Lifecycle Management bundle is the most production-ready deployable. The proxy is the first case study tested through it. The next deliverable is one customer pilot, not more engineering.
+Active. **473 tests passing.** 30+ documented findings. 6 dimensions evaluated (3 strong, 3 at Stage 2 baseline). 3 memory-framework adapters (Mem0, Graphiti, Cognee) with cross-adapter consistency tests. CI regression gate on every PR.
 
 ## Install
 
@@ -149,20 +239,20 @@ pip install -e .[ann]                # ANN scaling variant (hnswlib + numpy)
 ## Running the headline benchmarks
 
 ```sh
-# Memory Lifecycle: Mem0 + gc-v0.1.8 reduction smoke (~2 hours at N=2000)
+# Memory Lifecycle: real-Mem0 reduction smoke (~2 hours at N=2000)
 .venv/bin/python experiments/mem0_smoke_test_real_llm.py --n-memories 2000 --sweep-every 100
 
 # Memory Lifecycle: retrieval F1 preservation (~6 min at N=50, ~30 min at N=200)
 .venv/bin/python experiments/mem0_retrieval_f1_benchmark.py --n-pairs 50 --aged-fraction 0.4
 
-# Entity-norm: the substantial-N case study (125 entities, 416 aliases, 836 tweets)
+# Entity-norm: substantial-N case study (125 entities, 416 aliases, 836 tweets)
 .venv/bin/python experiments/case_study_expanded.py --per-entity 1000
 
 # Cross-dimension 72-config matrix (the recommendation source)
 .venv/bin/python experiments/cross_dim_full_matrix.py
 ```
 
-Outputs land in `runs/` as immutable JSON artifacts. The CI regression gate runs the F1 benchmark on every PR and fails the build if any variant drops below 75% F1 preservation.
+Outputs land in `runs/` as immutable JSON artifacts.
 
 ## License
 
