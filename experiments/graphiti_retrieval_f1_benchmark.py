@@ -70,21 +70,27 @@ def _build_graphiti(uri: str, user: str, password: str,
         from graphiti_core.llm_client.openai_generic_client import OpenAIGenericClient
         from graphiti_core.llm_client.config import LLMConfig
         from graphiti_core.embedder.openai import OpenAIEmbedder, OpenAIEmbedderConfig
-        llm_client = OpenAIGenericClient(config=LLMConfig(
+        from graphiti_core.cross_encoder.openai_reranker_client import OpenAIRerankerClient
+        llm_config = LLMConfig(
             api_key="ollama",
             model=ollama_llm_model,
             base_url=ollama_base,
             temperature=0.0,
-        ))
+        )
+        llm_client = OpenAIGenericClient(config=llm_config)
         embedder = OpenAIEmbedder(config=OpenAIEmbedderConfig(
             api_key="ollama",
             embedding_model=ollama_embed_model,
             base_url=ollama_base,
             embedding_dim=ollama_embed_dim,
         ))
+        # Reranker also needs an OpenAI-compat endpoint; reuse the
+        # same Ollama LLM config (Graphiti calls it as a regular LLM)
+        cross_encoder = OpenAIRerankerClient(config=llm_config)
         return Graphiti(
             uri=uri, user=user, password=password,
             llm_client=llm_client, embedder=embedder,
+            cross_encoder=cross_encoder,
         )
     return Graphiti(uri=uri, user=user, password=password)
 
@@ -220,9 +226,12 @@ def main():
             print(f"  added {i+1}/{len(memories)} "
                   f"(wall {time.time()-add_start:.1f}s)")
         try:
+            from datetime import datetime, timezone
             result = mw.add_episode(
                 name=f"squad_{squad_id}", episode_body=text,
                 group_id="f1_user",
+                source_description="SQuAD context",
+                reference_time=datetime.now(timezone.utc),
             )
             # Map squad_id to both the episode and extracted entities
             ids: list[str] = []
