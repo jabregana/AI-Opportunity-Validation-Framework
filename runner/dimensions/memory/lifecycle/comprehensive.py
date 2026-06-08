@@ -59,7 +59,12 @@ class ComprehensiveGC(ConservativeEntityPlusFactGC):
         # Inherited conservative-entity-plus-fact rule
         return super().should_collect(node_id, state, current_time)
 
-    def collect(self, node_id: str, state: GraphState) -> int:
+    def collect(
+        self,
+        node_id: str,
+        state: GraphState,
+        current_time: float = 0.0,
+    ) -> int:
         # Tenant-pin protection (base GCVariant.collect only checks
         # state.pinned; v0.1.6 must also refuse tenant-pinned)
         if self.is_pinned_for_any_tenant(node_id):
@@ -67,15 +72,18 @@ class ComprehensiveGC(ConservativeEntityPlusFactGC):
         # Record tombstone BEFORE delegating to parent (from v0.1.3)
         if node_id in state.nodes and node_id not in state.pinned:
             node_meta = dict(state.nodes.get(node_id, {}))
-            collected_at = state.last_access.get(
-                node_id, node_meta.get("added_at", 0.0),
-            )
+            if current_time > 0.0:
+                collected_at = current_time
+            else:
+                collected_at = state.last_access.get(
+                    node_id, node_meta.get("added_at", 0.0),
+                )
             self.tombstones[node_id] = {
                 "collected_at": collected_at,
                 "kind": node_meta.get("kind"),
                 "added_at": node_meta.get("added_at"),
             }
-        return super().collect(node_id, state)
+        return super().collect(node_id, state, current_time)
 
     # ---- Tombstone API (from v0.1.3) ----
 
@@ -86,7 +94,10 @@ class ComprehensiveGC(ConservativeEntityPlusFactGC):
     ) -> bool:
         if node_id not in self.tombstones:
             return False
-        return (current_time - self.tombstones[node_id]["collected_at"]) <= self.tombstone_ttl
+        collected_at = self.tombstones[node_id]["collected_at"]
+        if current_time < collected_at:
+            return False
+        return (current_time - collected_at) <= self.tombstone_ttl
 
     def prune_expired_tombstones(self, current_time: float) -> int:
         expired = [

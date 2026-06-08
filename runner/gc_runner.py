@@ -181,7 +181,8 @@ def run_gc(
                 if cand_id in workload.expected_survivors:
                     falsely_collected.append(cand_id)
                     n_false_collections += 1
-                removed_edges = variant.collect(cand_id, state)
+                removed_edges = variant.collect(
+                    cand_id, state, current_time=event.timestamp)
                 if cand_id not in state.nodes:
                     n_nodes_collected += 1
             sweep_seconds += time.perf_counter() - ts
@@ -192,7 +193,7 @@ def run_gc(
         if cand_id in workload.expected_survivors:
             falsely_collected.append(cand_id)
             n_false_collections += 1
-        variant.collect(cand_id, state)
+        variant.collect(cand_id, state, current_time=last_event_time)
         if cand_id not in state.nodes:
             n_nodes_collected += 1
     sweep_seconds += time.perf_counter() - ts
@@ -214,14 +215,24 @@ def run_gc(
     n_added_safe = max(1, n_nodes_added)
     reduction_pct = 100.0 * n_nodes_collected / n_added_safe
 
-    # UC-GC-5: tombstone recovery for collected_fact_query_targets
+    # UC-GC-5: tombstone recovery using actual query timestamps.
+    # Each collected_fact_query_target has a corresponding query event;
+    # the recovery check happens at THAT query time. Production
+    # semantic: a query arriving at time Q sees tombstones recorded
+    # before Q AND within TTL.
     n_tombstone_targets = len(workload.collected_fact_query_targets)
     n_tombstone_recoveries = 0
     if has_tombstone and n_tombstone_targets > 0:
+        # Look up each target's actual query timestamp
+        query_times: dict[str, float] = {}
+        target_set = set(workload.collected_fact_query_targets)
+        for ev in workload.events:
+            if ev.op == "query" and ev.node_id in target_set:
+                if ev.node_id not in query_times:
+                    query_times[ev.node_id] = ev.timestamp
         for fid in workload.collected_fact_query_targets:
-            # Query at the last_event_time; production code would
-            # query at the actual query timestamp
-            if variant.was_recently_collected(fid, last_event_time):
+            query_t = query_times.get(fid, last_event_time)
+            if variant.was_recently_collected(fid, query_t):
                 n_tombstone_recoveries += 1
     tombstone_recovery_rate_pct = (
         100.0 * n_tombstone_recoveries / n_tombstone_targets

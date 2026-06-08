@@ -101,10 +101,23 @@ class GCVariant(ABC):
             if self.should_collect(nid, state, current_time)
         ]
 
-    def collect(self, node_id: str, state: GraphState) -> int:
-        """Remove `node_id` and all its incident edges. Refuses to
-        collect pinned nodes (returns 0). Returns the number of edges
-        removed (callers can sum these for accounting)."""
+    def collect(
+        self,
+        node_id: str,
+        state: GraphState,
+        current_time: float = 0.0,
+    ) -> int:
+        """Remove `node_id` and all its incident edges.
+
+        `current_time` is the sweep time at which collection is
+        happening. The base implementation does not use it. Tombstone
+        variants record it as the collection moment so the TTL window
+        is measured from the actual collection time, not from a proxy
+        like state.last_access.
+
+        Refuses to collect pinned nodes (returns 0). Returns the
+        number of edges removed.
+        """
         if node_id in state.pinned:
             return 0
         if node_id not in state.nodes:

@@ -125,6 +125,36 @@ BUILD_COST_ESTIMATES: dict[str, dict] = {
         "confidence": "medium",
         "notes": "Fact-only collection; conservative entity survival.",
     },
+    "gc-v0.1.3-fact-only-tombstone": {
+        "engineer_weeks": 1.5, "ongoing_quarterly_weeks": 0.5,
+        "infra_cost_per_million_calls_usd": 0.0,
+        "confidence": "medium",
+        "notes": "Adds tombstone log to v0.1.2 for over-collection recovery.",
+    },
+    "gc-v0.1.4-conservative-entity-plus-fact": {
+        "engineer_weeks": 1.5, "ongoing_quarterly_weeks": 0.5,
+        "infra_cost_per_million_calls_usd": 0.0,
+        "confidence": "medium",
+        "notes": "v0.1.2 + entity collection with conservative thresholds.",
+    },
+    "gc-v0.1.5-fact-only-tenant-pinning": {
+        "engineer_weeks": 1.5, "ongoing_quarterly_weeks": 0.5,
+        "infra_cost_per_million_calls_usd": 0.0,
+        "confidence": "medium",
+        "notes": "v0.1.2 + per-tenant pin tracking for multi-tenant SaaS.",
+    },
+    "gc-v0.1.6-comprehensive": {
+        "engineer_weeks": 3.0, "ongoing_quarterly_weeks": 1.0,
+        "infra_cost_per_million_calls_usd": 0.0,
+        "confidence": "medium",
+        "notes": "Bundle of v0.1.3 + v0.1.4 + v0.1.5; production-ready full feature set.",
+    },
+    "gc-v0.1.7-conservative-entity-tuned": {
+        "engineer_weeks": 2.0, "ongoing_quarterly_weeks": 0.5,
+        "infra_cost_per_million_calls_usd": 0.0,
+        "confidence": "medium",
+        "notes": "v0.1.4 + query_count secondary gate to reduce over-collection.",
+    },
 
     # ---- Prompt dimension ----
     "b-default-prompt": {

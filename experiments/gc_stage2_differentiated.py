@@ -44,6 +44,7 @@ VARIANT_IDS = [
     "gc-v0.1.4-conservative-entity-plus-fact",
     "gc-v0.1.5-fact-only-tenant-pinning",
     "gc-v0.1.6-comprehensive",
+    "gc-v0.1.7-conservative-entity-tuned",
 ]
 
 

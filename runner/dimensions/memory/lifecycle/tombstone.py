@@ -52,20 +52,31 @@ class FactOnlyTombstoneGC(FactOnlyGC):
         self.tombstones: dict[str, dict] = {}
         self.tombstone_eviction_count = 0
 
-    def collect(self, node_id: str, state: GraphState) -> int:
-        """Record tombstone before delegating to parent's collect."""
+    def collect(
+        self,
+        node_id: str,
+        state: GraphState,
+        current_time: float = 0.0,
+    ) -> int:
+        """Record tombstone with the actual collection time."""
         # Capture metadata BEFORE deletion
         if node_id in state.nodes and node_id not in state.pinned:
             node_metadata = dict(state.nodes.get(node_id, {}))
-            # Get the timestamp from the node's added_at or use last_access
-            collected_at = state.last_access.get(node_id,
-                                                 node_metadata.get("added_at", 0.0))
+            # Use current_time when provided (the runner passes the
+            # sweep time). Fall back to last_access for backward compat
+            # with tests that don't pass current_time.
+            if current_time > 0.0:
+                collected_at = current_time
+            else:
+                collected_at = state.last_access.get(
+                    node_id, node_metadata.get("added_at", 0.0),
+                )
             self.tombstones[node_id] = {
                 "collected_at": collected_at,
                 "kind": node_metadata.get("kind"),
                 "added_at": node_metadata.get("added_at"),
             }
-        return super().collect(node_id, state)
+        return super().collect(node_id, state, current_time)
 
     def was_recently_collected(
         self,
@@ -74,13 +85,16 @@ class FactOnlyTombstoneGC(FactOnlyGC):
     ) -> bool:
         """Public query-time API for production use.
 
-        Returns True if the node was collected within the tombstone TTL
-        window. Production query code can call this to distinguish
-        'never existed' from 'recently superseded.'
+        Returns True if:
+          - the node has a tombstone, AND
+          - the tombstone existed at current_time (collected_at <= current_time), AND
+          - current_time - collected_at is within the TTL window.
         """
         if node_id not in self.tombstones:
             return False
         collected_at = self.tombstones[node_id]["collected_at"]
+        if current_time < collected_at:
+            return False  # tombstone did not exist yet at current_time
         return (current_time - collected_at) <= self.tombstone_ttl
 
     def prune_expired_tombstones(self, current_time: float) -> int:
