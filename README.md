@@ -24,7 +24,7 @@ I studied agent memory tools: Mem0, Graphiti, Cognee, Neo4j Agent Memory, Memgra
 4. Cold extraction tax (every write pays a full LLM call)
 5. No reasoning memory (graphs store facts but not the decisions that produced them)
 
-You don't have to rebuild any of these tools to fix those problems. You can sit in front of them as middleware. That's seems the real opening.
+You don't have to rebuild any of these tools to fix those problems. You can sit in front of them as middleware. That seems to be the real opening.
 
 I picked four candidate wedges and checked each one against what the incumbents already shipped:
 
