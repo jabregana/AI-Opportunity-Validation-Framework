@@ -128,13 +128,13 @@ Honest read on where this framework sits today against the six-dimension claim:
 | Dimension | Coverage | What proves it |
 |---|---|---|
 | **1. Model** | **Strong.** | `experiments/ladder_sweep_real_data.py` auto-routes Anthropic / OpenAI / Google / Ollama by prefix. 14 models from 5 providers exercised in the proxy case study. |
-| **2. Prompt** | **Partial.** | The variant abstraction implicitly carries prompt as a variant axis (different prompt = different variant). No first-class `PromptVariant` ABC yet. |
-| **3. Tools** | **Not yet.** | No `ToolVariant`, no tool-selection or tool-failure benchmarks. New work. |
-| **4. Memory** | **Strong.** | The schema-alignment proxy ran all four stages. The graph-GC opportunity has Stage 1 done plus Stage 2 baseline. |
-| **5. Execution policy** | **Not yet.** | No `PolicyVariant` for ReAct vs plan-and-execute vs reflection loops. New work. |
-| **6. Recovery behavior** | **Not yet.** | No `RecoveryVariant`. No retry / fallback / refusal-handling benchmarks. New work. |
+| **2. Prompt** | **Scaffolded.** | `runner/dimensions/prompt/` ships the `PromptVariant` ABC, the `b-default-prompt` baseline, and factory registry. No real variants yet. The variant abstraction also carries prompt implicitly today (different prompt = different variant). |
+| **3. Tools** | **Scaffolded.** | `runner/dimensions/tools/` ships the `ToolVariant` ABC, `ToolCall` dataclass, `b-allow-all-tools` baseline, and factory registry. No real variants yet. |
+| **4. Memory** | **Strong.** | The schema-alignment proxy ran all four stages. The graph-GC opportunity has Stage 1 done plus Stage 2 baseline. Both will migrate under `dimensions/memory/` (see `docs/six-dimensions-architecture.md`). |
+| **5. Execution policy** | **Scaffolded.** | `runner/dimensions/policy/` ships the `PolicyVariant` ABC, `AgentStep` dataclass, `b-single-shot-policy` baseline, and factory registry. No real variants yet. |
+| **6. Recovery behavior** | **Scaffolded.** | `runner/dimensions/recovery/` ships the `RecoveryVariant` ABC, `Failure` and `RecoveryAction` dataclasses, `b-abort-on-failure` baseline, and factory registry. No real variants yet. |
 
-Scorecard: 2 strong, 1 partial, 3 not started. The framework today is the seed of the six-dimension evaluation system, not the full thing.
+Scorecard: 2 strong, 4 scaffolded with stubs. The architecture is real, not aspirational; the four new ABCs each ship with a no-op baseline and pass tests. Adding the first real variant to any of the scaffolded dimensions is the same shape as adding a new GC variant (see `docs/six-dimensions-architecture.md` for the four-step recipe).
 
 ### Why the framework's mechanisms generalize to the other dimensions
 
