@@ -93,7 +93,22 @@ Running this framework on a new opportunity takes about 4 to 6 weeks. You finish
 
 Without the framework, you ship overclaims. Customers tear them apart. You retract publicly. The framework's job is to catch those overclaims before anyone outside sees them.
 
-Full framework narrative and the reusable component inventory: [`FRAMEWORK.md`](FRAMEWORK.md).
+### The bigger framing
+
+The narrowest claim is "this framework tests one AI mechanism at a time, rigorously." That claim is already proven on two opportunities (schema-alignment proxy and real-time graph GC).
+
+The bigger claim is more interesting. **An agent system has six measurable dimensions, and the same statistical machinery applies to all six**:
+
+1. **Model**: which LLM, which size tier (covered: 14-model ladder across 5 providers)
+2. **Prompt**: system prompts, instructions, output-format contracts (partial: implicit in the variant abstraction)
+3. **Tools**: which tools the agent calls and how it selects and arguments them (not yet)
+4. **Memory**: what is stored, how it is canonicalized, how it is pruned (covered: proxy + graph-GC)
+5. **Execution policy**: ReAct vs plan-and-execute vs reflection loops vs handoff (not yet)
+6. **Recovery behavior**: retry, fallback, refusal handling, partial-result semantics (not yet)
+
+Coverage today: 2 strong, 1 partial, 3 not started. The framework's mechanisms (four-stage progression, variant ABC + factory, multi-model ladder, paired bootstrap, finding-doc culture) generalize directly to the missing dimensions. Most agent-eval tools today either record traces (LangSmith, Langfuse, Arize Phoenix) or test a single axis (Pydantic Evals, Inspect AI). The shape this framework is built for, **the same statistical discipline applied across every dimension that defines an agent system**, does not yet exist as one tool. Two dimensions done, four to go.
+
+Full framework narrative, reusable component inventory, and the six-dimension scorecard: [`FRAMEWORK.md`](FRAMEWORK.md).
 
 ## 3. What the process found about the entity-normalization proxy
 

@@ -104,6 +104,58 @@ The revised commercial claim is **"competitive with frontier at fraction of cost
 
 The proxy variants themselves (the `embed-proxy-*` family) are specific to this opportunity. Everything else is general infrastructure.
 
+## The bigger framing: agent systems as statistical systems
+
+The framework's narrowest claim is "a four-stage evaluation pipeline for one AI mechanism at a time." That claim is true and already proven on two opportunities (schema-alignment proxy, real-time graph GC).
+
+The framework's larger claim is more interesting. **An agent system has six measurable dimensions, and this framework is the shape of a tool that treats all six as a statistical system instead of a demo.**
+
+The six dimensions:
+
+1. **Model**: which LLM (or local model) the agent calls, and which size tier
+2. **Prompt**: system prompts, instructions, output-format contracts
+3. **Tools**: which tools the agent can invoke and how it selects and arguments them
+4. **Memory**: what the agent stores, how it canonicalizes, how it prunes
+5. **Execution policy**: how the agent decides the next step (ReAct, plan-and-execute, reflection loops, multi-agent handoff)
+6. **Recovery behavior**: what happens on tool failure, refusal, partial result, retry, fallback
+
+Most AI evaluation today covers one dimension at a time and does so anecdotally. A demo. A single benchmark. A vibes check. The novelty here is not the four stages by themselves. It is the discipline of running the same statistical machinery across every dimension that defines an agent system.
+
+### Current coverage
+
+Honest read on where this framework sits today against the six-dimension claim:
+
+| Dimension | Coverage | What proves it |
+|---|---|---|
+| **1. Model** | **Strong.** | `experiments/ladder_sweep_real_data.py` auto-routes Anthropic / OpenAI / Google / Ollama by prefix. 14 models from 5 providers exercised in the proxy case study. |
+| **2. Prompt** | **Partial.** | The variant abstraction implicitly carries prompt as a variant axis (different prompt = different variant). No first-class `PromptVariant` ABC yet. |
+| **3. Tools** | **Not yet.** | No `ToolVariant`, no tool-selection or tool-failure benchmarks. New work. |
+| **4. Memory** | **Strong.** | The schema-alignment proxy ran all four stages. The graph-GC opportunity has Stage 1 done plus Stage 2 baseline. |
+| **5. Execution policy** | **Not yet.** | No `PolicyVariant` for ReAct vs plan-and-execute vs reflection loops. New work. |
+| **6. Recovery behavior** | **Not yet.** | No `RecoveryVariant`. No retry / fallback / refusal-handling benchmarks. New work. |
+
+Scorecard: 2 strong, 1 partial, 3 not started. The framework today is the seed of the six-dimension evaluation system, not the full thing.
+
+### Why the framework's mechanisms generalize to the other dimensions
+
+Adding the missing dimensions is mechanical, not architectural:
+
+- **The four-stage progression** drops in unchanged. For each dimension: landscape scan, synthetic variants, real-data small-N, substantial-real-data.
+- **The Variant ABC + factory pattern** has been proven twice now (schema alignment, graph GC). `PromptVariant`, `ToolVariant`, `PolicyVariant`, `RecoveryVariant` are the same shape with a different `should_X` decision.
+- **The multi-model ladder** is already model-aware. It runs every prompt / tool / policy / recovery variant across the same ladder for free.
+- **The paired-bootstrap + LORD++ FDR + CI gates** are statistical primitives that do not care which dimension you are testing.
+- **The finding-doc culture** is process, not code. It carries over by writing it.
+
+### Why this framing is directionally novel
+
+Most agent-eval tools live in one of two boxes:
+- **Trace observability** (LangSmith, Langfuse, Arize Phoenix). Records what happened, does not test variants against each other under statistical control.
+- **Single-dimension benchmarks** (Pydantic Evals, Inspect AI, model-only leaderboards). Tests one axis at a time, usually one prompt against one prompt.
+
+The combination this framework is built for, **the same statistical discipline applied across every dimension that defines an agent system**, does not exist as a single tool today. The schema-alignment proxy is one dimension's worth of evidence that the pattern works. The graph-GC pilot is the second. The other four dimensions are wedge-sized openings that this framework's bones are already shaped for.
+
+That is the strategic frame. The framework's value is not "another eval harness." It is "the first shape of a tool that measures an agent system as a statistical system."
+
 ## What the framework found about the schema-alignment proxy
 
 The opportunity is **real but narrow.** After 4 stages of testing:
