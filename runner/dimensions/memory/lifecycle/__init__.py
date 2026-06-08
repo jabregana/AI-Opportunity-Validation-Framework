@@ -10,6 +10,7 @@ from typing import Callable
 from .base import GCVariant, GraphState
 from .b_raw import BRawNoGC
 from .comprehensive import ComprehensiveGC
+from .comprehensive_tuned import ComprehensiveTunedGC
 from .conservative_entity import ConservativeEntityPlusFactGC
 from .conservative_entity_tuned import ConservativeEntityTunedGC
 from .ref_count import FactOnlyGC, RefCountGC, RefCountUtilityGC
@@ -27,6 +28,7 @@ FACTORIES: dict[str, Callable[[], GCVariant]] = {
     "gc-v0.1.5-fact-only-tenant-pinning": FactOnlyTenantPinningGC,
     "gc-v0.1.6-comprehensive": ComprehensiveGC,
     "gc-v0.1.7-conservative-entity-tuned": ConservativeEntityTunedGC,
+    "gc-v0.1.8-comprehensive-tuned": ComprehensiveTunedGC,
 }
 
 
