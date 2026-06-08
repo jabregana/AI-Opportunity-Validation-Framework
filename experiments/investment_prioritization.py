@@ -116,7 +116,7 @@ VARIANT_LIFTS: dict[str, dict] = {
         "baseline": "b-raw-no-gc",
         "source": "finding-gc-differentiated-stage2.md",
         "lift_ci_lo_pp": 80.0, "lift_ci_hi_pp": 90.0,
-        "interaction_note": "Bundle of v0.1.3+v0.1.4+v0.1.5; cross-dim still loses on differentiated workload due to v0.1.4 over-collection inherited; v0.1.7 swap-in is the next iteration.",
+        "interaction_note": "Bundle of v0.1.3+v0.1.4+v0.1.5; superseded by v0.1.8-comprehensive-tuned which swaps v0.1.4 for v0.1.7. Prefer v0.1.8 for any new deployment.",
     },
     "gc-v0.1.7-conservative-entity-tuned": {
         "lift_pp": 84.96,
@@ -301,6 +301,9 @@ def _verdict(
         or "cross-dim still loses" in interaction_note.lower()
     ):
         return "DO-NOT-BUILD", notes + ["Cross-dim says single-dim lift does not survive."]
+
+    if interaction_note and "superseded by" in interaction_note.lower():
+        return "DEFER", notes + ["Superseded variant available; prefer the newer one."]
 
     if interaction_note and ("conditional" in interaction_note.lower()
                              or "fails uc" in interaction_note.lower()):

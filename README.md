@@ -93,6 +93,51 @@ Running this framework on a new opportunity takes about 4 to 6 weeks. You finish
 
 Without the framework, you ship overclaims. Customers tear them apart. You retract publicly. The framework's job is to catch those overclaims before anyone outside sees them.
 
+### DEPLOYABLE-BUNDLE A: Agent Memory Lifecycle Management
+
+The most production-ready product the framework supports today: an **Agent Memory Lifecycle Management** stack built on the GC variants. Deploy this exact configuration in front of your Mem0 / Graphiti / Cognee memory:
+
+```
+Production deployment recipe (Q3 2026):
+
+  Variant:          gc-v0.1.8-comprehensive-tuned
+                    (fact collection + tombstones + tenant pins + tuned entity)
+
+  Sweep cadence:    100 events between sweeps (Pareto-optimal per
+                    finding-gc-cadence-matrix.md; 95.5% tombstone
+                    recovery at 1.88x baseline sweep cost)
+
+  Lifecycle policy: gc-v0.1.8 defaults
+                    - min_age_seconds = 86400 (1 day grace on fact collection)
+                    - tombstone_ttl_seconds = 604800 (7 days tombstone retention)
+                    - min_unaccessed_seconds = 5184000 (60 days for entity demotion)
+                    - min_observation_seconds = 2592000 (30 days observation window)
+                    - min_query_count = 3 (entities with 3+ queries always survive)
+
+  Tenant API:       variant.pin_for_tenant(tenant_id, node_id)
+                    variant.unpin_for_tenant(tenant_id, node_id)
+                    variant.is_pinned_for_any_tenant(node_id)
+
+  Query-time API:   variant.was_recently_collected(node_id, current_time)
+                    (returns True if memory was recently superseded)
+
+Expected outcomes (per finding-gc-stage3-real-text.md):
+  - 80-90% reduction in memory graph size
+  - 100% pinned-entity preservation
+  - 95-100% tombstone recovery at cadence 100
+  - 0% false collection of expected survivors
+  - Sub-millisecond write-path p99 (per finding-gc-stage4-shim.md)
+
+Engineering cost: 3.5 engineer-weeks total
+  (variant in framework; deployment = integration adapter + sweep daemon)
+
+Business value (per business-kpi-mapping-memory-lifecycle.md):
+  $1K-$10K/tenant/month at typical SaaS scale (storage + latency savings)
+  Plus 16-32 engineer-hours/year saved on manual cleanup per deployment
+```
+
+See `docs/synthesis-memory-lifecycle-management.md` for the product-category positioning (Memory Lifecycle Management is the customer-facing pitch; the GC variants are the implementation).
+
 ### The bigger framing
 
 The narrowest claim is "this framework tests one AI mechanism at a time, rigorously." That claim is already proven on two opportunities (schema-alignment proxy and real-time graph GC).
