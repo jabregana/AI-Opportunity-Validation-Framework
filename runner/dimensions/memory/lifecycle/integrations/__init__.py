@@ -15,6 +15,13 @@ Sub-modules:
 from __future__ import annotations
 
 from .base import GCIntegrationShim, IntegrationStats
+from .mem0_adapter import Mem0GCMiddleware, Mem0MemoryRecord
 from .mock import MockGraphStoreShim
 
-__all__ = ["GCIntegrationShim", "IntegrationStats", "MockGraphStoreShim"]
+__all__ = [
+    "GCIntegrationShim",
+    "IntegrationStats",
+    "Mem0GCMiddleware",
+    "Mem0MemoryRecord",
+    "MockGraphStoreShim",
+]
