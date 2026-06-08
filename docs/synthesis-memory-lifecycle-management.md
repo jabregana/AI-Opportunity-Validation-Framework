@@ -1,11 +1,30 @@
 ---
 type: strategic-synthesis
 date: 2026-06-08
-status: PROPOSAL
+status: PARTIALLY-EXECUTED
 supersedes: positioning portions of strategic-framing-decision-tool.md
 ---
 
 # Synthesis: from "Graph GC" to "Agent Memory Lifecycle Management"
+
+## Execution status (2026-06-08)
+
+| Phase | Status | Evidence |
+|---|---|---|
+| Phase 1: Real integrations | **SHIPPED** | Mem0 + Graphiti + Cognee adapters in `runner/dimensions/memory/lifecycle/integrations/`; cross-adapter consistency test in `tests/test_cross_adapter_consistency.py`; smoke test scripts in `experiments/{mem0,graphiti}_smoke_test_real_llm.py`; finding doc `docs/finding-graphiti-adapter-phase2.md` |
+| Phase 1.5: 2000-memory Mem0 smoke | **IN-FLIGHT** | `experiments/mem0_smoke_test_real_llm.py --n-memories 2000` running locally; partial artifact at `runs/mem0_smoke_real_llm/*.partial.json` |
+| Phase 2: Long-running benchmarks | **SCAFFOLDED** | `experiments/gc_long_running_simulation.py` compresses 30/60/90-day churn; first result: 30-day baseline=3020 -> v0.1.8=20 (99.3% reduction) |
+| Phase 3: Retrieval-quality F1 | **SHIPPED + TUNED** | `experiments/gc_retrieval_f1_benchmark.py` (synthetic + SQuAD); per-adapter variants in `experiments/{mem0,graphiti,cognee}_retrieval_f1_benchmark.py`; `compute_retrieval_gate()` in `runner/gc_runner.py` emits UC-GC-RETRIEVAL verdict; tuned trade-off table in `docs/finding-retrieval-f1-scaffold-tuned.md` |
+| Phase 3.5: CI regression gate | **SHIPPED** | `.github/workflows/ci.yml` runs F1 benchmark on every PR; `experiments/ci_check_f1_regression.py` fails CI if any variant drops below 75% F1 preservation |
+| Phase 4: Customer pilot | **NOT STARTED** | Partnership work, blocked on engineering completion |
+
+### What's still measurably missing
+
+1. **Run the per-adapter F1 benchmarks against real downstreams.** Scripts exist but require `pip install graphiti-core` + Neo4j and `pip install cognee` respectively. The Mem0-backed one runs once the 2000-memory smoke finishes (frees up Ollama).
+2. **Real 60-day and 90-day deployments.** The compressed simulation answers "does GC keep up?" but not "does memory quality decay differently after week 8?" That needs a real deployment.
+3. **The customer pilot.** Still the bottleneck the analyst named.
+
+---
 
 This doc responds to substantive analyst feedback that reframes the framework's biggest single commercial opportunity. The reframe is from a research framework to a **product category**: Agent Memory Lifecycle Management.
 
@@ -177,50 +196,58 @@ The analyst's strongest point:
 
 > "Not RefCountGC — anyone can build that. Not FactOnlyGC — anyone can build that too. The defensible layer is: Lifecycle policies + Evaluation harness + Real-world benchmark corpus + Framework integrations. That combination is hard to replicate."
 
-The framework's defensibility today:
+The framework's defensibility today (updated 2026-06-08):
 
-- ✅ Lifecycle policies (8 variants with documented use cases)
-- ✅ Evaluation harness (paired bootstrap, LORD++ FDR, UC-GC-1..5 gates, cross-dim matrix)
-- ⚠️ Real-world benchmark corpus (Twitter Financial News is one corpus; needs more verticals for credibility)
-- ⚠️ Framework integrations (shim ABC + mock; needs real Mem0/Graphiti adapters)
+- DONE: Lifecycle policies (8 variants with documented use cases)
+- DONE: Evaluation harness (paired bootstrap, LORD++ FDR, UC-GC-1..5 + UC-GC-RETRIEVAL gates, cross-dim matrix)
+- DONE: Framework integrations (Mem0 + Graphiti + Cognee adapters, cross-adapter consistency tests, smoke-test scripts)
+- PARTIAL: Real-world benchmark corpus (Twitter Financial News + SQuAD subset; HotpotQA blocked on HF; more verticals = more credibility)
 
-Two of the four defensibility legs are missing. Phase 1 (real integrations) and Phase 2 (long-running) close them.
+Three of the four defensibility legs are now closed. The remaining gap is corpus breadth — every additional vertical reduces the "you only tested it on X" critique.
 
 ## Investor-readability checklist (from the analyst)
 
 The analyst named what they would want to see to call this a product:
 
-| Item | Current state | Gap |
+| Item | Current state (2026-06-08) | Gap |
 |---|---|---|
-| Real Mem0 / Graphiti integrations | Mock + ABC | Build the two concrete shims |
-| Retrieval-quality benchmarks | Entity survival proxy | Replace with F1 on a real retrieval dataset |
-| 30-90 day accumulation studies | 30-day simulated | Run on real Mem0/Graphiti deployment |
-| Clear evidence: lower cost, better retrieval, better agent outcomes | Synthetic cost reduction | Real $$ savings from a real deployment |
+| Real Mem0 / Graphiti integrations | DONE: Mem0 + Graphiti + Cognee adapters with cross-adapter consistency tests | Run all three F1 benchmarks against real downstreams |
+| Retrieval-quality benchmarks | DONE: F1 scaffold + per-adapter benchmarks + UC-GC-RETRIEVAL gate + CI regression guard | Land first real-downstream F1 numbers (Mem0 first) |
+| 30-90 day accumulation studies | SCAFFOLDED: Compressed-time simulator, first 30-day result (99.3% reduction) | Run on real Mem0/Graphiti deployment over real calendar time |
+| Clear evidence: lower cost, better retrieval, better agent outcomes | Synthetic cost reduction + measured F1 preservation trade-off | Real $$ savings from a real deployment |
 | One customer using it in production | None | The pilot |
 
-Five items. Three are bounded engineering (~6-10 engineer-weeks total). Two are partnership work (~8-12 calendar weeks). The technical baseline is in place.
+Five items. Three engineering items are DONE or in-flight. Two partnership items (real-deployment data + customer pilot) remain. The technical baseline is fully in place.
 
-## Recommended sequencing
+## Recommended sequencing — STATUS UPDATE (2026-06-08)
 
-Three concrete deliverables for the next ~6 weeks of engineering work:
+**Weeks 1-2: Mem0 adapter** -- DONE
+- `runner/dimensions/memory/lifecycle/integrations/mem0_adapter.py`
+- Wires `GCIntegrationShim` to Mem0 v2.0.4 API (with v2 search-filter translation)
+- Smoke-test scripts: `experiments/mem0_smoke_test_real_llm.py`; 2000-memory run in flight
 
-**Weeks 1-2: Mem0 adapter** (`runner/dimensions/memory/lifecycle/integrations/mem0.py`)
-- Wires the existing `GCIntegrationShim` contract to actual Mem0 calls
-- Smoke-test deployment on a 10K-memory test corpus
-- First customer-facing demo
+**Weeks 3-4: Graphiti adapter** -- DONE
+- `runner/dimensions/memory/lifecycle/integrations/graphiti_adapter.py`
+- Async-to-sync wrapper via `_run_async()`; episode + node + edge handling
+- 14 adapter tests against `FakeGraphiti`; smoke-test script `experiments/graphiti_smoke_test_real_llm.py`
 
-**Weeks 3-4: Graphiti adapter** (`runner/dimensions/memory/lifecycle/integrations/graphiti.py`)
-- Same shape, different downstream
-- Smoke-test on a Graphiti Neo4j deployment
-- Second customer-facing demo
+**Weeks 3-4 bonus: Cognee adapter** -- DONE (was not in original plan)
+- `runner/dimensions/memory/lifecycle/integrations/cognee_adapter.py`
+- Module-level API (not instance-based); cognify() + add() separation
+- 13 adapter tests against `FakeCognee`
 
-**Weeks 5-6: Retrieval-quality benchmark** (`experiments/gc_retrieval_quality.py`)
-- HotpotQA subset (or equivalent) as ground-truth retrieval test
-- Before / after GC: F1 delta
-- Replaces UC-GC-2's entity-survival proxy with measured F1
-- The credibility-anchor number
+**Weeks 5-6: Retrieval-quality benchmark** -- DONE
+- `experiments/gc_retrieval_f1_benchmark.py` with `--use-squad` flag
+- Per-adapter variants: `experiments/{mem0,graphiti,cognee}_retrieval_f1_benchmark.py`
+- New `compute_retrieval_gate()` in `runner/gc_runner.py` emits UC-GC-RETRIEVAL verdict
+- Bonus: CI regression guard at `experiments/ci_check_f1_regression.py` + `.github/workflows/ci.yml`
 
-After these three, the framework has the integrations, the benchmark, AND the measured-quality story. With one customer pilot on top, the product category is real.
+### What comes next
+
+1. Run `experiments/mem0_retrieval_f1_benchmark.py` once 2000-memory smoke completes
+2. Write `docs/finding-mem0-adapter-real-llm-stage5.md` (the 2000-memory result)
+3. Write `docs/runbook-mem0-v0.1.8-deploy.md` (production deployment guide)
+4. Phase 4: customer pilot conversations
 
 ## How this changes the framework's pitch
 
