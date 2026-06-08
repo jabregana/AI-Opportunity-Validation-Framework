@@ -14,10 +14,20 @@ from typing import Callable
 
 from .base import AgentStep, PolicyVariant
 from .b_noop import SingleShotPolicyVariant
+from .policies import (
+    HandoffPolicyVariant,
+    PlanExecutePolicyVariant,
+    ReActPolicyVariant,
+    ReflectLoopPolicyVariant,
+)
 
 
 FACTORIES: dict[str, Callable[[], PolicyVariant]] = {
     "b-single-shot-policy": SingleShotPolicyVariant,
+    "policy-v0.1.0-react": ReActPolicyVariant,
+    "policy-v0.1.1-plan-execute": PlanExecutePolicyVariant,
+    "policy-v0.1.2-reflect-loop": ReflectLoopPolicyVariant,
+    "policy-v0.1.3-handoff": HandoffPolicyVariant,
 }
 
 
