@@ -132,26 +132,109 @@ class StubLLMClient:
         }
 
 
+class OllamaLLMClient:
+    """Real Ollama LLM client. Calls a locally-running Ollama instance.
+
+    Set `model_name` to one of the locally installed models (run
+    `ollama list` to see). No API key required; Ollama runs locally.
+
+    Per-token "cost" is set to 0 because local inference is free
+    (hardware/electricity not modeled). The framework's strategic
+    framing doc surfaces this as an honest limit.
+    """
+
+    name = "ollama"
+    input_token_rate = 0.0
+    output_token_rate = 0.0
+
+    def __init__(self, model_name: str, host: str = "http://localhost:11434"):
+        self.model_name = model_name
+        self.host = host
+
+    def call(
+        self,
+        prompt: str,
+        tools: list[str],
+        max_output_tokens: int = 256,
+    ) -> dict:
+        import json as _json
+        import urllib.request
+
+        # Build a tool-aware prompt by appending the available tools
+        if tools:
+            full_prompt = (
+                prompt
+                + "\n\nAvailable tools: " + ", ".join(tools[:20])
+                + "\n\nGive a concise final answer."
+            )
+        else:
+            full_prompt = prompt + "\n\nGive a concise final answer."
+
+        req_body = _json.dumps({
+            "model": self.model_name,
+            "prompt": full_prompt,
+            "stream": False,
+            "options": {"num_predict": max_output_tokens},
+        }).encode("utf-8")
+
+        req = urllib.request.Request(
+            self.host + "/api/generate",
+            data=req_body,
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        try:
+            with urllib.request.urlopen(req, timeout=60) as resp:
+                payload = _json.loads(resp.read().decode("utf-8"))
+        except Exception as e:
+            return {
+                "text": f"[ollama error] {e}",
+                "input_tokens": _approx_token_count(full_prompt),
+                "output_tokens": 0,
+                "tool_calls": [],
+                "stopped_on": "error",
+                "completed": False,
+            }
+
+        text = payload.get("response", "")
+        # Heuristic: completed if response is non-empty and not a refusal
+        refusal_signals = ["I cannot", "I can't", "I'm unable",
+                           "I am unable", "as an AI"]
+        non_empty = bool(text.strip())
+        no_refusal = not any(sig in text for sig in refusal_signals)
+        completed = non_empty and no_refusal
+
+        return {
+            "text": text,
+            "input_tokens": payload.get("prompt_eval_count",
+                                       _approx_token_count(full_prompt)),
+            "output_tokens": payload.get("eval_count", 0),
+            "tool_calls": [],
+            "stopped_on": payload.get("done_reason", "stop"),
+            "completed": completed,
+        }
+
+
 def _get_llm_client(model_name: str, for_real: bool):
     """Return an LLM client appropriate for the requested model.
 
-    To wire a real client, populate the for_real branch. The
-    framework's narrative discipline is that we do not silently
-    upgrade from stub to real; the user must opt in.
+    Stub by default. Ollama wired and active for ollama:<model> names.
+    Anthropic / OpenAI wiring documented but not active (no API key
+    handling here).
     """
     if not for_real:
         return StubLLMClient(success_rate=0.70, seed=42)
 
+    if model_name.startswith("ollama:"):
+        ollama_model = model_name.split(":", 1)[1]
+        return OllamaLLMClient(model_name=ollama_model)
     if model_name.startswith("claude-"):
-        # Anthropic client wiring (not active by default)
         raise NotImplementedError(
-            "Real Anthropic client wiring is documented in this file's "
-            "docstring; uncomment to enable."
+            "Real Anthropic client wiring not active. Add `pip install "
+            "anthropic` and instantiate `anthropic.Anthropic()` here."
         )
     if model_name.startswith("gpt-"):
         raise NotImplementedError("OpenAI client wiring not active.")
-    if model_name.startswith("ollama:"):
-        raise NotImplementedError("Ollama client wiring not active.")
     raise NotImplementedError(f"Unknown model: {model_name}")
 
 

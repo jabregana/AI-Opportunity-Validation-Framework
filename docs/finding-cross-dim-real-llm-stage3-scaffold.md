@@ -2,14 +2,38 @@
 type: finding
 opportunity: cross-dimension orchestration
 stage: 3
-status: SCAFFOLD-COMPLETE-AWAITING-API-ACCESS
+status: SCAFFOLD-VERIFIED-WITH-REAL-OLLAMA-LLM
 date: 2026-06-08
-artifact: runs/cross_dim_real_llm_stage3/20260608T085557.json
+artifact: runs/cross_dim_real_llm_stage3/20260608T090847.json
 ---
 
-# Real-LLM Stage 3: scaffold complete, awaiting API budget for real run
+# Real-LLM Stage 3: end-to-end driver verified with phi3:mini via Ollama
 
-This finding documents the **scaffolding** for taking the framework's recommended joint configuration (from [`finding-cross-dim-cost-weighted.md`](finding-cross-dim-cost-weighted.md)) and running it against a real LLM agent loop. The scaffold ships with a stub LLM client and runs end-to-end; **the real-LLM run itself is deferred until API access (and budget) is provisioned.**
+This finding documents the Stage 3 scaffold for taking the framework's recommended joint configuration (from [`finding-cross-dim-cost-weighted.md`](finding-cross-dim-cost-weighted.md)) and running it against a real LLM agent loop. **Update: the Ollama client is now wired and active. A 20-task run with phi3:mini (locally hosted, free) verified the driver end-to-end.** Anthropic and OpenAI client wiring remain stubbed pending API access; Ollama is the active path.
+
+## Smoke-test run on phi3:mini (20 tasks)
+
+| Field | Value |
+|---|---|
+| Model | phi3:mini (3.8B, locally hosted via Ollama) |
+| Config | cot-plus-structured + b-allow-all-tools + fallback-chain |
+| Tasks | 20 |
+| Completion rate (heuristic) | 100% |
+| API calls | 21 (one task triggered a recovery retry) |
+| Input tokens | 3397 |
+| Output tokens | 3021 |
+| Wall time | 19.67 seconds (~1 sec/task) |
+| Estimated cost | $0 (local model) |
+
+**Important honest caveat**: the 100% completion rate is from a lenient heuristic (response non-empty AND no obvious refusal phrases), NOT ground-truth answer checking. The synthetic workload's tasks do not have machine-checkable ground truth (templates like "Find {topic}" with placeholder fillers); a proper Stage 3 validation requires ground-truth-checkable tasks (e.g., math problems with known answers, factual questions with verifiable responses).
+
+What the run DOES verify:
+
+- The `OllamaLLMClient` wiring is correct
+- The recommended config's variants (`cot-plus-structured` + `b-allow-all-tools` + `fallback-chain`) compose correctly through a real agent loop
+- The recovery variant (`fallback-chain`) was exercised once (21 calls for 20 tasks = one recovery)
+- The cost-tracking infrastructure produces sensible numbers (170 input + 150 output tokens per call)
+- Total per-task wall time of ~1 second is feasible for production-shape benchmarks at scale
 
 ## Why this is honest as "Stage 3 scaffold" rather than "Stage 3"
 
@@ -35,15 +59,20 @@ None of these are available in the current execution environment by default. Shi
 
 End-to-end smoke test (with stub) produces a 100% completion rate at zero cost in milliseconds. The wiring is verified.
 
-## To convert this into a real Stage 3 run
+## To convert this into a proper Stage 3 validation run
 
-Three steps:
+The current run validates the driver but does not validate the simulator's quantitative predictions. To do that, two additions are needed:
 
-1. **Install a real LLM client** (`pip install anthropic` or similar)
+1. **Ground-truth-checkable tasks.** Add a `fixtures/workloads/w_real_stage3_tasks.py` with tasks like "What is 7+5?" (ground truth: 12) where a simple substring check on the LLM response gives a meaningful completion signal. The current synthetic workload's template-filled goals do not have machine-checkable answers.
+2. **Multi-config comparison.** Run baseline (single-shot, no recovery) vs recommended (cot-plus-structured + fallback-chain) on the same task set. If the recommended config beats baseline by ~10-20pp on a real LLM, the simulator's qualitative recommendation is validated. If both score the same, the simulator does not discriminate enough.
+
+To wire other LLM providers:
+
+1. **Install a provider client** (`pip install anthropic` or similar)
 2. **Edit `_get_llm_client()` to instantiate the real client** when `for_real=True` and the model name matches the provider's prefix
 3. **Run with `--for-real --model claude-haiku-4-5 --n-tasks 50`**
 
-The driver is designed to fail gracefully if the real-client wiring is incomplete (raises `NotImplementedError` with a clear message) rather than silently downgrading to the stub.
+The driver is designed to fail gracefully if the wiring is incomplete (raises `NotImplementedError` with a clear message) rather than silently downgrading to the stub.
 
 ## What Stage 3 should test (when run)
 
