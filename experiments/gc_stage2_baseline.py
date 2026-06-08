@@ -30,6 +30,9 @@ VARIANT_IDS = [
     "gc-v0.1.0-ref-count",
     "gc-v0.1.1-ref-count-utility",
     "gc-v0.1.2-fact-only",
+    "gc-v0.1.3-fact-only-tombstone",
+    "gc-v0.1.4-conservative-entity-plus-fact",
+    "gc-v0.1.5-fact-only-tenant-pinning",
 ]
 
 

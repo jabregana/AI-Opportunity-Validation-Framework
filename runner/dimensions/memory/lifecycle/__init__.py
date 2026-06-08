@@ -9,7 +9,10 @@ from typing import Callable
 
 from .base import GCVariant, GraphState
 from .b_raw import BRawNoGC
+from .conservative_entity import ConservativeEntityPlusFactGC
 from .ref_count import FactOnlyGC, RefCountGC, RefCountUtilityGC
+from .tenant_pin import FactOnlyTenantPinningGC
+from .tombstone import FactOnlyTombstoneGC
 
 
 FACTORIES: dict[str, Callable[[], GCVariant]] = {
@@ -17,6 +20,9 @@ FACTORIES: dict[str, Callable[[], GCVariant]] = {
     "gc-v0.1.0-ref-count": RefCountGC,
     "gc-v0.1.1-ref-count-utility": RefCountUtilityGC,
     "gc-v0.1.2-fact-only": FactOnlyGC,
+    "gc-v0.1.3-fact-only-tombstone": FactOnlyTombstoneGC,
+    "gc-v0.1.4-conservative-entity-plus-fact": ConservativeEntityPlusFactGC,
+    "gc-v0.1.5-fact-only-tenant-pinning": FactOnlyTenantPinningGC,
 }
 
 
