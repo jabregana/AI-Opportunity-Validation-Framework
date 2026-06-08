@@ -388,6 +388,7 @@ def main():
 
     if args.out:
         out_path = Path(args.out)
+        out_path.parent.mkdir(parents=True, exist_ok=True)
     else:
         ts = time.strftime("%Y%m%dT%H%M%S")
         out_dir = ROOT / "runs" / "gc_retrieval_f1_benchmark"
@@ -411,7 +412,11 @@ def main():
         ),
     }
     out_path.write_text(json.dumps(artifact, indent=2))
-    print(f"Artifact: {out_path.relative_to(ROOT)}")
+    try:
+        display_path = out_path.relative_to(ROOT)
+    except ValueError:
+        display_path = out_path
+    print(f"Artifact: {display_path}")
 
 
 if __name__ == "__main__":
