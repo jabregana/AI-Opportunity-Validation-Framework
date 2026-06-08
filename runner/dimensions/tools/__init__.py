@@ -18,10 +18,14 @@ from typing import Callable
 
 from .base import ToolCall, ToolVariant
 from .b_noop import AllowAllToolVariant
+from .budget_bucketed import BudgetBucketedToolVariant
+from .intent_classified import IntentClassifiedToolVariant
 
 
 FACTORIES: dict[str, Callable[[], ToolVariant]] = {
     "b-allow-all-tools": AllowAllToolVariant,
+    "tool-v0.1.0-budget-bucketed": BudgetBucketedToolVariant,
+    "tool-v0.1.1-intent-classified": IntentClassifiedToolVariant,
 }
 
 
