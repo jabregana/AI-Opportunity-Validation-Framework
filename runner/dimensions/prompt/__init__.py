@@ -13,10 +13,22 @@ from typing import Callable
 
 from .base import PromptVariant
 from .b_noop import DefaultPromptVariant
+from .strategies import (
+    CoTPromptVariant,
+    CoTStructuredPromptVariant,
+    DirectStructuredPromptVariant,
+    FewShot1PromptVariant,
+    FewShot3PromptVariant,
+)
 
 
 FACTORIES: dict[str, Callable[[], PromptVariant]] = {
     "b-default-prompt": DefaultPromptVariant,
+    "prompt-v0.1.0-cot": CoTPromptVariant,
+    "prompt-v0.1.1-direct-structured": DirectStructuredPromptVariant,
+    "prompt-v0.1.2-few-shot-1": FewShot1PromptVariant,
+    "prompt-v0.1.3-few-shot-3": FewShot3PromptVariant,
+    "prompt-v0.1.4-cot-plus-structured": CoTStructuredPromptVariant,
 }
 
 
