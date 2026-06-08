@@ -18,7 +18,7 @@ Ran `experiments/mem0_retrieval_f1_benchmark.py` against real Mem0 (Ollama phi3:
 | n=50  | 50 | 198 | 52.0% | 0.323 | 0.264 | **81.6%** | PASS |
 | n=200 | 200 | 803 | 43.7% | 0.306 | 0.250 | **81.8%** | PASS |
 
-The n=50 estimate is well-calibrated — 4x the sample size gave essentially the same number. The 80% UC-GC-RETRIEVAL threshold is calibrated to real-world conditions: comfortably passing, not aspirationally easy.
+The n=50 estimate is well-calibrated; 4x the sample size gave essentially the same number. The 80% UC-GC-RETRIEVAL threshold is calibrated to real-world conditions: comfortably passing, not aspirationally easy.
 
 This is the credibility-anchor number with a real retrieval pipeline. Combined with the 98.4% reduction from `finding-mem0-adapter-real-llm-stage5.md`, the Mem0 deployment story is now: measured store reduction, measured retrieval quality, replicated at two sample sizes.
 
@@ -60,17 +60,17 @@ This is the credibility-anchor number with a real retrieval pipeline. Combined w
 | Add cost (50 contexts) | 380.6 s |
 | Add latency | 7.61 s/add |
 
-The 0.2pp delta between n=50 and n=200 estimates is well within bootstrap noise — the experiment is replicable.
+The 0.2pp delta between n=50 and n=200 estimates is well within bootstrap noise; the experiment is replicable.
 
 ## Reading the numbers
 
-**Baseline F1 of 0.323 looks low at first glance.** It is — but not because GC. Mem0's LLM extraction rewrites each SQuAD context into a third-person fact (e.g., "User recalled that the Bears beat the Patriots 46-10 in Super Bowl XX"), which often does not lexically match the SQuAD question phrasing ("Who won Super Bowl XX?"). The retrieval-quality ceiling is bounded by extraction quality, not by the GC variant.
+**Baseline F1 of 0.323 looks low at first glance.** It is, but not because of GC. Mem0's LLM extraction rewrites each SQuAD context into a third-person fact (e.g., "User recalled that the Bears beat the Patriots 46-10 in Super Bowl XX"), which often does not lexically match the SQuAD question phrasing ("Who won Super Bowl XX?"). The retrieval-quality ceiling is bounded by extraction quality, not by the GC variant.
 
-**Recall drops more than precision after sweep** (0.703 -> 0.446 vs 0.257 -> 0.227). The sweep removes both relevant and irrelevant memories proportionally — but because the absolute number of relevant memories is small, losing some hits recall harder than losing irrelevant ones hurts precision. This is the expected shape; a future precision/recall trade-off setting could prefer recall preservation at the cost of more aggressive false-positive filtering.
+**Recall drops more than precision after sweep** (0.703 -> 0.446 vs 0.257 -> 0.227). The sweep removes both relevant and irrelevant memories proportionally, but because the absolute number of relevant memories is small, losing some hits recall harder than losing irrelevant ones hurts precision. This is the expected shape; a future precision/recall trade-off setting could prefer recall preservation at the cost of more aggressive false-positive filtering.
 
 **81.6% preservation is at the floor** of the UC-GC-RETRIEVAL gate (80%). A tighter floor would have failed this configuration; a looser one would have been easy. Sitting near the threshold is a sign the gate is calibrated to real-world conditions rather than aspirational.
 
-**52% reduction (not the 98% from the 2000-input smoke).** Smaller workloads have less memory churn — most of the 198 memories were "young" because they were added within the last few minutes. Only the 40% explicitly backdated subset crossed `min_age_seconds=86400`. The 2000-input run reached steady-state where most memories had naturally aged out; the F1 run shows the early-life behavior. Both numbers are useful for different deployment phases.
+**52% reduction (not the 98% from the 2000-input smoke).** Smaller workloads have less memory churn: most of the 198 memories were "young" because they were added within the last few minutes. Only the 40% explicitly backdated subset crossed `min_age_seconds=86400`. The 2000-input run reached steady-state where most memories had naturally aged out; the F1 run shows the early-life behavior. Both numbers are useful for different deployment phases.
 
 ## The fix that made this work
 
@@ -88,12 +88,12 @@ if filters:
     kwargs["filters"] = filters
 ```
 
-This translation was described in the synthesis plan as "done" in an earlier session but never actually committed. The bug was invisible because the test suite's `FakeMem0` was too permissive — it accepted both `search(query, user_id=...)` and `search(query, filters={...})`, masking the issue.
+This translation was described in the synthesis plan as "done" in an earlier session but never actually committed. The bug was invisible because the test suite's `FakeMem0` was too permissive: it accepted both `search(query, user_id=...)` and `search(query, filters={...})`, masking the issue.
 
 A regression test was added in `tests/test_mem0_adapter.py` using a strict `_FakeMem0V2Strict` that mimics the real Mem0 v2 error. Three new tests:
-- `test_search_translates_top_level_user_id_to_filters` — the regression itself
-- `test_search_passes_filters_dict_through_unchanged` — backward compat
-- `test_search_merges_top_level_and_filters` — both shapes interop
+- `test_search_translates_top_level_user_id_to_filters`: the regression itself
+- `test_search_passes_filters_dict_through_unchanged`: backward compat
+- `test_search_merges_top_level_and_filters`: both shapes interop
 
 Total tests: 470 -> 473.
 

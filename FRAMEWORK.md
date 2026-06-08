@@ -130,7 +130,7 @@ Honest read on where this framework sits today against the six-dimension claim:
 | **1. Model** | **Strong.** | `experiments/ladder_sweep_real_data.py` auto-routes Anthropic / OpenAI / Google / Ollama by prefix. 14 models from 5 providers exercised in the proxy case study. |
 | **2. Prompt** | **Stage 2 baseline PASS.** | Pilot variants `prompt-v0.1.0-cot`, `prompt-v0.1.2-few-shot-1`, and `prompt-v0.1.4-cot-plus-structured` pass all 4 UC-PROMPT gates against `b-default-prompt` baseline. Best: cot-plus-structured (+10.50pp completion at 1.32x cost). `prompt-v0.1.3-few-shot-3` fails UC-PROMPT-2 (2.09x cost) and `prompt-v0.1.1-direct-structured` fails UC-PROMPT-1 (+2.5pp insufficient). See `docs/finding-prompt-stage2-baseline.md`. |
 | **3. Tools** | **Stage 2 v0.1.2 revision (still PARTIAL-PASS).** | `tool-v0.1.2-intent-plus-helper` improves recall (83.92% to 89.82%) but still 0.18pp short of UC-TOOL-3, and trades precision down to 16% (UC-TOOL-2 now also fails). Cross-dim still negative (joint config 31% < baseline 37%). See `docs/finding-tools-v0.1.2-revision.md`. v0.1.3 should attempt embedding-based classifier; keyword mechanism appears to have a ~90% recall ceiling on this workload. |
-| **4. Memory** | **Strong.** | The schema-alignment proxy ran all four stages. The graph-GC opportunity has Stages 1, 2 (PASS), 3 (PASS), and 4 (ARCHITECTURAL-PASS) complete. Both case studies live under `dimensions/memory/canonicalization/` and `dimensions/memory/lifecycle/` (backward-compat shims at the old paths). The graph-GC opportunity also ships an integration-shim contract at `dimensions/memory/lifecycle/integrations/` for hooking the variant into any downstream framework (Graphiti / Mem0 / Cognee) via a 150-line adapter. |
+| **4. Memory** | **Strong.** | The schema-alignment proxy ran all four stages. The graph-GC opportunity has Stages 1, 2 (PASS), 3 (PASS), 4 (ARCHITECTURAL-PASS), and 5 (VALIDATED ON REAL ADAPTER) complete. Stage 5 shipped Mem0, Graphiti, and Cognee adapters as real code (not just shims), plus measured retrieval-F1 preservation on the Mem0 adapter at n=50 and n=200 (both PASS the UC-GC-RETRIEVAL gate). The 2000-input smoke shows 98.4% steady-state reduction; F1 preservation is 81.6%-81.8% at 44%-52% reduction. The path between "stage 5 validated" and "customer-validated in production" is exactly one pilot deployment (see `docs/synthesis-memory-lifecycle-management.md`). |
 | **5. Execution policy** | **Stage 2 baseline PARTIAL-PASS.** | `policy-v0.1.3-handoff` passes all 4 UC-POLICY gates (+19.25pp completion at 1.32x cost). The richer multi-step variants (react, plan-execute, reflect-loop) lift completion by +20-29pp but fail UC-POLICY-2 (cost) and UC-POLICY-4 (latency). `plan-execute` is conditional second pick for cost-tolerant deployments. See `docs/finding-policy-stage2-baseline.md`. Stage 3 should run across the multi-model ladder to produce the model x policy interaction table. |
 | **6. Recovery behavior** | **Stage 3 ROBUST-PASS (sensitivity).** | Stages 1, 2, and 3-sensitivity all complete. Both pilot variants pass all four UC-REC gates across five probability tables (optimistic, pessimistic, small-model, large-model, hostile); the variant ranking `fallback-chain > retry > baseline` is stable across all tables. See `docs/finding-recovery-stage3-sensitivity.md`. Real-LLM-trace Stage 3 (replace simulation table with measured probabilities) is the next iteration. |
 
@@ -152,7 +152,15 @@ The framework runs **cross-dimension experiments** that walk scenarios through o
 
 ### Strategic positioning: from research framework to decision tool
 
-An analyst review reshaped how this framework should be positioned. The framework excels at mechanism evaluation + statistical effect size; it does NOT yet provide engineering-cost estimates or business-KPI overlays. The strongest future version connects all four layers. See [`docs/strategic-framing-decision-tool.md`](docs/strategic-framing-decision-tool.md) for the concrete proposals (engineering-cost fields per variant, business-KPI mapping docs per opportunity, investment-prioritization tool, per-audience report templates, reframed README/FRAMEWORK). The cost-weighted matrix experiment is the first step in that direction; the rest is the next iteration.
+An analyst review reshaped how this framework should be positioned. The framework excels at mechanism evaluation + statistical effect size. The earlier version of this section called out engineering-cost estimates and business-KPI overlays as gaps. **Both now exist:**
+
+- **Engineering-cost fields per variant**: `runner/variant_costs.py` ships eng-week and lift-per-week estimates for every variant in the registry. The investment-prioritization tool (`experiments/investment_prioritization.py`) consumes these to produce ranked FUND-NOW / DEFER / DO-NOT-BUILD verdicts.
+- **Business-KPI overlays per dimension**: seven `docs/business-kpi-mapping-*.md` files (canonicalization, lifecycle, model, policy, prompt, recovery, tools) each translate UC-gate metrics into the customer-visible KPI that pays for the variant (token spend, completion rate, p99 latency, eng-hours saved).
+- **Synthesis plan**: `docs/synthesis-memory-lifecycle-management.md` connects the lifecycle work to a four-phase product roadmap with explicit completion status per phase.
+
+What is STILL missing: a customer pilot that converts those estimates into measured business outcomes. The framework can produce defensible go/no-go decisions today; the conversion from "research asset" to "commercial product" requires one external team to run a recommended bundle in production for 30 days and report their actual storage savings, latency change, and any incidents. That gap is named explicitly in the README's "Honest gaps" section and in the synthesis plan's Phase 4.
+
+Earlier strategic-positioning proposals (per-audience report templates, README/FRAMEWORK reframe) have been substantially executed. See [`docs/strategic-framing-decision-tool.md`](docs/strategic-framing-decision-tool.md) for the original framing.
 
 ### Why the framework's mechanisms generalize to the other dimensions
 
@@ -241,8 +249,20 @@ That is what the framework is worth. The schema-alignment proxy was the first op
             Framework catches its own overclaim
             |
 2026-06-07  This doc: framework narrative reframe
+            |
+2026-06-08  Memory lifecycle (graph GC) opportunity productized:
+              Mem0 adapter + Graphiti adapter + Cognee adapter
+              (real code, not just shims). Cross-adapter
+              consistency test, integration-shim ABC.
+              Real-Mem0 smoke: 2000 inputs, 98.4% reduction.
+              Real-Mem0 F1: 81.6% (n=50) + 81.8% (n=200), both PASS.
+              UC-GC-RETRIEVAL gate added.
+              Production runbook (docs/runbook-mem0-v0.1.8-deploy.md).
+              CI regression gate (.github/workflows/ci.yml).
+              README reframed around two opportunities (entity-norm
+              + memory lifecycle) + their commercialization status.
 ```
 
-The dates are real. The framework took about 48 hours of focused work to apply end-to-end. Each stage produced concrete artifacts. The negative-result discipline at the end is what makes the project credible.
+The dates are real. The framework took about 72 hours of focused work to apply end-to-end across two opportunities. Each stage produced concrete artifacts. The negative-result discipline plus the self-correction (Stage 3 -> Stage 4 ranking flip on the entity-norm proxy) plus the productization at Stage 5 of the lifecycle opportunity is what makes the project credible.
 
-That is the work. The proxy is the first case study. The framework is the asset.
+That is the work. The proxy is the first case study. The memory lifecycle is the second, currently the more-commercializable. The framework is the asset.

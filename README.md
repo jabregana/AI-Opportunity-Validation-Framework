@@ -10,7 +10,7 @@ This framework inserts four tests **before** the customer sees anything:
 idea -> kill test -> synthetic validation -> small-N real data -> substantial-N real data -> deployment recommendation
 ```
 
-Each test catches errors the previous one missed. Most opportunities die at one of the earlier stages, which is the point. The ones that survive arrive at the customer pre-corrected, with a deployment recipe and a measured business outcome the team can defend.
+Each test catches errors the previous one missed. Most opportunities die at one of the earlier stages, which is the point. The ones that survive arrive at the customer pre-corrected, with a deployment recipe, measured technical numbers (store reduction, F1 preservation, p99 latency, false-collection rate), and a business-outcome translation built on top of those numbers. The translation stays an estimate until a customer reports their own outcomes from a production deployment; the technical numbers are real measurements from real runs.
 
 The framework is the durable asset. The individual opportunities tested through it are the case studies that show it works.
 
@@ -49,7 +49,7 @@ Sits in front of Mem0, Graphiti, or Cognee. Intercepts entity writes, vector-mat
 
 ### Opportunity 2: Agent Memory Lifecycle Management (graph GC)
 
-Sits behind Mem0, Graphiti, or Cognee. Sweeps stale facts, preserves entities, tracks tombstones for over-collection recovery, supports per-tenant pinning. Eight production-ready policy variants. Drop-in middleware around any of the three frameworks.
+Sits behind Mem0, Graphiti, or Cognee. Sweeps stale facts, preserves entities, tracks tombstones for over-collection recovery, supports per-tenant pinning. Eight deployment-shaped policy variants (passed all UC gates on synthetic + real-text workloads; pending one customer pilot for production-validated status). Drop-in middleware around any of the three frameworks.
 
 ## Results: what each produced
 

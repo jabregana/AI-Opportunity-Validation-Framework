@@ -42,7 +42,7 @@ Five lifecycle states, each with a deterministic policy:
 
 | State | Today (GC framework) | Lifecycle Management framing |
 |---|---|---|
-| Created | The downstream framework (Mem0, Graphiti, Cognee) writes a node | Acknowledged but not policy-controlled by us |
+| Created | The downstream framework (Mem0, Graphiti, Cognee) writes a node | Acknowledged but not policy-controlled by the framework |
 | Promoted | Pinning (state.pinned + tenant_pins) | "Mark as important" API surface |
 | Retained | All v0.1.2+ variants preserve facts with edges + entities | Default policy: keep what's referenced |
 | Demoted | Tombstone log (v0.1.3+) preserves metadata after collection | "Move to cold storage; queries return tombstone" |
@@ -79,12 +79,12 @@ Four concrete phases, in the analyst's recommended sequence:
 ### Phase 1: Real integrations (highest ROI)
 
 Today the project has:
-- `runner/dimensions/memory/lifecycle/integrations/base.py` — `GCIntegrationShim` ABC
-- `runner/dimensions/memory/lifecycle/integrations/mock.py` — Reference implementation
+- `runner/dimensions/memory/lifecycle/integrations/base.py`: `GCIntegrationShim` ABC
+- `runner/dimensions/memory/lifecycle/integrations/mock.py`: Reference implementation
 
 What the analyst correctly flags as missing:
-- `runner/dimensions/memory/lifecycle/integrations/mem0.py` — Actual Mem0 adapter
-- `runner/dimensions/memory/lifecycle/integrations/graphiti.py` — Actual Graphiti adapter
+- `runner/dimensions/memory/lifecycle/integrations/mem0.py`: Actual Mem0 adapter
+- `runner/dimensions/memory/lifecycle/integrations/graphiti.py`: Actual Graphiti adapter
 
 Effort estimate: 1-2 engineer-weeks per concrete shim (contract already designed; just need to wire to the downstream framework's actual API). The Graphiti adapter probably issues Cypher queries; the Mem0 adapter probably intercepts `add()` / `update()` / `search()`.
 
@@ -106,7 +106,7 @@ Expected output: three line graphs showing memory growth without GC (exponential
 
 ### Phase 3: Real retrieval-quality metrics (the critical gap)
 
-Today: GC's UC gates use `entity survival` (UC-GC-2) as a proxy for "did we keep what matters." The Stage 3 finding doc explicitly says this needs to become actual retrieval F1.
+Today: GC's UC gates use `entity survival` (UC-GC-2) as a proxy for "did the framework keep what matters." The Stage 3 finding doc explicitly says this needs to become actual retrieval F1.
 
 What's needed:
 - A retrieval-quality benchmark with known ground truth (e.g., HotpotQA-shape: "what is X's role at company Y?" with known correct memory)
@@ -203,7 +203,7 @@ The framework's defensibility today (updated 2026-06-08):
 - DONE: Framework integrations (Mem0 + Graphiti + Cognee adapters, cross-adapter consistency tests, smoke-test scripts)
 - PARTIAL: Real-world benchmark corpus (Twitter Financial News + SQuAD subset; HotpotQA blocked on HF; more verticals = more credibility)
 
-Three of the four defensibility legs are now closed. The remaining gap is corpus breadth — every additional vertical reduces the "you only tested it on X" critique.
+Three of the four defensibility legs are now closed. The remaining gap is corpus breadth: every additional vertical reduces the "you only tested it on X" critique.
 
 ## Investor-readability checklist (from the analyst)
 
@@ -219,7 +219,7 @@ The analyst named what they would want to see to call this a product:
 
 Five items. Three engineering items are DONE or in-flight. Two partnership items (real-deployment data + customer pilot) remain. The technical baseline is fully in place.
 
-## Recommended sequencing — STATUS UPDATE (2026-06-08)
+## Recommended sequencing (STATUS UPDATE 2026-06-08)
 
 **Weeks 1-2: Mem0 adapter** -- DONE
 - `runner/dimensions/memory/lifecycle/integrations/mem0_adapter.py`
@@ -265,7 +265,7 @@ The decision-making framework is the engine. Memory Lifecycle Management is the 
 
 - Strategic positioning (prior): `docs/strategic-framing-decision-tool.md`
 - Architecture: `docs/six-dimensions-architecture.md`
-- GC variant lineup (8 production-ready policies): `runner/dimensions/memory/lifecycle/`
+- GC variant lineup (8 deployment-shaped policies, pending customer pilot for production-validated status): `runner/dimensions/memory/lifecycle/`
 - Integration shim contract: `runner/dimensions/memory/lifecycle/integrations/base.py`
 - Business-KPI mapping (already partially closes the analyst's gap): `docs/business-kpi-mapping-memory-lifecycle.md`
 - Investment tool (already produces ROI rankings): `experiments/investment_prioritization.py`

@@ -74,7 +74,7 @@ Three knobs matter:
 from runner.dimensions.memory.lifecycle.gc_v018 import ComprehensiveTunedGC
 
 variant = ComprehensiveTunedGC(
-    min_age_seconds=86400,      # 1 day — memories must be at least this old to be collected
+    min_age_seconds=86400,      # 1 day, memories must be at least this old to be collected
     min_query_count=2,          # Entities need >=2 queries to count as "useful"
 )
 ```

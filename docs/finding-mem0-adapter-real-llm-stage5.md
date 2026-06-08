@@ -11,7 +11,7 @@ artifact: runs/mem0_smoke_real_llm/20260608T110926.final.json
 
 ## TL;DR
 
-Ran the Mem0 adapter end-to-end on 2,000 SQuAD-style inputs through Ollama (phi3:mini + all-minilm) with `gc-v0.1.8-comprehensive-tuned` swept every 100 adds. Mem0's LLM extraction amplified the 2,000 inputs into **3,363 actual memories** (1.68x). The variant collected **3,308 of them (98.4% reduction)**, leaving **55 alive at the end**. The store oscillated in a clean sawtooth between ~50 surviving and ~250-320 pre-sweep — exactly the steady-state behavior the runbook predicts.
+Ran the Mem0 adapter end-to-end on 2,000 SQuAD-style inputs through Ollama (phi3:mini + all-minilm) with `gc-v0.1.8-comprehensive-tuned` swept every 100 adds. Mem0's LLM extraction amplified the 2,000 inputs into **3,363 actual memories** (1.68x). The variant collected **3,308 of them (98.4% reduction)**, leaving **55 alive at the end**. The store oscillated in a clean sawtooth between ~50 surviving and ~250-320 pre-sweep, exactly the steady-state behavior the runbook predicts.
 
 This is the first end-to-end result with a real downstream + real LLM extraction. It confirms three things:
 
@@ -50,7 +50,7 @@ Every sweep (after every 100 adds) showed the same pattern: the store had grown 
 | 16 | 1600 | 323 | 261 | 62 |
 | 20 | 2000 | 211 | 156 | 55 |
 
-The "post-sweep" column is the steady-state working set. It does not grow over the run — this is the property the runbook claims and this test confirms.
+The "post-sweep" column is the steady-state working set. It does not grow over the run; this is the property the runbook claims and this test confirms.
 
 ## What the result means
 
@@ -58,7 +58,7 @@ The "post-sweep" column is the steady-state working set. It does not grow over t
 
 **For the variant:** v0.1.8 holds the working set bounded under real LLM-driven memory growth. The 1.68x amplification (LLM extracts more facts than the input has) is a real risk for any Mem0 production deployment without GC. With GC, the store reaches steady-state in the first few sweeps and never grows beyond ~320.
 
-**For sweep cadence:** at `sweep_every=100`, sweep cost ranged from 0.067 to 0.172 seconds. That's 6 to 16 millisecond per pre-sweep memory — sub-linear because most of the cost is the iteration, not per-memory work. A team running 10x larger stores could safely sweep less often without changing the cost shape.
+**For sweep cadence:** at `sweep_every=100`, sweep cost ranged from 0.067 to 0.172 seconds. That's 6 to 16 millisecond per pre-sweep memory, sub-linear because most of the cost is the iteration, not per-memory work. A team running 10x larger stores could safely sweep less often without changing the cost shape.
 
 **For p99 latency:** the add p99 of 13.07s is Ollama+phi3:mini, not the adapter. The adapter's own overhead is unmeasurable in the artifact (sweep cost is 100x smaller than add cost).
 
@@ -70,9 +70,9 @@ The "post-sweep" column is the steady-state working set. It does not grow over t
 
 ## What this changes
 
-This result moves the Mem0 adapter from "tested against a FakeMem0" (stage 3) and "tested with 5-100 real memories" (stage 4) to "tested at production-realistic scale with real LLM extraction" (stage 5). Combined with the runbook (`docs/runbook-mem0-v0.1.8-deploy.md`), the Mem0 deployment path is now defensible to a customer.
+This result moves the Mem0 adapter from "tested against a FakeMem0" (stage 3) and "tested with 5-100 real memories" (stage 4) to "tested at production-realistic scale with real LLM extraction" (stage 5). Combined with the runbook (`docs/runbook-mem0-v0.1.8-deploy.md`), the Mem0 deployment path is now documented, reproducible by an external team, and ready to take to a customer conversation. The conversion from "ready to discuss" to "customer-validated in production" requires Phase 4 (one external team running the bundle in production for 30 days and reporting their actual outcomes), which has not happened yet.
 
-The 98.4% reduction number is the headline. It's the analyst's "credibility anchor" — a measured, reproducible, single-run number that a customer can verify by re-running the smoke test.
+The 98.4% reduction number is the headline. It's the analyst's "credibility anchor": a measured, reproducible, single-run number that a customer can verify by re-running the smoke test.
 
 ## Pointers
 
