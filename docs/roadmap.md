@@ -44,11 +44,11 @@ The roadmap covers both.
 
 ### 6. Apply the framework to a second AI/ML opportunity (Path B, the meta-value)
 **Why.** The framework's durability is unproven until it is applied to a second opportunity. Candidates:
-- **Agent reasoning verification.** Trace-based audit of multi-step agent decisions. Niche 2 from the original landscape scan, now partially closed by Neo4j Agent Memory but still has form-factor angles.
-- **Real-time graph GC.** Niche 3 from the original scan, still open per the original verification.
+- **Real-time graph GC.** Niche 3 from the original scan. **Stage 1 done.** See [`opportunity-graph-gc.md`](opportunity-graph-gc.md). Surveyed Java GC plus modern architectures (BEAM, Rust, region-based). Recommended wedge: reference-counted write-path GC middleware (Wedge A). Stage 2 baseline is about 4-5 days of work.
+- **Agent reasoning verification.** Trace-based audit of multi-step agent decisions. Niche 2 from the original landscape scan, now partially closed by Neo4j Agent Memory but still has form-factor angles. Stage 1 not yet done.
 - **A new opportunity not yet scoped.** Structured-output validation, prompt-injection defenses, multi-modal entity normalization, anything you want.
 
-**Cost.** 4 to 6 weeks per opportunity for a complete four-stage evaluation.
+**Cost.** 4 to 6 weeks per opportunity for a complete four-stage evaluation. Stage 1 alone is 1-3 days.
 **Output.** A second case study applying the same framework. Two case studies establish a pattern.
 
 ## Long-term (3+ months)
