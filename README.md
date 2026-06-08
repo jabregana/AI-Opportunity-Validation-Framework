@@ -1,4 +1,4 @@
-# ai-wedge-harness
+# AI Opportunity Validation Framework
 
 **A process for testing whether an AI or ML opportunity is actually worth building.**
 
