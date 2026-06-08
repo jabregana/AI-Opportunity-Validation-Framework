@@ -14,10 +14,14 @@ from typing import Callable
 
 from .base import Failure, RecoveryAction, RecoveryVariant
 from .b_noop import AbortOnFailureVariant
+from .fallback import FallbackChainVariant
+from .retry import RetryWithBackoffVariant
 
 
 FACTORIES: dict[str, Callable[[], RecoveryVariant]] = {
     "b-abort-on-failure": AbortOnFailureVariant,
+    "recovery-v0.1.0-retry-with-backoff": RetryWithBackoffVariant,
+    "recovery-v0.1.1-fallback-chain": FallbackChainVariant,
 }
 
 
