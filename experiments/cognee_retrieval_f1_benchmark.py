@@ -246,32 +246,6 @@ def main():
         out_dir.mkdir(parents=True, exist_ok=True)
         out_path = out_dir / f"{ts}.json"
 
-    raw = {
-        "experiment": "Real-Cognee retrieval F1 benchmark",
-        "n_pairs": args.n_pairs,
-        "aged_fraction": args.aged_fraction,
-        "backdate_days": args.backdate_days,
-        "variant": args.variant,
-        "min_age_seconds": args.min_age_seconds,
-        "n_records_before_sweep": n_before_sweep,
-        "n_removed": n_removed,
-        "n_remaining": len(mw._records),
-        "reduction_pct": reduction_pct,
-        "add_seconds": add_seconds,
-        "sweep_seconds": sweep_seconds,
-        "before": {
-            "precision": before.avg_precision,
-            "recall": before.avg_recall,
-            "f1": before.avg_f1,
-        },
-        "after": {
-            "precision": after.avg_precision,
-            "recall": after.avg_recall,
-            "f1": after.avg_f1,
-        },
-        "uc_gc_retrieval_gate": gate,
-    }
-    # Standardized dimension artifact (schema v1)
     from runner.artifacts import emit_dimension_artifact
     emit_dimension_artifact(
         opportunity="memory_lifecycle",
@@ -308,7 +282,6 @@ def main():
         environment={
             "min_age_seconds": args.min_age_seconds,
         },
-        raw=raw,
         out_path=out_path,
     )
     try:

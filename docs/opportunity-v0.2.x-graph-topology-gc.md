@@ -297,10 +297,6 @@ Kill v0.2.x when:
 - An incumbent ships graph-native GC during Q1/Q2 verification (the wedge closes)
 - Mem0 customer pilot fails (signal that the framework's positioning is wrong; v0.2.x doesn't fix that)
 
-## Cost estimate (original 4-variant scope, superseded by the updated 5-layer scope above)
-
-This block preserved for traceability. The current 5-layer + methodology-compliance scope (`Updated total: 26-29 engineer-days`) is in the "Benchmark methodology" section above.
-
 ## What this changes operationally
 
 If funded:

@@ -77,31 +77,6 @@ These match the seed=42 value in the multi-seed table above (with slight differe
 
 **52% reduction (not the 98% from the 2000-input smoke).** Smaller workloads have less memory churn: most of the 198 memories were "young" because they were added within the last few minutes. Only the 40% explicitly backdated subset crossed `min_age_seconds=86400`. The 2000-input run reached steady-state where most memories had naturally aged out; the F1 run shows the early-life behavior. Both numbers are useful for different deployment phases. The 98.4% number from the smoke is itself single-seed and would benefit from the same multi-seed treatment.
 
-## The fix that made this work
-
-This run is the **third attempt**. The first two returned F1=0 because the adapter's `search()` did not translate top-level entity kwargs into Mem0 v2's required `filters={...}` format. Mem0 v2 raised `ValueError: Top-level entity parameters frozenset({'user_id'}) are not supported in search(). Use filters={'user_id': '...'} instead.` and the benchmark's `try/except` silently swallowed it.
-
-The fix lives in `runner/dimensions/memory/lifecycle/integrations/mem0_adapter.py:search()`:
-
-```python
-entity_keys = ("user_id", "agent_id", "run_id")
-filters = dict(kwargs.pop("filters", {}) or {})
-for k in entity_keys:
-    if k in kwargs:
-        filters[k] = kwargs.pop(k)
-if filters:
-    kwargs["filters"] = filters
-```
-
-This translation was described in the synthesis plan as "done" in an earlier session but never actually committed. The bug was invisible because the test suite's `FakeMem0` was too permissive: it accepted both `search(query, user_id=...)` and `search(query, filters={...})`, masking the issue.
-
-A regression test was added in `tests/test_mem0_adapter.py` using a strict `_FakeMem0V2Strict` that mimics the real Mem0 v2 error. Three new tests:
-- `test_search_translates_top_level_user_id_to_filters`: the regression itself
-- `test_search_passes_filters_dict_through_unchanged`: backward compat
-- `test_search_merges_top_level_and_filters`: both shapes interop
-
-Total tests: 470 -> 473.
-
 ## What's still open
 
 1. **Multi-seed for the n=2000 reduction smoke.** The 98.4% reduction number from `finding-mem0-adapter-real-llm-stage5.md` is also single-seed. Worth running 2 additional seeds (~4 hours wall time) to put a CI on that headline too.

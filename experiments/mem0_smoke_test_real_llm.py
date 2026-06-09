@@ -285,33 +285,11 @@ def main():
 
     out_path = (Path(args.out) if args.out
                 else checkpoint_dir / f"{ts}.final.json")
-    raw = {
-        "experiment": "real-Mem0 smoke test (Phase 1)",
-        "n_memories_attempted": args.n_memories,
-        "n_memories_actually_added": total_added,
-        "n_swept": n_swept,
-        "setup_seconds": setup_seconds,
-        "total_wall_seconds": total_wall,
-        "config": {
-            "llm_model": args.llm_model,
-            "embed_model": args.embed_model,
-            "variant": args.variant,
-            "sweep_every": args.sweep_every,
-        },
-        "add_latency_p50": add_latencies[len(add_latencies)//2] if add_latencies else None,
-        "add_latency_p99": add_latencies[min(len(add_latencies)-1, int(0.99*len(add_latencies)))] if add_latencies else None,
-        "add_latency_avg": sum(add_latencies)/len(add_latencies) if add_latencies else None,
-        "sweep_log": sweep_log,
-        "stats": {
-            "n_writes": mw.stats().n_writes,
-            "n_queries": mw.stats().n_queries,
-            "n_sweeps_invoked": mw.stats().n_sweeps_invoked,
-            "n_nodes_actually_removed": mw.stats().n_nodes_actually_removed,
-        },
-    }
-    # Standardized dimension artifact (schema v1)
     from runner.artifacts import emit_dimension_artifact
     reduction_pct = (100.0 * n_swept / max(1, mw.stats().n_writes))
+    p50 = add_latencies[len(add_latencies)//2] if add_latencies else None
+    p99 = add_latencies[min(len(add_latencies)-1, int(0.99*len(add_latencies)))] if add_latencies else None
+    avg = sum(add_latencies)/len(add_latencies) if add_latencies else None
     emit_dimension_artifact(
         opportunity="memory_lifecycle",
         dimension="memory.lifecycle",
@@ -330,11 +308,14 @@ def main():
             "n_swept": n_swept,
             "n_remaining": mw.stats().n_writes - n_swept,
             "reduction_pct": reduction_pct,
-            "add_latency_p50_s": raw["add_latency_p50"],
-            "add_latency_p99_s": raw["add_latency_p99"],
-            "add_latency_avg_s": raw["add_latency_avg"],
+            "add_latency_p50_s": p50,
+            "add_latency_p99_s": p99,
+            "add_latency_avg_s": avg,
             "total_wall_seconds": total_wall,
+            "setup_seconds": setup_seconds,
             "n_sweeps_invoked": mw.stats().n_sweeps_invoked,
+            "n_queries": mw.stats().n_queries,
+            "sweep_log": sweep_log,
         },
         gates={},
         decision="PILOT",
@@ -342,7 +323,6 @@ def main():
             "llm_model": args.llm_model,
             "embedder": args.embed_model,
         },
-        raw=raw,
         out_path=out_path,
     )
     print(f"\nArtifact: {out_path}")

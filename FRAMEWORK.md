@@ -2,7 +2,6 @@
 
 This repo is at its core **a reusable framework for testing whether an AI/ML/LLM opportunity is real**. The schema-alignment proxy is the first opportunity I tested with it. The framework works the same way on the next one.
 
-This doc explains what is in the framework, why it is structured this way, and what it produced.
 
 ## The question this framework answers
 
@@ -20,7 +19,7 @@ Most AI evaluation skips most of those. This framework does not.
 
 ## The four stages
 
-This is the heart of the framework. Each stage catches errors the previous stage missed.
+Each stage catches errors the previous stage missed.
 
 ```
 THEORETICAL  ->  SYNTHETIC DATA  ->  REAL DATA  ->  SUBSTANTIAL REAL DATA
@@ -226,7 +225,7 @@ The opportunity is **real but narrow.** After 4 stages of testing:
 - **Good-fit domains:** financial chat, clinical NLP, B2B SaaS customer support (per-tenant memory deployments).
 - **Out of scope:** general conversational memory (LongMemEval regression), coreference resolution (LLMs do it internally), open-ended entity discovery beyond surface-form variation.
 
-This is the honest read after the full framework ran. The proxy is a useful infrastructure component for entity-heavy LLM pipelines. It is not a market-defining product.
+The proxy is a useful infrastructure component for entity-heavy LLM pipelines. It is not a market-defining product.
 
 ## What the framework would do on the next opportunity
 
@@ -237,18 +236,7 @@ Pick a new wedge (agent reasoning verification, real-time graph GC, structured-o
 3. **Stage 3 (3-5 days):** real-data workload at small N, full multi-model ladder, pause before publishing
 4. **Stage 4 (2-5 days):** scale the workload 5x to 10x with more diverse entities, confirm or correct the stage 3 headline
 
-The framework will:
-- Force you to kill the wedge if incumbents already cover it
-- Make you iterate on synthetic data with statistical gates so mechanism bugs surface before scaling
-- Make you run on real data at small N so synthetic-vs-real ranking flips surface
-- Make you run at substantial N before publishing so small-N overclaims surface
-- Make you run across the model size ladder so model-family quirks surface
-- Make you document negative results so the project stays credible
-- Produce a finding doc per stage, giving you an auditable evidence chain
-
-**Total cost: 4 to 6 weeks per opportunity, ending in a defensible go/no-go decision backed by data.**
-
-That is what the framework is worth. The schema-alignment proxy was the first opportunity I ran through it. The framework outlived the original headline claim. That is what a good framework does.
+**Total cost: 4 to 6 weeks per opportunity, ending in a defensible go/no-go decision backed by data.** The framework enforces this by killing closed wedges at Stage 1, surfacing synthetic-vs-real flips at Stage 3, and catching small-N overclaims at Stage 4. Every step produces a finding doc, including the negative results.
 
 ## How to read this repo
 

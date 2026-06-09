@@ -293,31 +293,6 @@ def main():
             "embedder": args.embed_model,
             "min_age_seconds": args.min_age_seconds,
         },
-        raw={
-            "experiment": "Real-Mem0 retrieval F1 benchmark",
-            "n_pairs": args.n_pairs,
-            "aged_fraction": args.aged_fraction,
-            "backdate_days": args.backdate_days,
-            "variant": args.variant,
-            "min_age_seconds": args.min_age_seconds,
-            "n_initial_memories": initial_n,
-            "n_removed": n_removed,
-            "n_remaining": n_remaining,
-            "reduction_pct": reduction_pct,
-            "add_seconds": add_seconds,
-            "sweep_seconds": sweep_seconds,
-            "before": {
-                "precision": before.avg_precision,
-                "recall": before.avg_recall,
-                "f1": before.avg_f1,
-            },
-            "after": {
-                "precision": after.avg_precision,
-                "recall": after.avg_recall,
-                "f1": after.avg_f1,
-            },
-            "uc_gc_retrieval_gate": gate,
-        },
         out_path=out_path,
     )
     try:
