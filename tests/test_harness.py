@@ -12,7 +12,7 @@ if str(ROOT) not in sys.path:
 from fixtures import workloads
 from runner import variants
 from runner.metrics import alignment, stats
-from runner.runner import main as runner_main
+from runner.canonicalization_runner import main as runner_main
 
 
 def test_workload_loads_and_is_deterministic():

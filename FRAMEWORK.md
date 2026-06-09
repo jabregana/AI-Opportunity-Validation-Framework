@@ -94,15 +94,49 @@ The revised commercial claim is **"competitive with frontier at fraction of cost
 
 | Component | What it does | Reusable for any opportunity? |
 |---|---|---|
-| **Harness** (`runner/`) | LORD++ online FDR, paired bootstrap, CUPED, CI gates, three-block artifact schema | Yes. Drop-in for any A/B-style ML evaluation. |
-| **Variant ABC + factory pattern** (`runner/variants/`) | Inject any new mechanism behind a common interface | Yes. The pattern is what carries, not the variants themselves. |
-| **Multi-model ladder runner** (`experiments/ladder_sweep_real_data.py`) | Auto-routes to Anthropic, OpenAI, Google, or Ollama by model name prefix | Yes. Works for any LLM eval. |
-| **Bootstrap + CI gates** (`runner/metrics/stats.py`) | Paired diff bootstrap with one and two-sided p-values | Yes. |
-| **Findings culture** (`docs/finding-*.md`, 24 docs) | Every claim, including the negative ones, gets a dated doc | Yes. Discipline, not code. |
-| **Integration shim pattern** (`runner/service/integrations/`) | Wrap any external system behind a common contract | Yes. I have three reference implementations (Mem0, Graphiti, Cognee). |
+| **Statistical primitives** (`runner/metrics/stats.py`, `runner/fdr.py`, `runner/cuped.py`) | Paired bootstrap, LORD++ online FDR, CUPED variance reduction | Yes. Pure functions, no opportunity-specific assumptions. |
+| **Artifact writer** (`runner/artifacts.py`) | Immutable three-block JSON artifacts under `runs/` | Yes. |
+| **CI gate machinery** (`runner/gates.py`) | INCONCLUSIVE-is-FAIL gate, SAFFRON hot-swap recommendation, B-VPREV freshness checks | Yes. |
+| **Dimension `Variant` ABC pattern** (`runner/dimensions/<dim>/base.py`) | Per-dimension contract: prompt has `render()`, GC has `should_collect()`, recovery has `step_recover()`. Each dimension owns its shape. | Yes. Pattern carries; specific variant classes do not. |
+| **Per-dimension runner template** (see below) | Each dimension has its own runner (`runner/gc_runner.py`, `runner/prompt_runner.py`, etc.) that owns its workload load, its gate computation, its artifact emission | Yes. Copy + adapt to the new dimension. |
+| **Integration shim pattern** (`runner/service/integrations/`, `runner/dimensions/memory/lifecycle/integrations/`) | Wrap any external system behind a common contract | Yes. Six reference implementations across two opportunities (Mem0 / Graphiti / Cognee for canonicalization + same three for lifecycle). |
+| **Multi-model ladder runner** (`experiments/ladder_sweep_real_data.py`) | Auto-routes to Anthropic, OpenAI, Google, or Ollama by model name prefix | Yes. |
+| **Findings culture** (`docs/finding-*.md`, 30+ docs) | Every claim, including the negative ones, gets a dated doc | Yes. Discipline, not code. |
 | **Statistical rigor spec** (`docs/experiments.md`) | Pre-registered tests, non-inferiority margins, INCONCLUSIVE-is-FAIL on fast tier | Yes. |
 
-The proxy variants themselves (the `embed-proxy-*` family) are specific to this opportunity. Everything else is general infrastructure.
+What is NOT reusable: the actual variant implementations (`embed-proxy-*`, `gc-v0.1.*`, `prompt-v0.1.*`), the dimension-specific gate thresholds (UC-4.1 vs UC-GC-RETRIEVAL vs UC-PROMPT-2), and the canonicalization-specific `runner/canonicalization_runner.py` (~681 lines tied to clustering / B-cubed F1 / oracle labels). These are opportunity-specific by design.
+
+### Per-dimension runner pattern
+
+Each agent-system dimension has fundamentally different metric shapes (F1 vs completion rate vs latency vs token cost vs precision/recall), different gate definitions (UC-GC-1..5 + UC-GC-RETRIEVAL vs UC-PROMPT-1..4 vs UC-REC-1..4), and different workload types (Q&A pairs vs prompt templates vs tool-call traces vs failure-injection sequences). Forcing them through a single universal runner would push complexity into config parsing and obscure what each experiment actually does.
+
+The pattern this framework uses instead: **one runner per dimension, each ~200-450 lines, owning its dimension's full pipeline.**
+
+```
+runner/canonicalization_runner.py  681 lines  (entity-normalization proxy: UC-4.1, UC-4.4, UC-4.6, UC-4.7)
+runner/gc_runner.py                407 lines  (memory lifecycle: UC-GC-1..5 + UC-GC-RETRIEVAL)
+runner/prompt_runner.py            234 lines  (prompt variants: UC-PROMPT-1..4)
+runner/tool_runner.py              262 lines  (tool selection: UC-TOOL-1..4)
+runner/policy_runner.py            217 lines  (execution policy: UC-POLICY-1..4)
+runner/recovery_runner.py          447 lines  (recovery behavior: UC-REC-1..4)
+runner/cross_dim_runner.py         252 lines  (joint experiments across all six)
+```
+
+Each runner imports the shared statistical primitives but defines its own gates, its own metric calculations, and its own workload load. Per-runner duplication is real and intentional: a generic gate function would be leakier than five focused ones.
+
+**Recipe for adding a new opportunity in a new dimension:**
+
+1. Create `runner/dimensions/<your_dim>/base.py` with a `Variant` ABC for your dimension's decision shape (e.g., `should_retry()`, `route_query()`, etc.)
+2. Implement candidate variants alongside (e.g., `runner/dimensions/<your_dim>/v0_1_0.py`)
+3. Build a workload type in `fixtures/workloads/w_<your_dim>.py`
+4. Copy the closest-shape existing runner (`gc_runner.py` for state-mutating ops, `prompt_runner.py` for pure-function evaluation, `recovery_runner.py` for trace-based replay) into `runner/<your_dim>_runner.py`
+5. Replace the dimension import, the workload import, the gate function, and the artifact-emission keys
+6. Register the variant factory in `runner/dimensions/<your_dim>/__init__.py`
+7. Write a `docs/finding-<your_opportunity>-stage1.md` and run
+
+Total: typically 2-3 engineer-days for a new dimension, then 4-6 weeks for the four-stage progression.
+
+**What this framework explicitly does NOT include** (and probably should not, as of 2026-06-08): an `ExperimentSpec`-style config-driven runner. A universal runner would unify dimensions that legitimately differ in metric shape; the indirection would obscure rather than reduce real complexity. If you find yourself copy-pasting the same boilerplate into three new per-dim runners, that's the moment to extract a base runner. Not before.
 
 ## The bigger framing: agent systems as statistical systems
 

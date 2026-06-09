@@ -4,13 +4,13 @@ Supports two use-case modes:
 
   UC-4.1 (clustering): paired bootstrap on per-item B-cubed F1
     diff between variant and baseline on a workload.
-      python -m runner.runner --variant V --baseline B \\
+      python -m runner.canonicalization_runner --variant V --baseline B \\
         --workload W --use-case UC-4.1 --tier fast
 
   UC-4.4 (false-positive resistance): runs the variant on every
     pair in a Tier B adversarial fixture and reports false-merge
     rate as a guardrail_kill_switch outcome.
-      python -m runner.runner --variant V \\
+      python -m runner.canonicalization_runner --variant V \\
         --tier-b-fixture fixtures/adversarials/X.json \\
         --use-case UC-4.4 --tier fast
 
