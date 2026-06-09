@@ -285,7 +285,7 @@ def _run_uc_4_7(args) -> int:
         })
         decision = "PASS_AND_MERGE"
 
-    path = artifacts.emit(
+    path = artifacts.emit_canonicalization_artifact(
         variant_name=variant_factory().name,
         baseline_name=baseline_factory().name if baseline_factory else "(none)",
         workload_id=args.workload,
@@ -391,7 +391,7 @@ def _run_uc_4_6(args) -> int:
         "SOFT_REGRESSION_OPENED" if outcome == "FAIL" else "PASS_AND_MERGE"
     )
 
-    path = artifacts.emit(
+    path = artifacts.emit_canonicalization_artifact(
         variant_name=v.name,
         baseline_name="(none, latency self-measurement)",
         workload_id=args.workload,
@@ -479,7 +479,7 @@ def _run_uc_4_4(args) -> int:
     else:
         decision = "PASS_AND_MERGE"
 
-    path = artifacts.emit(
+    path = artifacts.emit_canonicalization_artifact(
         variant_name=variant_factory().name,
         baseline_name="(none — kill-switch test)",
         workload_id=f"tier-b:{fixture_path.name}",
@@ -645,7 +645,7 @@ def main(argv: list[str] | None = None) -> int:
 
     decision, reasons = _pipeline_decision(ordered, tier=args.tier)
 
-    path = artifacts.emit(
+    path = artifacts.emit_canonicalization_artifact(
         variant_name=var.name,
         baseline_name=base.name,
         workload_id=args.workload,

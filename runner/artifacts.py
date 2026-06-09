@@ -61,7 +61,7 @@ def _ledger_block(ledger: LordPlusPlusLedger, scope: str = "per_release") -> dic
     }
 
 
-def emit(
+def emit_canonicalization_artifact(
     *,
     variant_name: str,
     baseline_name: str,
@@ -74,7 +74,22 @@ def emit(
     ledger_scope: str = "per_release",
     out_dir: str | os.PathLike[str] = "runs",
 ) -> Path:
-    """Write one run artifact in the three-block schema."""
+    """Write one run artifact in the original three-block schema.
+
+    This is the schema the canonicalization runner emits (variant vs
+    baseline clustering, paired bootstrap on B-cubed F1). The shape
+    (variant_name, baseline_name, workload_id, tier) reflects that
+    opportunity's specific structure.
+
+    NEW Stage 3+ benchmarks should use `emit_dimension_artifact()`
+    below instead. It provides the standardized v1 schema
+    (opportunity, dimension, stage, variants, metrics, gates,
+    decision, environment) that lets a future analyst grep across
+    opportunities without writing per-runner parsers.
+
+    Renamed from `emit()` on 2026-06-09 for truth in naming (matches
+    the runner.py -> canonicalization_runner.py rename).
+    """
     if tier not in {"fast", "nightly"}:
         raise ValueError(f"tier must be 'fast' or 'nightly', got {tier!r}")
     artifact = {

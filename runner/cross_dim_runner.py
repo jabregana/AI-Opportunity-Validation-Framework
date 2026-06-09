@@ -14,9 +14,33 @@ Cost model (per scenario):
 Engineering-cost weights are NOT modeled here (those live in the
 investment-prioritization tooling); this is the per-call inference cost.
 
+============================================================================
+SCOPE BOUNDARY: This module is a Stage 2 SYNTHETIC SIMULATOR, not a general
+cross-dimension composition framework.
+============================================================================
+
 The simulator combines the three dimensions multiplicatively:
 
   P(complete) = P_prompt * P_tools_required * P_recovery_if_failure
+
+The multiplicative composition is a Stage 2 modeling choice for the
+prompt + tools + recovery axes. It assumes the three failures are
+conditionally independent given the scenario, which is a reasonable
+simplification for synthetic exploration but is NOT a general framework
+claim. Other dimension triples (e.g., memory x policy x model) may have
+non-independent failure modes that compose differently.
+
+The Stage 3 driver (experiments/cross_dim_real_llm_stage3.py) replaces
+this simulator with a real LLM client that produces actual binary
+outcomes, removing the multiplicative assumption entirely. The
+methodology standard (docs/benchmark-methodology.md) requires that
+Stage 3+ results NOT use this simulator's outcome model; they use
+real measurements from the real downstream.
+
+This module's value is fast iteration during Stage 2 variant design,
+not headline production numbers. Treat the per-config completion
+percentages here as ordinal (rank-only) signals, not cardinal claims
+about how a real LLM stack would perform.
 
 This module exposes per-scenario binary outcomes so the bootstrap
 CI tooling can paired-resample.

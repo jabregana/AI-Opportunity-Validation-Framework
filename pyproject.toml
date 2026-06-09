@@ -3,9 +3,9 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "ai-wedge-harness"
-version = "0.0.1"
-description = "Reusable harness for evaluating AI/ML/LLM opportunities. First case study: deterministic entity-normalization proxy."
+name = "ai-opportunity-validation-framework"
+version = "0.1.0"
+description = "A repeatable framework for deciding whether an AI/ML/LLM opportunity is worth building. Four-stage progression (theoretical -> synthetic -> real-small-N -> real-substantial-N) with per-dimension runners, calibrated UC gates, multi-seed reporting, and finding-doc discipline. Two case studies through the framework: schema-alignment proxy (entity normalization) at Stage 4; memory lifecycle management at Stage 5 on the Mem0 path (v0.2.x design pending for graph-native frameworks)."
 requires-python = ">=3.11"
 dependencies = []
 
@@ -17,6 +17,10 @@ ner = ["spacy>=3.7"]
 ner-transformers = ["transformers>=4.40", "torch>=2.0"]
 
 [project.scripts]
+# The amg-run console script targets the canonicalization runner only.
+# Other dimensions (memory lifecycle, prompt, tools, policy, recovery,
+# cross-dim) run via `python experiments/<script>.py`; see README.md
+# 'Running the headline benchmarks' for the canonical invocations.
 amg-run = "runner.canonicalization_runner:main"
 
 [tool.hatch.build.targets.wheel]
