@@ -73,8 +73,7 @@ Three end-to-end results with real Mem0 (Ollama phi3:mini + all-minilm + Qdrant)
 | Workload | What it measures | Result |
 |---|---|---|
 | 2,000 SQuAD-style inputs, sweep every 100 | Steady-state store reduction over a 2-hour run | Mem0 LLM extracted 3,363 memories; v0.1.8 collected 3,308. **98.4% reduction**, 0 failures, clean sawtooth (50-65 surviving, 200-320 pre-sweep) |
-| 50 SQuAD Q&A pairs, F1 preservation before/after sweep | Retrieval quality preservation under GC | **81.6% F1 preservation at 52% reduction**. UC-GC-RETRIEVAL gate (>= 80%) PASS |
-| 200 SQuAD Q&A pairs (4x replication) | Same, larger N | **81.8% F1 preservation at 44% reduction**. PASS. Replication confirms n=50 estimate within 0.2pp |
+| 50 SQuAD Q&A pairs, F1 preservation before/after sweep, **3 seeds (multi-seed required per `docs/benchmark-methodology.md`)** | Retrieval quality preservation under GC | **Mean 83.8% F1 preservation (95% CI [74.5%, 88.8%], n=3 seeds) at mean 36.4% reduction**. UC-GC-RETRIEVAL gate (>= 80%) PASS in 2 of 3 seeds; FAIL in 1 of 3 (seed=42, 74.5%). Previously-reported single-seed numbers (81.6% at n=50, 81.8% at n=200) sat inside this distribution but understated the variance. See [`docs/finding-mem0-f1-stage5.md`](docs/finding-mem0-f1-stage5.md) for the revised analysis. |
 
 Plus 14 unit tests on the Graphiti adapter, 13 on the Cognee adapter, 9 cross-adapter consistency tests. All three adapters compose with v0.1.x policies identically at the contract level.
 

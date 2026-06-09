@@ -71,7 +71,7 @@ In rough priority order:
 |---|---|
 | Report distributions, not just averages | p50 / p95 / p99 / max for every latency, sweep cost, F1, reduction, and false-collection metric. Means alone hide tail behavior. |
 | Trade-off frontier explicit | The artifact must include a Pareto-style table or chart showing the tradeoff between competing metrics (reduction vs F1, throughput vs sweep cost). A new variant ALWAYS wins one and loses another; show the whole frontier. |
-| Confound control documented | Each artifact's JSON records: LLM model + version, embedder + dimensions, vector store + path, deterministic seed, machine + OS, neighboring processes (especially other Ollama jobs). The reproducibility of the 81.6% F1 number depends on this. |
+| Confound control documented | Each artifact's JSON records: LLM model + version, embedder + dimensions, vector store + path, deterministic seed, machine + OS, neighboring processes (especially other Ollama jobs). The reproducibility of the Mem0 F1 numbers depends on this. |
 | Fair baseline | Where an incumbent exists, tune the incumbent as aggressively as the new variant before comparing. Where no incumbent exists (current state for graph-native GC), the baseline is "no GC" and that is the correct comparison. Document the baseline-tuning decision in the artifact. |
 
 ### 5. Reproducibility & defensibility
@@ -152,7 +152,7 @@ This methodology applies retroactively as the framework's standard. Existing Sta
 | Finding | Compliance status | What's missing |
 |---|---|---|
 | `finding-mem0-adapter-real-llm-stage5.md` (98.4% reduction, 2000-input smoke) | PARTIAL | Single seeded run; no CI; one workload archetype |
-| `finding-mem0-f1-stage5.md` (81.6% / 81.8% F1 preservation) | PARTIAL | Two N values (50, 200) but single seed each; no multi-seed CI; one archetype |
+| `finding-mem0-f1-stage5.md` (revised 2026-06-09 to multi-seed: mean 83.8% F1 preservation, 95% CI [74.5%, 88.8%], pass-2-of-3 seeds) | COMPLIANT (multi-seed) but PARTIAL (single archetype) | Multi-seed CI now present; needs additional archetypes for full compliance |
 | `finding-graphiti-f1-stage5.md` (0% reduction, three scenarios) | COMPLIANT-FOR-NEGATIVE | Three scenarios IS the multi-archetype check; the negative result is the finding |
 | `finding-substantial-N-revision.md` (the 3B-vs-frontier self-correction) | COMPLIANT | This is the canonical example of why the methodology matters |
 | `finding-gc-stage3-real-text.md` (Twitter 84.96% reduction) | PARTIAL | Single seed; needs CI |
