@@ -43,7 +43,7 @@ These three need answering before committing to v0.2.x designs. Each is roughly 
 
 ### Q1: Does Graphiti actually set `invalid_at` and `expired_at` reliably?
 
-What we know: the fields exist on `EntityEdge`. What we don't know: under what conditions Graphiti's extraction layer populates them. The benchmark workloads run this week (SQuAD, single-context-per-add) never trigger supersession because each SQuAD context is a standalone fact.
+What is known: the fields exist on `EntityEdge`. What is not known: under what conditions Graphiti's extraction layer populates them. The benchmark workloads run this week (SQuAD, single-context-per-add) never trigger supersession because each SQuAD context is a standalone fact.
 
 **Verification approach**: build a 2-step workload where the second add explicitly contradicts the first (e.g., "User likes coffee" then "User now drinks only tea"). Run through Mem0GCMiddleware-equivalent wrapper for Graphiti, query Neo4j directly, check whether the original "likes coffee" edge has `invalid_at` set. If yes, v0.2.0-temporal-validity is cheap. If no, the variant has to instrument supersession detection itself.
 
