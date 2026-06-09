@@ -69,25 +69,43 @@ class GraphitiNodeRecord:
     group_id: str | None = None  # used as tenant_id
 
 
+_PERSISTENT_LOOP = None
+
+
+def _get_persistent_loop():
+    """Lazily create a single event loop that lives for the process.
+
+    Graphiti caches httpx + Neo4j driver clients tied to the loop
+    they were first instantiated under. asyncio.run() creates AND
+    closes a fresh loop per call, which leaves those cached clients
+    pointing at a dead loop and produces:
+      'got Future attached to a different loop'
+    on the second call. A persistent loop avoids that.
+    """
+    global _PERSISTENT_LOOP
+    if _PERSISTENT_LOOP is None or _PERSISTENT_LOOP.is_closed():
+        _PERSISTENT_LOOP = asyncio.new_event_loop()
+    return _PERSISTENT_LOOP
+
+
 def _run_async(coro):
     """Run an async coroutine synchronously.
 
-    Uses asyncio.run() if no loop is currently running; otherwise
-    creates a new loop for this call. This lets the adapter work from
-    both sync code (notebooks, scripts) and pre-existing async contexts.
+    Uses a process-wide persistent event loop (see _get_persistent_loop)
+    so cached async clients survive across calls. Falls back to a
+    threaded asyncio.run if called from inside a running loop.
     """
     try:
-        loop = asyncio.get_running_loop()
+        running = asyncio.get_running_loop()
     except RuntimeError:
-        loop = None
-    if loop is None or loop.is_closed():
-        return asyncio.run(coro)
-    # Nested-loop case: schedule on the running loop
-    # This branch should be rare; most callers are sync.
-    import concurrent.futures
-    with concurrent.futures.ThreadPoolExecutor(max_workers=1) as ex:
-        future = ex.submit(asyncio.run, coro)
-        return future.result()
+        running = None
+    if running is not None and not running.is_closed():
+        # Nested-loop case (called from inside async): thread-pool fallback
+        import concurrent.futures
+        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as ex:
+            future = ex.submit(asyncio.run, coro)
+            return future.result()
+    return _get_persistent_loop().run_until_complete(coro)
 
 
 class GraphitiGCMiddleware(GCIntegrationShim):
