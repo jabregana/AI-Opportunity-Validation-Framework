@@ -163,6 +163,83 @@ fixtures/workloads/w_graph_lifecycle.py
 
 This is roughly 1 day to build. Existing `w_graph_churn.py` is the wrong shape (it includes edge-removal events that don't happen in real Graphiti).
 
+## Benchmark methodology (compliance with the framework standard)
+
+v0.2.x is a Stage 3+ opportunity, so it must comply with [`docs/benchmark-methodology.md`](benchmark-methodology.md). The key methodology requirements applied to this opportunity:
+
+### Workload archetypes (must run AT LEAST 3 of the 5 standard archetypes plus the adversarial one)
+
+| Archetype | Fixture | v0.2.x specifics |
+|---|---|---|
+| **Steady-state** | `w_graph_lifecycle.py` with `supersession_rate=0.0, n_topics=1` | Baseline behavior; should match Mem0+v0.1.x reduction shape |
+| **High-mutation / supersession-heavy** | `w_graph_lifecycle.py` with `supersession_rate=0.5` | Required to exercise v0.2.0-temporal-validity; the rule cannot fire without supersession events |
+| **Cluster-rich** | `w_graph_lifecycle.py` with `n_topics=10, query_distribution=zipfian` | Exercises v0.2.2-component-isolation; without distinct subgraphs the rule has nothing to isolate |
+| **Adversarial (variant-specific)** | NEW: `w_graph_no_supersession_no_isolation.py` | Designed to defeat v0.2.x: rich connectivity, no supersession events, no isolated subgraphs. If v0.2.x cannot handle this case, the finding doc documents it as out-of-scope rather than hiding it. |
+| Real-data sanity | Graphiti + SQuAD subset (existing benchmark) | Confirms the variant does NOT regress on the workload that the Mem0 path already runs |
+
+### Volume protocol (5-cell matrix per variant)
+
+Each variant gets benchmarked across this grid:
+
+| n_pairs | Seeds | Store-size multipliers |
+|---|---|---|
+| 50, 200, 1000 | {42, 123, 456} | 1x, 4x, 10x converged-live-set |
+
+Total: 3 N values × 3 seeds × 3 store sizes × 4 archetypes = **108 runs per variant**. At ~5 min average per run that is roughly 9 hours of Ollama time per variant. Acceptable.
+
+For the comprehensive bundle (v0.2.3) and the headline cross-framework comparison, the full matrix runs. For exploratory v0.2.0 / v0.2.1 / v0.2.2 individual-rule iterations, a reduced grid (1 N × 3 seeds × 1 store size × 2 archetypes) is acceptable during dev, with the full matrix run before any finding doc ships.
+
+### Variance + significance reporting
+
+Every headline metric reported as `<mean> [<ci_low>, <ci_high>] (n_seeds=3)` using `runner/metrics/stats.py::paired_bootstrap`. The Graphiti F1 numbers landed this week as point estimates; v0.2.x numbers ship from day one with bootstrap CIs.
+
+### Pre-registration ritual
+
+Before each variant's Stage 3 run, the corresponding finding doc gets a pre-registration block (per the template in [`docs/benchmark-methodology.md`](benchmark-methodology.md)) stating the metrics, thresholds, and decision rules. After the run, the post-run block reports observed values against those exact thresholds. Gates are not moved post hoc.
+
+For v0.2.x specifically, the pre-registered UC gates are:
+
+```yaml
+pre_registered_gates:
+  uc_gc_retrieval_min_f1_preservation: 80.0   # same as Mem0 v0.1.8
+  uc_gc_min_reduction_when_workload_aged: 30.0  # at least 30% reduction on supersession-heavy archetype
+  uc_gc_max_false_collection_pct: 1.0         # same as Mem0 v0.1.8
+  uc_gc_max_sweep_p99_seconds: 5.0            # 10x the Mem0 v0.1.8 limit (graph algorithms are more expensive)
+  uc_gc_max_search_overhead_pct: 5.0          # v0.2.1 traversal-tracking hook overhead ceiling
+```
+
+If v0.2.x fails any pre-registered gate on the adversarial archetype, the variant ships as DEFER or DO-NOT-BUILD rather than rebuilding the gate.
+
+### Sourcing strategy (tiered)
+
+| Tier | Source | Status for v0.2.x |
+|---|---|---|
+| 1 | Production telemetry from customer pilot | UNAVAILABLE until customer pilot exists |
+| 2 | Parametric fits to Mem0 2000-input smoke (1.68x amplification, sweep oscillation pattern) | Available now; will be used to calibrate steady-state archetype |
+| 3 | Public corpora as sanity floor: SQuAD (existing), LongMemEval, MemGPT-bench | LongMemEval + MemGPT-bench should be added; treat as Stage 1 task |
+| 4 | Synthetic with documented parametric model | Default for archetypes that have no real-data analog |
+
+### Updated cost estimate
+
+The benchmark-methodology compliance adds roughly 3-4 engineer-days to the original v0.2.x scope:
+
+| Phase (updated) | Effort |
+|---|---|
+| Stage 1 verification (Q1, Q2, Q3) + landscape deeper scan | 2-3 eng-days (unchanged) |
+| v0.2.0-temporal-validity variant + tests | 2 eng-days (unchanged) |
+| Workload archetype library: lifecycle + adversarial + supersession-validation | 2 eng-days (was 1; bumped for archetype library) |
+| v0.2.0 Stage 2 benchmark with multi-seed + multi-archetype matrix | 2 eng-days (was 1; bumped for compliance) |
+| v0.2.1-activation-decay variant | 2 eng-days (unchanged) |
+| v0.2.2-component-isolation variant | 3 eng-days (unchanged) |
+| v0.2.3-comprehensive-tuned bundle + profile loader | 3 eng-days (unchanged) |
+| Stage 3 real-Graphiti F1 with full compliance matrix | 2 eng-days (was 1; bumped for 108-run matrix execution + analysis) |
+| Stage 4 multi-vertical scale-up | 2-3 eng-days (unchanged) |
+| Retroactive: add CIs to existing Mem0 + Graphiti finding docs | 1 eng-day (new) |
+
+**Updated total: 22-23 engineer-days (was 18-19), roughly 4-5 calendar weeks of focused work.**
+
+The bump justifies itself: half the value of v0.2.x is that the numbers survive hostile review. The retroactive Mem0 CI addition (1 day) is mandatory regardless of v0.2.x funding because the existing 81.6% headline is currently a single-seed point estimate.
+
 ## Why this could fail (risk register)
 
 Honest list of ways v0.2.x might not produce defensible numbers:
