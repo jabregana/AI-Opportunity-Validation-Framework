@@ -306,13 +306,14 @@ def main():
 
     if args.out:
         out_path = Path(args.out)
+        out_path.parent.mkdir(parents=True, exist_ok=True)
     else:
         ts = time.strftime("%Y%m%dT%H%M%S")
         out_dir = ROOT / "runs" / "graphiti_retrieval_f1"
         out_dir.mkdir(parents=True, exist_ok=True)
         out_path = out_dir / f"{ts}.json"
 
-    artifact = {
+    raw = {
         "experiment": "Real-Graphiti retrieval F1 benchmark",
         "n_pairs": args.n_pairs,
         "aged_fraction": args.aged_fraction,
@@ -337,8 +338,54 @@ def main():
         },
         "uc_gc_retrieval_gate": gate,
     }
-    out_path.write_text(json.dumps(artifact, indent=2))
-    print(f"\nArtifact: {out_path.relative_to(ROOT)}")
+    # Standardized dimension artifact (schema v1)
+    from runner.artifacts import emit_dimension_artifact
+    emit_dimension_artifact(
+        opportunity="memory_lifecycle",
+        dimension="memory.lifecycle",
+        stage=5,
+        experiment_name="Real-Graphiti retrieval F1 benchmark",
+        variants=[{"id": args.variant, "role": "candidate"}],
+        workload={
+            "archetype": "real-data-squad",
+            "n": args.n_pairs,
+            "seed": 42,
+            "params": {
+                "aged_fraction": args.aged_fraction,
+                "backdate_days": args.backdate_days,
+            },
+        },
+        metrics={
+            "retrieval_f1_before": before.avg_f1,
+            "retrieval_f1_after": after.avg_f1,
+            "retrieval_precision_before": before.avg_precision,
+            "retrieval_precision_after": after.avg_precision,
+            "retrieval_recall_before": before.avg_recall,
+            "retrieval_recall_after": after.avg_recall,
+            "reduction_pct": reduction_pct,
+            "n_records_before_sweep": n_before_sweep,
+            "n_removed": n_removed,
+            "n_remaining": len(mw._records),
+            "add_seconds": add_seconds,
+            "sweep_seconds": sweep_seconds,
+        },
+        gates={"UC-GC-RETRIEVAL": gate},
+        decision=gate["status"],
+        environment={
+            "llm_provider": args.llm_provider,
+            "llm_model": getattr(args, "ollama_llm_model", None) if args.llm_provider == "ollama" else "openai-default",
+            "embedder": getattr(args, "ollama_embed_model", None) if args.llm_provider == "ollama" else "openai-default",
+            "min_age_seconds": args.min_age_seconds,
+            "neo4j_uri": args.neo4j_uri,
+        },
+        raw=raw,
+        out_path=out_path,
+    )
+    try:
+        display_path = out_path.relative_to(ROOT)
+    except ValueError:
+        display_path = out_path
+    print(f"\nArtifact: {display_path}")
     return 0
 
 

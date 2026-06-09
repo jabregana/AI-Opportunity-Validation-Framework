@@ -285,7 +285,7 @@ def main():
 
     out_path = (Path(args.out) if args.out
                 else checkpoint_dir / f"{ts}.final.json")
-    artifact = {
+    raw = {
         "experiment": "real-Mem0 smoke test (Phase 1)",
         "n_memories_attempted": args.n_memories,
         "n_memories_actually_added": total_added,
@@ -309,7 +309,42 @@ def main():
             "n_nodes_actually_removed": mw.stats().n_nodes_actually_removed,
         },
     }
-    out_path.write_text(json.dumps(artifact, indent=2))
+    # Standardized dimension artifact (schema v1)
+    from runner.artifacts import emit_dimension_artifact
+    reduction_pct = (100.0 * n_swept / max(1, mw.stats().n_writes))
+    emit_dimension_artifact(
+        opportunity="memory_lifecycle",
+        dimension="memory.lifecycle",
+        stage=5,
+        experiment_name="real-Mem0 smoke test (steady-state reduction)",
+        variants=[{"id": args.variant, "role": "candidate"}],
+        workload={
+            "archetype": "real-data-squad-style",
+            "n": args.n_memories,
+            "seed": 42,
+            "params": {"sweep_every": args.sweep_every},
+        },
+        metrics={
+            "n_memories_attempted": args.n_memories,
+            "n_writes_total": mw.stats().n_writes,
+            "n_swept": n_swept,
+            "n_remaining": mw.stats().n_writes - n_swept,
+            "reduction_pct": reduction_pct,
+            "add_latency_p50_s": raw["add_latency_p50"],
+            "add_latency_p99_s": raw["add_latency_p99"],
+            "add_latency_avg_s": raw["add_latency_avg"],
+            "total_wall_seconds": total_wall,
+            "n_sweeps_invoked": mw.stats().n_sweeps_invoked,
+        },
+        gates={},
+        decision="PILOT",
+        environment={
+            "llm_model": args.llm_model,
+            "embedder": args.embed_model,
+        },
+        raw=raw,
+        out_path=out_path,
+    )
     print(f"\nArtifact: {out_path}")
 
 

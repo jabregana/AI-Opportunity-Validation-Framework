@@ -106,6 +106,8 @@ def main():
     p.add_argument("--qdrant-path", default="/tmp/qdrant_mem0_f1")
     p.add_argument("--history-db", default="/tmp/mem0_f1_history.db")
     p.add_argument("--out", type=str, default=None)
+    p.add_argument("--seed", type=int, default=42,
+                   help="SQuAD subset selection seed (for multi-seed CIs)")
     args = p.parse_args()
 
     print("=" * 78)
@@ -159,7 +161,7 @@ def main():
     print("Loading SQuAD subset...")
     memories, qa_items = _load_squad_corpus(
         n_pairs=args.n_pairs, aged_fraction=args.aged_fraction,
-        seed=42,
+        seed=args.seed,
     )
     print(f"  {len(memories)} unique contexts, {len(qa_items)} queries")
 
@@ -246,39 +248,83 @@ def main():
 
     if args.out:
         out_path = Path(args.out)
+        out_path.parent.mkdir(parents=True, exist_ok=True)
     else:
         ts = time.strftime("%Y%m%dT%H%M%S")
         out_dir = ROOT / "runs" / "mem0_retrieval_f1"
         out_dir.mkdir(parents=True, exist_ok=True)
         out_path = out_dir / f"{ts}.json"
 
-    artifact = {
-        "experiment": "Real-Mem0 retrieval F1 benchmark",
-        "n_pairs": args.n_pairs,
-        "aged_fraction": args.aged_fraction,
-        "backdate_days": args.backdate_days,
-        "variant": args.variant,
-        "min_age_seconds": args.min_age_seconds,
-        "n_initial_memories": initial_n,
-        "n_removed": n_removed,
-        "n_remaining": n_remaining,
-        "reduction_pct": reduction_pct,
-        "add_seconds": add_seconds,
-        "sweep_seconds": sweep_seconds,
-        "before": {
-            "precision": before.avg_precision,
-            "recall": before.avg_recall,
-            "f1": before.avg_f1,
+    # Standardized dimension artifact (schema v1)
+    from runner.artifacts import emit_dimension_artifact
+    emit_dimension_artifact(
+        opportunity="memory_lifecycle",
+        dimension="memory.lifecycle",
+        stage=5,
+        experiment_name="Real-Mem0 retrieval F1 benchmark",
+        variants=[{"id": args.variant, "role": "candidate"}],
+        workload={
+            "archetype": "real-data-squad",
+            "n": args.n_pairs,
+            "seed": args.seed,
+            "params": {
+                "aged_fraction": args.aged_fraction,
+                "backdate_days": args.backdate_days,
+                "n_initial_memories": initial_n,
+            },
         },
-        "after": {
-            "precision": after.avg_precision,
-            "recall": after.avg_recall,
-            "f1": after.avg_f1,
+        metrics={
+            "retrieval_f1_before": before.avg_f1,
+            "retrieval_f1_after": after.avg_f1,
+            "retrieval_precision_before": before.avg_precision,
+            "retrieval_precision_after": after.avg_precision,
+            "retrieval_recall_before": before.avg_recall,
+            "retrieval_recall_after": after.avg_recall,
+            "reduction_pct": reduction_pct,
+            "n_removed": n_removed,
+            "n_remaining": n_remaining,
+            "add_seconds": add_seconds,
+            "sweep_seconds": sweep_seconds,
         },
-        "uc_gc_retrieval_gate": gate,
-    }
-    out_path.write_text(json.dumps(artifact, indent=2))
-    print(f"\nArtifact: {out_path.relative_to(ROOT)}")
+        gates={"UC-GC-RETRIEVAL": gate},
+        decision=gate["status"],
+        environment={
+            "llm_model": args.llm_model,
+            "embedder": args.embed_model,
+            "min_age_seconds": args.min_age_seconds,
+        },
+        raw={
+            "experiment": "Real-Mem0 retrieval F1 benchmark",
+            "n_pairs": args.n_pairs,
+            "aged_fraction": args.aged_fraction,
+            "backdate_days": args.backdate_days,
+            "variant": args.variant,
+            "min_age_seconds": args.min_age_seconds,
+            "n_initial_memories": initial_n,
+            "n_removed": n_removed,
+            "n_remaining": n_remaining,
+            "reduction_pct": reduction_pct,
+            "add_seconds": add_seconds,
+            "sweep_seconds": sweep_seconds,
+            "before": {
+                "precision": before.avg_precision,
+                "recall": before.avg_recall,
+                "f1": before.avg_f1,
+            },
+            "after": {
+                "precision": after.avg_precision,
+                "recall": after.avg_recall,
+                "f1": after.avg_f1,
+            },
+            "uc_gc_retrieval_gate": gate,
+        },
+        out_path=out_path,
+    )
+    try:
+        display_path = out_path.relative_to(ROOT)
+    except ValueError:
+        display_path = out_path
+    print(f"\nArtifact: {display_path}")
 
 
 if __name__ == "__main__":

@@ -99,3 +99,70 @@ def emit(
     )
     file_path.write_text(json.dumps(artifact, indent=2, sort_keys=True))
     return file_path
+
+
+# ---- Standardized dimension-artifact schema (v1) ---------------------------
+#
+# Per docs/benchmark-methodology.md: every Stage 3+ benchmark across every
+# dimension should emit a top-level schema with the same shape so a future
+# analyst can grep across opportunities without writing a parser per runner.
+#
+# Existing artifacts (pre-2026-06-09) are immutable per the framework's
+# finding-doc discipline. NEW Stage 3+ artifacts use emit_dimension_artifact.
+#
+# The schema preserves backward compat by stashing any experiment-specific
+# keys under `raw`, so existing analysis code that read the old keys can
+# still find them at `artifact["raw"][key]`.
+
+SCHEMA_VERSION = "v1"
+
+
+def emit_dimension_artifact(
+    *,
+    opportunity: str,           # "memory_lifecycle", "entity_normalization", etc.
+    dimension: str,             # "memory.lifecycle", "prompt", "tools", etc.
+    stage: int,                 # 1-5
+    experiment_name: str,       # human-readable label
+    variants: list[dict],       # [{"id": "gc-v0.1.8-...", "role": "candidate"}, ...]
+    workload: dict,             # {"archetype": "...", "n": ..., "seed": ..., "params": {...}}
+    metrics: dict,              # {"retrieval_f1_before": 0.323, ...}
+    gates: dict,                # {"UC-GC-RETRIEVAL": {"name": "...", "value": ..., "threshold": ..., "status": "PASS", "reason": "..."}}
+    decision: str,              # "PASS" / "FAIL" / "NA" / "PILOT" / "PARTIAL"
+    environment: dict,          # {"llm_model": "...", "embedder": "...", "git_sha": "...", ...}
+    raw: dict | None = None,    # All experiment-specific keys that don't fit above
+    out_path: str | os.PathLike[str] | None = None,
+) -> Path:
+    """Write a standardized dimension-experiment artifact.
+
+    Returns the file path the artifact was written to. If out_path is None,
+    auto-generates under runs/<opportunity>/<timestamp>.json.
+
+    The standardized top-level shape lets a future analyst answer queries
+    like "show me all stage-5 memory.lifecycle experiments where the
+    UC-GC-RETRIEVAL gate passed" with a one-line jq command across all
+    artifacts under runs/.
+    """
+    artifact = {
+        "schema_version": SCHEMA_VERSION,
+        "artifact_id": str(uuid.uuid4()),
+        "git_sha": _git_sha(),
+        "timestamp_utc": datetime.now(timezone.utc).isoformat(),
+        "opportunity": opportunity,
+        "dimension": dimension,
+        "stage": stage,
+        "experiment_name": experiment_name,
+        "variants": variants,
+        "workload": workload,
+        "metrics": metrics,
+        "gates": gates,
+        "decision": decision,
+        "environment": environment,
+        "raw": raw or {},
+    }
+    if out_path is None:
+        ts = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+        out_path = Path(__file__).resolve().parent.parent / "runs" / opportunity / f"{ts}.json"
+    out_path = Path(out_path)
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    out_path.write_text(json.dumps(artifact, indent=2, sort_keys=True))
+    return out_path
