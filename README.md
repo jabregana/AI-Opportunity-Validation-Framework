@@ -76,7 +76,9 @@ Three end-to-end results with real Mem0 (Ollama phi3:mini + all-minilm + Qdrant)
 | 50 SQuAD Q&A pairs, F1 preservation before/after sweep | Retrieval quality preservation under GC | **81.6% F1 preservation at 52% reduction**. UC-GC-RETRIEVAL gate (>= 80%) PASS |
 | 200 SQuAD Q&A pairs (4x replication) | Same, larger N | **81.8% F1 preservation at 44% reduction**. PASS. Replication confirms n=50 estimate within 0.2pp |
 
-Plus 14 unit tests on the Graphiti adapter, 13 on the Cognee adapter, 9 cross-adapter consistency tests. All three adapters compose with v0.1.x policies identically.
+Plus 14 unit tests on the Graphiti adapter, 13 on the Cognee adapter, 9 cross-adapter consistency tests. All three adapters compose with v0.1.x policies identically at the contract level.
+
+**Important caveat surfaced 2026-06-09:** End-to-end Graphiti F1 benchmarks (three scenarios; see [`docs/finding-graphiti-f1-stage5.md`](docs/finding-graphiti-f1-stage5.md)) showed that v0.1.x variants return 0% reduction on Graphiti's edge-rich graph because the `in_degree == 0` orphan-node check at the heart of every v0.1.x rule rarely triggers when entities are connected by edges. This is an architectural assumption baked into v0.1.x that holds in flat-memory frameworks (Mem0) but not in graph-native ones (Graphiti, likely Cognee). The Mem0 numbers above stand; the Graphiti and Cognee paths await a v0.2.x variant family designed for graph topology rather than orphan-node assumption. This is the second time the framework caught itself surfacing a real limitation (first was the entity-norm Stage 3-to-4 ranking flip).
 
 ### Bonus: the cross-dimension result
 
@@ -87,7 +89,8 @@ A 72-config matrix joint experiment across all six dimensions found **75% of "ob
 | Opportunity | Stage | What's deployable today | What's missing for commercialization |
 |---|---|---|---|
 | Entity-norm proxy | 4 (substantial real data) | `embed-proxy-v0.5.7-mt-ann` (multi-tenant, ANN-backed) + drop-in middleware for Mem0/Graphiti/Cognee | Vertical alias maps as a paid subscription (pharma, finance, legal). Without those, the proxy itself is ~50 lines of regex anyone can rewrite. |
-| Memory lifecycle | 5 (real LLM + real adapter at production-realistic scale) | `gc-v0.1.8-comprehensive-tuned` + Mem0/Graphiti/Cognee adapters + production runbook + CI regression gate | One customer running the bundle in production for 30 days. That's the only remaining gap between "research asset" and "product." |
+| Memory lifecycle (Mem0 path) | 5 (real LLM + real adapter at production-realistic scale) | `gc-v0.1.8-comprehensive-tuned` + Mem0 adapter + production runbook + CI regression gate | One customer running the Mem0 bundle in production for 30 days. That's the only remaining gap between "research asset" and "product" for the Mem0 path. |
+| Memory lifecycle (Graphiti / Cognee path) | 5 (architectural limitation surfaced) | Adapters exist as real code, but v0.1.x rules return 0% reduction on edge-rich graphs (see [`docs/finding-graphiti-f1-stage5.md`](docs/finding-graphiti-f1-stage5.md)) | A v0.2.x variant family designed for graph topology rather than orphan-node assumption. Estimated 2-3 weeks Stage 1-2 effort. |
 
 Both are within one focused engagement of being commercial. The memory lifecycle work is closer because the deployable bundle has measured numbers from this week's runs and a documented runbook. The entity-norm work needs vertical content (alias maps) to become defensible beyond the harness itself.
 

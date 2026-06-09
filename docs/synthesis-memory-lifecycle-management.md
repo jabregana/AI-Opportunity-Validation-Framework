@@ -17,6 +17,7 @@ supersedes: positioning portions of strategic-framing-decision-tool.md
 | Phase 3: Retrieval-quality F1 | **SHIPPED + TUNED** | `experiments/gc_retrieval_f1_benchmark.py` (synthetic + SQuAD); per-adapter variants in `experiments/{mem0,graphiti,cognee}_retrieval_f1_benchmark.py`; `compute_retrieval_gate()` in `runner/gc_runner.py` emits UC-GC-RETRIEVAL verdict; tuned trade-off table in `docs/finding-retrieval-f1-scaffold-tuned.md` |
 | Phase 3.5: CI regression gate | **SHIPPED** | `.github/workflows/ci.yml` runs F1 benchmark on every PR; `experiments/ci_check_f1_regression.py` fails CI if any variant drops below 75% F1 preservation |
 | Phase 4: Customer pilot | **NOT STARTED** | Partnership work, blocked on engineering completion |
+| Phase 5: v0.2.x graph-topology variants | **NEEDED** | End-to-end Graphiti F1 surfaced that v0.1.x's `in_degree == 0` orphan-node check never triggers on edge-rich graphs (see `docs/finding-graphiti-f1-stage5.md`). 0% reduction across three test scenarios on Graphiti. Mem0 numbers unaffected (flat-memory). Graphiti and Cognee paths await a v0.2.x family operating on graph topology rather than orphan assumption. Estimated 2-3 weeks Stage 1-2. |
 
 ### What's still measurably missing
 
