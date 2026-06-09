@@ -7,14 +7,19 @@ Same pattern: an ABC, a factory dict, and a build() helper.
 from __future__ import annotations
 from typing import Callable
 
+from .activation_decay import ActivationDecayGC
 from .base import GCVariant, GraphState
 from .b_raw import BRawNoGC
 from .component_isolation import ComponentIsolationGC
 from .comprehensive import ComprehensiveGC
+from .comprehensive_graph_tuned import ComprehensiveGraphTunedGC, V02xConfig
 from .comprehensive_tuned import ComprehensiveTunedGC
 from .conservative_entity import ConservativeEntityPlusFactGC
 from .conservative_entity_tuned import ConservativeEntityTunedGC
+from .evidence_count import EvidenceCountGC
 from .ref_count import FactOnlyGC, RefCountGC, RefCountUtilityGC
+from .supersession_tombstone import SupersessionTombstoneGC, Tombstone
+from .temporal_validity import TemporalValidityGC
 from .tenant_pin import FactOnlyTenantPinningGC
 from .tombstone import FactOnlyTombstoneGC
 
@@ -33,6 +38,11 @@ FACTORIES: dict[str, Callable[[], GCVariant]] = {
     # v0.2.x family: graph-topology-aware variants for edge-rich frameworks
     # (Graphiti, Cognee). See docs/opportunity-v0.2.x-graph-topology-gc.md.
     "gc-v0.2.0-component-isolation": ComponentIsolationGC,
+    "gc-v0.2.1-temporal-validity": TemporalValidityGC,
+    "gc-v0.2.2-activation-decay": ActivationDecayGC,
+    "gc-v0.2.3-evidence-count": EvidenceCountGC,
+    "gc-v0.2.4-supersession-tombstone": SupersessionTombstoneGC,
+    "gc-v0.2.5-comprehensive-graph-tuned": ComprehensiveGraphTunedGC,
 }
 
 

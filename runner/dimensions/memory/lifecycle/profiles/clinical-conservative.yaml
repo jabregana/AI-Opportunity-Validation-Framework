@@ -1,0 +1,24 @@
+# clinical-conservative profile for gc-v0.2.5-comprehensive-graph-tuned
+# Healthcare / clinical record workloads. Multi-year retention is the
+# norm; over-collection has compliance + safety consequences. All
+# thresholds are dramatically more conservative than default.
+
+component_isolation_enabled: true
+min_component_idle_seconds: 63072000     # 2 years
+min_component_age_seconds: 31536000      # 1 year
+
+temporal_validity_enabled: true
+temporal_validity_ttl_seconds: 31536000  # 1 year (even superseded facts retained)
+
+activation_decay_enabled: true
+activation_window_seconds: 31536000      # 1 year
+min_query_count: 1                       # rare-but-real queries matter
+
+evidence_count_enabled: true
+evidence_min_age_seconds: 63072000       # 2 years
+
+supersession_tombstone_enabled: true
+tombstone_ttl_seconds: 31536000          # 1 year (long recovery window)
+supersession_min_age_seconds: 2592000    # 30 days
+
+tenant_pinning_enabled: true

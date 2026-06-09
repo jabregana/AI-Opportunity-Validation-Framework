@@ -1,0 +1,29 @@
+# general-default profile for gc-v0.2.5-comprehensive-graph-tuned
+# Out-of-the-box conservative defaults. Use this when the deployment
+# does not fit one of the more-specific profiles.
+
+# Layer 1: component-isolation
+component_isolation_enabled: true
+min_component_idle_seconds: 2592000      # 30 days
+min_component_age_seconds: 604800        # 7 days
+
+# Layer 2: temporal-validity
+temporal_validity_enabled: true
+temporal_validity_ttl_seconds: 604800    # 7 days
+
+# Layer 3: activation-decay
+activation_decay_enabled: true
+activation_window_seconds: 5184000       # 60 days
+min_query_count: 3
+
+# Layer 4: evidence-count
+evidence_count_enabled: true
+evidence_min_age_seconds: 2592000        # 30 days
+
+# Layer 5: supersession-tombstone
+supersession_tombstone_enabled: true
+tombstone_ttl_seconds: 604800            # 7 days
+supersession_min_age_seconds: 86400      # 1 day
+
+# Tenant pinning
+tenant_pinning_enabled: true

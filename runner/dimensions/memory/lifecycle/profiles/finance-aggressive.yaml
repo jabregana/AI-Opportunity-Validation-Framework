@@ -1,0 +1,23 @@
+# finance-aggressive profile for gc-v0.2.5-comprehensive-graph-tuned
+# Financial news / trading / quant workloads. Facts go stale fast;
+# aggressive collection to keep the working set focused on current data.
+
+component_isolation_enabled: true
+min_component_idle_seconds: 86400        # 1 day (much shorter than default)
+min_component_age_seconds: 3600          # 1 hour
+
+temporal_validity_enabled: true
+temporal_validity_ttl_seconds: 3600      # 1 hour (financial facts age fast)
+
+activation_decay_enabled: true
+activation_window_seconds: 86400         # 1 day
+min_query_count: 2                       # cleaner extraction; less conservative
+
+evidence_count_enabled: true
+evidence_min_age_seconds: 86400          # 1 day
+
+supersession_tombstone_enabled: true
+tombstone_ttl_seconds: 3600              # 1 hour
+supersession_min_age_seconds: 600        # 10 minutes
+
+tenant_pinning_enabled: true
