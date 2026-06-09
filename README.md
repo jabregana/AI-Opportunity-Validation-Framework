@@ -1,6 +1,6 @@
 # AI-Opportunity-Validation-Framework
 
-**A repeatable framework for deciding whether an AI/ML/LLM opportunity is worth building.**
+**A repeatable framework for deciding whether an AI/ML/LLM opportunity is worth building, with measured evidence at every stage.**
 
 Most AI teams operate as: idea -> prototype -> launch. By the time the prototype is in front of a customer, the team has already spent months on the wrong shape, the wrong claim, or the wrong wedge. The customer reaction is the first real test.
 
@@ -10,7 +10,7 @@ This framework inserts four tests **before** the customer sees anything:
 idea -> kill test -> synthetic validation -> small-N real data -> substantial-N real data -> deployment recommendation
 ```
 
-Each test catches errors the previous one missed. Most opportunities die at one of the earlier stages, which is the point. The ones that survive arrive at the customer pre-corrected, with a deployment recipe, measured technical numbers (store reduction, F1 preservation, p99 latency, false-collection rate), and a business-outcome translation built on top of those numbers. The translation stays an estimate until a customer reports their own outcomes from a production deployment; the technical numbers are real measurements from real runs.
+Each test catches errors the previous one missed. Most opportunities die at one of the earlier stages, which is the point. The ones that survive arrive at the customer pre-corrected, with a deployment recipe, measured technical numbers (store reduction, F1 preservation, p99 latency, false-collection rate), and a business-outcome translation built on top of those numbers. The translation stays an estimate until a customer reports their own outcomes from a production deployment; the technical numbers are real measurements from real runs with documented confidence intervals.
 
 The framework is the durable asset. The individual opportunities tested through it are the case studies that show it works.
 
@@ -18,30 +18,45 @@ The framework is the durable asset. The individual opportunities tested through 
 
 Run any AI/ML/LLM opportunity through this framework in four to six weeks and finish with one of two outcomes:
 
-- **Go**: a specific deployment recipe (variant + config + sweep cadence + rollback signal), backed by measured numbers from real data, with the business-outcome translation written down
+- **Go**: a specific deployment recipe (variant + config + sweep cadence + rollback signal), backed by measured numbers from real data with confidence intervals, and a business-outcome translation written down
 - **No-go**: a documented kill, including which stage caught it and what the evidence was
 
 The framework's defensibility comes from doing this **across every dimension of an agent system** (model, prompt, tools, memory, policy, recovery) with the same statistical discipline, and from **forcing deployment decisions** out of the joint result. Most agent-eval tooling stops at "here are the traces" or "here is one axis tested." This one continues to "and so the team should ship X, not Y."
 
 What the framework does NOT do: invent new mechanisms. Entity normalization, graph GC, prompt benchmarking all exist. The novelty is the **same statistical discipline applied uniformly + forced deployment decisions emerging from the data**.
 
+## The credibility-bearing pattern: the framework catches itself
+
+In the most recent week of work, the framework caught itself surfacing real problems three times. Each catch is a finding doc in `docs/`, none was silently corrected, and each one demonstrates that the methodology is doing its job. This is what separates the framework from "we shipped a prototype and the demo worked":
+
+| Self-correction | Surfaced by | Outcome |
+|---|---|---|
+| Entity-norm Stage 3 -> 4 ranking flip ("free local 3B beats every frontier API" was a small-N tail-bias artifact) | Stage 4 scale-up from N=227 to N=836 | Revised claim: "free local 7B ties gpt-4o at ~1000x lower cost." See [`docs/finding-substantial-N-revision.md`](docs/finding-substantial-N-revision.md) |
+| Graphiti `in_degree == 0` architectural assumption (every v0.1.x variant returns 0% reduction on edge-rich graphs) | Three Graphiti F1 scenarios (different backdates, different variants) all returning 0% | Documented; spawned v0.2.x graph-topology design. See [`docs/finding-graphiti-f1-stage5.md`](docs/finding-graphiti-f1-stage5.md) |
+| Mem0 F1 single-seed headline understated 14pp variance ("81.6%" was one point in a [75%, 89%] distribution; 1-in-3 seeds fails the gate) | Multi-seed compliance from [`docs/benchmark-methodology.md`](docs/benchmark-methodology.md) | Revised headline to "mean 84%, 95% CI [75%, 89%], 2-of-3 seeds pass." See [`docs/finding-mem0-f1-stage5.md`](docs/finding-mem0-f1-stage5.md) |
+
+The methodology standard ([`docs/benchmark-methodology.md`](docs/benchmark-methodology.md)) was codified the same day as the third catch and immediately validated itself on first application. The framework's value comes from this kind of revisability, not from high single-numbers.
+
 ## What the framework consists of
 
 | Layer | What it does | Where it lives |
 |---|---|---|
 | Four-stage progression | Forces theoretical -> synthetic -> small real -> substantial real, in that order | [`FRAMEWORK.md`](FRAMEWORK.md) |
+| Benchmark methodology standard | Workload archetypes, multi-seed reporting, pre-registration, compliance checklist that gates VALIDATED vs PARTIAL | [`docs/benchmark-methodology.md`](docs/benchmark-methodology.md) |
+| Per-dim runner pattern + recipe | Each dimension gets its own runner (200-450 lines); 7-step recipe with worked example for adding a new one | [`docs/RUNNER-RECIPE.md`](docs/RUNNER-RECIPE.md) |
 | Per-experiment UC gates | Calibrated pass/fail thresholds on store reduction, retrieval recall, false-collection, latency, tombstone recovery, retrieval F1 | `runner/gc_runner.py` |
 | Per-variant effect detection | Paired bootstrap (10k resamples), one and two-sided p-values | `runner/metrics/stats.py` |
 | Cross-variant FDR control | LORD++ online FDR ledger (Ramdas et al. 2017) for sequential testing | `runner/fdr.py` |
 | Variance reduction | CUPED (Deng et al. 2013) cuts required N by 20-40% when prior baselines exist | `runner/cuped.py` |
 | Cross-dimension matrix | Joint 72-config experiment across all six dimensions; surfaces interactions | `experiments/cross_dim_full_matrix.py` |
+| Standardized artifact schema | All Stage-5 experiments emit a v1 top-level schema (`opportunity, dimension, stage, variants, metrics, gates, decision, environment`) for cross-opportunity grep | `runner/artifacts.py::emit_dimension_artifact` |
 | Integration shim contract | One ABC adapts any downstream memory framework (Mem0, Graphiti, Cognee) into the gate-tested variant pipeline | `runner/dimensions/memory/lifecycle/integrations/base.py` |
-| Finding-doc discipline | Every claim, including failures and retractions, gets a dated `docs/finding-*.md` | `docs/finding-*.md` (30+) |
+| Finding-doc discipline | Every claim, including failures and retractions, gets a dated `docs/finding-*.md`. Artifacts are immutable | `docs/finding-*.md` (30+) |
 | CI regression gate | Every PR re-runs the F1 benchmark, fails the build if any variant drops below 75% F1 preservation | `.github/workflows/ci.yml` |
 
 ## The two opportunities tested through it
 
-I ran two real opportunities through all four stages. Both started from a 90-day landscape scan ([`docs/opportunity.md`](docs/opportunity.md)). Both produced revisable, deployable, measured outcomes.
+Two real opportunities have run through all four stages. Both started from a 90-day landscape scan ([`docs/opportunity.md`](docs/opportunity.md)). Both produced revisable, deployable, measured outcomes.
 
 ### Opportunity 1: Schema-alignment proxy (entity normalization middleware)
 
@@ -49,37 +64,35 @@ Sits in front of Mem0, Graphiti, or Cognee. Intercepts entity writes, vector-mat
 
 ### Opportunity 2: Agent Memory Lifecycle Management (graph GC)
 
-Sits behind Mem0, Graphiti, or Cognee. Sweeps stale facts, preserves entities, tracks tombstones for over-collection recovery, supports per-tenant pinning. Eight deployment-shaped policy variants (passed all UC gates on synthetic + real-text workloads; pending one customer pilot for production-validated status). Drop-in middleware around any of the three frameworks.
+Sits behind Mem0, Graphiti, or Cognee. Sweeps stale facts, preserves entities, tracks tombstones for over-collection recovery, supports per-tenant pinning. Eight deployment-shaped policy variants for flat-memory frameworks (Mem0); a seven-layer v0.2.x design exists for graph-native frameworks (Graphiti, Cognee) but is currently unbuilt. The Mem0 path has measured production-shape numbers; the graph-native path is at Stage 1.
 
 ## Results: what each produced
 
-### Opportunity 1 results (entity-normalization proxy)
-
-Four stages, four-stage-progression-caught-an-overclaim:
+### Opportunity 1: entity-normalization proxy (four stages complete)
 
 | Stage | Output | What the framework caught |
 |---|---|---|
-| Stage 1 | Wedge picked: Mem0 maintainer publicly rejected this approach on issue #4896 (April 2026) | Killed three other candidate wedges that incumbents had already shipped |
-| Stage 2 | v0.3.1 (hybrid + structural filter) became GA candidate after ranking flipped on real WikiData aliases | Synthetic-data winner v0.3.0 was beaten on real data; framework caught its own statistical bootstrap bug mid-pilot |
-| Stage 3 | At N=227: "free local 3B beats every frontier API" (p < 0.0001) | Headline was statistically significant but wrong |
-| Stage 4 | At N=836 with 416-alias map: ranking collapsed; correct claim is "free local 7B ties gpt-4o at 0.773 with ~1000x lower cost" | Stage 4's 5-10x scale-up caught the small-N tail bias before publication |
+| 1 | Wedge picked: Mem0 maintainer publicly rejected this approach on issue #4896 (April 2026) | Killed three other candidate wedges that incumbents had already shipped |
+| 2 | v0.3.1 (hybrid + structural filter) became GA candidate after ranking flipped on real WikiData aliases | Synthetic-data winner v0.3.0 was beaten on real data; framework caught its own statistical bootstrap bug mid-pilot |
+| 3 | At N=227: "free local 3B beats every frontier API" (p < 0.0001) | Headline was statistically significant but wrong (small-N tail bias) |
+| 4 | At N=836 with 416-alias map: ranking collapsed; correct claim is "free local 7B ties gpt-4o at 0.773 with ~1000x lower cost" | Stage 4's 5-10x scale-up caught the tail bias before publication |
 
-The framework catching its own Stage 3 overclaim is the single most credibility-bearing artifact this project produced. Full self-correction: [`docs/finding-substantial-N-revision.md`](docs/finding-substantial-N-revision.md).
+Full self-correction: [`docs/finding-substantial-N-revision.md`](docs/finding-substantial-N-revision.md). This is one of the framework's three credibility-bearing self-corrections.
 
-### Opportunity 2 results (memory lifecycle management)
+### Opportunity 2: memory lifecycle management
 
-Three end-to-end results with real Mem0 (Ollama phi3:mini + all-minilm + Qdrant) this week:
+Two end-to-end results with real Mem0 (Ollama phi3:mini + all-minilm + Qdrant). Both Stage 5; both are real measurements at production-realistic scale.
 
-| Workload | What it measures | Result |
-|---|---|---|
-| 2,000 SQuAD-style inputs, sweep every 100 | Steady-state store reduction over a 2-hour run | Mem0 LLM extracted 3,363 memories; v0.1.8 collected 3,308. **98.4% reduction**, 0 failures, clean sawtooth (50-65 surviving, 200-320 pre-sweep) |
-| 50 SQuAD Q&A pairs, F1 preservation before/after sweep, **3 seeds (multi-seed required per `docs/benchmark-methodology.md`)** | Retrieval quality preservation under GC | **Mean 83.8% F1 preservation (95% CI [74.5%, 88.8%], n=3 seeds) at mean 36.4% reduction**. UC-GC-RETRIEVAL gate (>= 80%) PASS in 2 of 3 seeds; FAIL in 1 of 3 (seed=42, 74.5%). Previously-reported single-seed numbers (81.6% at n=50, 81.8% at n=200) sat inside this distribution but understated the variance. See [`docs/finding-mem0-f1-stage5.md`](docs/finding-mem0-f1-stage5.md) for the revised analysis. |
+| Workload | What it measures | Result | Compliance status |
+|---|---|---|---|
+| 2,000 SQuAD-style inputs, sweep every 100, 1 seed | Steady-state store reduction over a 2-hour run | Mem0 LLM extracted 3,363 memories; v0.1.8 collected 3,308. **98.4% reduction**, 0 failures, clean sawtooth (50-65 surviving, 200-320 pre-sweep) | PARTIAL: single-seed; multi-seed re-run is queued follow-up |
+| 50 SQuAD Q&A pairs, F1 preservation before/after sweep, **3 seeds** | Retrieval quality preservation under GC | **Mean 83.8% F1 preservation, 95% CI [74.5%, 88.8%], at mean 36.4% reduction**. UC-GC-RETRIEVAL gate (>= 80%) passes in 2 of 3 seeds; fails in 1 of 3 (seed=42, 74.5%) | COMPLIANT (multi-seed); PARTIAL (single archetype) |
 
-Plus 14 unit tests on the Graphiti adapter, 13 on the Cognee adapter, 9 cross-adapter consistency tests. All three adapters compose with v0.1.x policies identically at the contract level.
+Three adapters exist (Mem0, Graphiti, Cognee) with 14 + 13 + cross-adapter consistency tests. The contract layer composes with v0.1.x policies identically across all three.
 
-**Important caveat surfaced 2026-06-09:** End-to-end Graphiti F1 benchmarks (three scenarios; see [`docs/finding-graphiti-f1-stage5.md`](docs/finding-graphiti-f1-stage5.md)) showed that v0.1.x variants return 0% reduction on Graphiti's edge-rich graph because the `in_degree == 0` orphan-node check at the heart of every v0.1.x rule rarely triggers when entities are connected by edges. This is an architectural assumption baked into v0.1.x that holds in flat-memory frameworks (Mem0) but not in graph-native ones (Graphiti, likely Cognee). The Mem0 numbers above stand; the Graphiti and Cognee paths await a v0.2.x variant family designed for graph topology rather than orphan-node assumption. This is the second time the framework caught itself surfacing a real limitation (first was the entity-norm Stage 3-to-4 ranking flip).
+**Cross-framework finding**: end-to-end Graphiti benchmarks (3 scenarios; full detail in [`docs/finding-graphiti-f1-stage5.md`](docs/finding-graphiti-f1-stage5.md)) showed v0.1.x variants return 0% reduction on Graphiti's edge-rich graph because the `in_degree == 0` orphan-node check at the heart of every v0.1.x rule rarely triggers when entities are connected by edges. The Mem0 numbers above stand; the Graphiti and Cognee paths await a v0.2.x variant family designed for graph topology. The v0.2.x design (7 layers) is documented at [`docs/opportunity-v0.2.x-graph-topology-gc.md`](docs/opportunity-v0.2.x-graph-topology-gc.md).
 
-### Bonus: the cross-dimension result
+### Cross-dimension result
 
 A 72-config matrix joint experiment across all six dimensions found **75% of "obvious" variant combinations LOSE vs baseline**, and the top-10 all use baseline tools. The framework's current cross-dimension deployment recommendation: `prompt-v0.1.4-cot-plus-structured + b-allow-all-tools + recovery-v0.1.1-fallback-chain`, ~59.6% completion at CI [55.0-63.6], +23pp over baseline. Cost-weighted top-1 and top-2 are statistically indistinguishable, so the cheaper one wins. See [`docs/finding-cross-dim-cost-weighted.md`](docs/finding-cross-dim-cost-weighted.md).
 
@@ -87,13 +100,13 @@ A 72-config matrix joint experiment across all six dimensions found **75% of "ob
 
 | Opportunity | Stage | What's deployable today | What's missing for commercialization |
 |---|---|---|---|
-| Entity-norm proxy | 4 (substantial real data) | `embed-proxy-v0.5.7-mt-ann` (multi-tenant, ANN-backed) + drop-in middleware for Mem0/Graphiti/Cognee | Vertical alias maps as a paid subscription (pharma, finance, legal). Without those, the proxy itself is ~50 lines of regex anyone can rewrite. |
-| Memory lifecycle (Mem0 path) | 5 (real LLM + real adapter at production-realistic scale) | `gc-v0.1.8-comprehensive-tuned` + Mem0 adapter + production runbook + CI regression gate | One customer running the Mem0 bundle in production for 30 days. That's the only remaining gap between "research asset" and "product" for the Mem0 path. |
-| Memory lifecycle (Graphiti / Cognee path) | 5 (architectural limitation surfaced) | Adapters exist as real code, but v0.1.x rules return 0% reduction on edge-rich graphs (see [`docs/finding-graphiti-f1-stage5.md`](docs/finding-graphiti-f1-stage5.md)) | A v0.2.x variant family designed for graph topology rather than orphan-node assumption. Estimated 2-3 weeks Stage 1-2 effort. |
+| Entity-norm proxy | 4 (substantial real data) | `embed-proxy-v0.5.7-mt-ann` (multi-tenant, ANN-backed) + drop-in middleware for Mem0/Graphiti/Cognee | Vertical alias maps as a paid subscription (pharma, finance, legal). Without those, the proxy itself is ~50 lines of regex anyone can rewrite |
+| Memory lifecycle (Mem0 path) | 5 (real LLM + real adapter at production-realistic scale; multi-seed CI on F1) | `gc-v0.1.8-comprehensive-tuned` + Mem0 adapter + production runbook + CI regression gate | One customer running the Mem0 bundle in production for 30 days |
+| Memory lifecycle (Graphiti / Cognee path) | 1-2 (architectural design after v0.1.x assumption surfaced) | Adapters exist as real code; v0.1.x rules don't fit graph-native; v0.2.x design ready for build | Build the v0.2.x family (5 layers in scope, 2 deferred to v0.3.x), per [`docs/opportunity-v0.2.x-graph-topology-gc.md`](docs/opportunity-v0.2.x-graph-topology-gc.md). Estimated 5-6 calendar weeks |
 
-Both are within one focused engagement of being commercial. The memory lifecycle work is closer because the deployable bundle has measured numbers from this week's runs and a documented runbook. The entity-norm work needs vertical content (alias maps) to become defensible beyond the harness itself.
+Both opportunities are within one focused engagement of being commercial on their best path. The Mem0 lifecycle work is closest because the deployable bundle has measured numbers from this week's runs and a documented runbook. The entity-norm work needs vertical content (alias maps) to become defensible beyond the harness itself.
 
-What does NOT get added next: more dimensions, more variants, more statistical machinery. The framework has enough. What gets added next: **one customer who runs a recommendation in production and reports their actual business outcome.**
+What does NOT get added next: more dimensions, more six-dimension variants, more statistical machinery. The framework has enough. What gets added next: **one customer who runs a recommendation in production and reports their actual business outcome.**
 
 ---
 
@@ -101,9 +114,9 @@ What does NOT get added next: more dimensions, more variants, more statistical m
 
 ### The wedge
 
-I studied agent memory tools (Mem0, Graphiti, Cognee, Neo4j Agent Memory, Memgraph) for 90 days. They all share five problems: fragmented extraction, graph explosion, schema rigidity, cold extraction tax, no reasoning memory. Sitting in front of them as middleware is the cleanest opening.
+A 90-day study of agent memory tools (Mem0, Graphiti, Cognee, Neo4j Agent Memory, Memgraph) surfaced five shared problems: fragmented extraction, graph explosion, schema rigidity, cold extraction tax, no reasoning memory. Sitting in front of them as middleware is the cleanest opening.
 
-I considered four candidate wedges:
+Four candidate wedges considered:
 
 | Wedge | Already taken? |
 |---|---|
@@ -112,7 +125,7 @@ I considered four candidate wedges:
 | Real-time graph GC | Not yet, but the operational definition was fuzzy (became Opportunity 2 below) |
 | Schema-alignment proxy | Not yet, and Mem0 maintainer rejected this approach on the record (issue #4896, April 2026) |
 
-I picked the schema-alignment proxy because the incumbent's public rejection is the cleanest signal a wedge will stay open. Full landscape: [`docs/opportunity.md`](docs/opportunity.md).
+The schema-alignment proxy got the pick because the incumbent's public rejection is the cleanest signal a wedge will stay open. Full landscape: [`docs/opportunity.md`](docs/opportunity.md).
 
 ### The mechanism
 
@@ -128,7 +141,7 @@ m.add("Bought AAPL today", user_id="trader1")
 
 Same shape for `GraphitiPreNormalized` and `CogneePreNormalized`. All three share a 50-line adapter contract.
 
-### What the proxy buys you
+### What the proxy buys
 
 | Where it helps | Where it does not |
 |---|---|
@@ -145,9 +158,11 @@ Plausibly a $1M to $10M ARR business. Not a $1B startup. The proxy code is ~50 l
 
 ### The wedge
 
-Same 90-day landscape scan. Real-time graph GC was the second wedge I considered. The operational definition was fuzzy initially (when does "GC" fire? what does it preserve?), but the synthesis became `gc-v0.1.8-comprehensive-tuned`: fact collection + tombstone log + per-tenant pinning + tuned entity rule.
+Same 90-day landscape scan. Real-time graph GC was the second wedge considered. The operational definition was fuzzy initially (when does "GC" fire? what does it preserve?), but the synthesis became `gc-v0.1.8-comprehensive-tuned`: fact collection + tombstone log + per-tenant pinning + tuned entity rule.
 
-### The mechanism
+The architectural finding from end-to-end Graphiti testing (see "Cross-framework finding" above) refined the wedge: v0.1.x is the right family for **flat-memory frameworks** (Mem0); the v0.2.x design ([`docs/opportunity-v0.2.x-graph-topology-gc.md`](docs/opportunity-v0.2.x-graph-topology-gc.md)) is the right family for **graph-native frameworks** (Graphiti, Cognee). Both families share the same product story (Agent Memory Lifecycle Management) and the same configurable-policy approach.
+
+### The mechanism (Mem0 path, production-shape today)
 
 ```python
 from mem0 import Memory
@@ -169,7 +184,7 @@ mw.sweep(variant, current_time=time.time())
 
 Same shape for `GraphitiGCMiddleware` (graph-native, async) and `CogneeGCMiddleware` (module-level API). Cross-adapter consistency: `tests/test_cross_adapter_consistency.py`.
 
-### Production recipe
+### Production recipe (Mem0 path)
 
 ```
 Variant:          gc-v0.1.8-comprehensive-tuned
@@ -179,6 +194,8 @@ Knobs:
   min_query_count       3       entities with 3+ queries always survive
   tombstone_ttl_seconds 604800  7 days "soft delete" window
 Rollback:         stop calling mw.sweep(); middleware degrades to pass-through
+Monitoring:       single sweep cycles can dip below the 80% F1 preservation
+                  threshold; rollback if multiple consecutive cycles fall below
 ```
 
 Full operational guide: [`docs/runbook-mem0-v0.1.8-deploy.md`](docs/runbook-mem0-v0.1.8-deploy.md).
@@ -187,31 +204,35 @@ Full operational guide: [`docs/runbook-mem0-v0.1.8-deploy.md`](docs/runbook-mem0
 
 | Metric | Estimate | Source |
 |---|---|---|
-| Memory store size | 80-98% reduction | Stage 3 real-text 84.96%; Stage 5 real-Mem0 98.4% |
-| Retrieval quality preserved | 80-82% F1 | Stage 5 F1 benchmarks (n=50 + n=200, both PASS) |
+| Memory store size | 80-98% reduction | Stage 3 real-text 84.96%; Stage 5 real-Mem0 98.4% (single-seed) |
+| Retrieval quality preserved | 75-89% F1 across seeds, mean 84% | Stage 5 multi-seed F1 (n=3 seeds); 1-in-3 seeds dips below 80% gate |
 | Vector-store storage cost | ~50x cheaper at the same agent quality | derived from store-size reduction |
 | Token-spend reduction | ~20% at typical RAG ratios | smaller context windows per query |
 | Eng-hours saved | 16-32 hours per year per deployment | replaces ad-hoc cleanup scripts |
 | Sweep cost | 0.067-0.245 s per call | sub-linear in store size; measured |
 
-The numbers above are estimates derived from the measured benchmarks. The gap between estimate and verified outcome closes when a customer pilot reports their actual savings.
+The numbers above are estimates derived from the measured benchmarks. Cost ranges reflect the variance the multi-seed methodology exposed. The gap between estimate and verified outcome closes when a customer pilot reports their actual savings.
 
 ### Commercial position
 
-This is the more-commercializable of the two opportunities today. The deployable bundle exists, the runbook exists, the regression gate runs on every PR, three downstreams are covered, and the headline numbers came out of THIS week's runs against real LLM extraction. The remaining gap is partnership, not engineering.
+The Mem0 path is the more-commercializable of the two paths today. The deployable bundle exists, the runbook exists, the regression gate runs on every PR, the F1 numbers come from real LLM extraction at multiple seeds. The remaining gap is partnership, not engineering.
+
+The Graphiti/Cognee path is one v0.2.x build cycle (~5-6 calendar weeks) away from a parallel commercializable offering. See [`docs/opportunity-v0.2.x-graph-topology-gc.md`](docs/opportunity-v0.2.x-graph-topology-gc.md) for the seven-layer design space, configurability per domain/model/setup, and the cost estimate.
 
 ---
 
 ## How to apply the framework to your own opportunity
 
-1. **Stage 1, 1-3 days.** Landscape scan. Find the incumbents. Kill any wedge that's already taken. Pick one with on-record evidence the incumbent will not build it.
+1. **Stage 1, 1-3 days.** Landscape scan. Find the incumbents. Kill any wedge that's already taken. Pick one with on-record evidence the incumbent will not build it. See [`docs/opportunity-v0.2.x-graph-topology-gc.md`](docs/opportunity-v0.2.x-graph-topology-gc.md) for an example Stage 1 doc.
 2. **Stage 2, 1-2 weeks.** Build the simplest variant behind the variant interface. Run against a synthetic workload where you know the right answer. Iterate against the statistical gates. Write a finding doc per iteration.
 3. **Stage 3, 3-5 days.** Add a real-data integration shim. Run the multi-model ladder. Do NOT publish the headline yet.
 4. **Stage 4, 2-5 days.** Scale the real-data workload 5x to 10x. Use a more diverse entity set. Re-run. Either confirm or correct the Stage 3 headline.
 
-Total: 4-6 weeks per opportunity. Output: go or no-go answer with cited data.
+Total: 4-6 weeks per opportunity. Output: go or no-go answer with cited data and confidence intervals.
 
-Reusable pieces: `runner/fdr.py`, `runner/cuped.py`, `runner/metrics/stats.py`, integration-shim ABC at `runner/dimensions/memory/lifecycle/integrations/base.py`, variant factory pattern at `runner/dimensions/memory/lifecycle/__init__.py`, finding-doc structure across `docs/finding-*.md` (30+ examples).
+The per-dimension runner pattern + seven-step recipe with a worked example: [`docs/RUNNER-RECIPE.md`](docs/RUNNER-RECIPE.md). The benchmark methodology standard that every Stage 3+ run must comply with: [`docs/benchmark-methodology.md`](docs/benchmark-methodology.md).
+
+Reusable pieces: `runner/fdr.py`, `runner/cuped.py`, `runner/metrics/stats.py`, integration-shim ABC at `runner/dimensions/memory/lifecycle/integrations/base.py`, variant factory pattern at `runner/dimensions/memory/lifecycle/__init__.py`, standardized artifact helper at `runner/artifacts.py::emit_dimension_artifact`, finding-doc structure across `docs/finding-*.md` (30+ examples).
 
 Full methodology and component inventory: [`FRAMEWORK.md`](FRAMEWORK.md).
 
@@ -220,14 +241,17 @@ Full methodology and component inventory: [`FRAMEWORK.md`](FRAMEWORK.md).
 What this repo does NOT have, in priority order:
 
 1. **A customer pilot for either opportunity.** Until a real team runs a recommended bundle in production for 30 days and reports actual storage savings, latency change, and any incidents, the business-outcome claims are estimates. This is the gating constraint between "research asset" and "product."
-2. **Real-calendar-time long-running data for Opportunity 2.** The 30/60/90-day projections come from a compressed-time simulator. Not the same as 8 weeks of real production traffic.
-3. **More vertical corpora.** Twitter Financial News (entity-norm) and SQuAD (F1) are two corpora. Pharma, legal, customer-support corpora would each tighten one specific deployment recommendation.
-4. **A non-English corpus.** Both opportunities should work on other languages; that has not been measured.
-5. **Empirical depth across all six dimensions.** Memory, model, and recovery have strong evidence; prompt, tools, and policy are at Stage 2 baseline. The framework recognizes the gap; the cross-dim matrix uses what's available.
+2. **v0.2.x variants built for graph-native frameworks.** The design is documented (seven layers, configurable per domain/model/setup) but no code exists yet. Mem0 has the production-shape bundle today; Graphiti and Cognee customers wait until v0.2.x ships.
+3. **Multi-seed CI on the n=2000 reduction smoke.** The 98.4% reduction headline is still single-seed (PARTIAL per [`docs/benchmark-methodology.md`](docs/benchmark-methodology.md)). Wide-CI re-run is a queued follow-up, ~4 hours of Ollama time.
+4. **More workload archetypes.** The methodology standard requires at least 3 archetypes per Stage 3+ run. Current Mem0 + Graphiti runs use one (SQuAD-shape). The archetype library (steady-state, bursty, large-fact, high-mutation, cluster-rich, adversarial) needs concrete fixture builds.
+5. **Real-calendar-time long-running data.** The 30/60/90-day projections come from a compressed-time simulator. Not the same as 8 weeks of real production traffic.
+6. **More vertical corpora.** Twitter Financial News (entity-norm) and SQuAD (F1) are two corpora. Pharma, legal, customer-support corpora would each tighten one specific deployment recommendation.
+7. **A non-English corpus.** Both opportunities should work on other languages; that has not been measured.
+8. **Empirical depth across all six dimensions.** Memory, model, and recovery have strong evidence; prompt, tools, and policy are at Stage 2 baseline. The framework recognizes the gap; the cross-dim matrix uses what's available.
 
 ## Status
 
-Active. **473 tests passing.** 30+ documented findings. 6 dimensions evaluated (3 strong, 3 at Stage 2 baseline). 3 memory-framework adapters (Mem0, Graphiti, Cognee) with cross-adapter consistency tests. CI regression gate on every PR.
+Active. **473 tests passing.** 30+ documented findings. Three self-corrections this week alone (entity-norm Stage 3 -> 4, Graphiti `in_degree == 0` architectural assumption, Mem0 F1 single-seed variance). 6 dimensions evaluated (3 strong, 3 at Stage 2 baseline). 3 memory-framework adapters (Mem0, Graphiti, Cognee) with cross-adapter consistency tests. CI regression gate on every PR. Methodology standard codified ([`docs/benchmark-methodology.md`](docs/benchmark-methodology.md)) and immediately validated on first application.
 
 ## Install
 
@@ -241,11 +265,16 @@ pip install -e .[ann]                # ANN scaling variant (hnswlib + numpy)
 ## Running the headline benchmarks
 
 ```sh
-# Memory Lifecycle: real-Mem0 reduction smoke (~2 hours at N=2000)
+# Memory Lifecycle: real-Mem0 reduction smoke (~2 hours at N=2000, single-seed)
 .venv/bin/python experiments/mem0_smoke_test_real_llm.py --n-memories 2000 --sweep-every 100
 
-# Memory Lifecycle: retrieval F1 preservation (~6 min at N=50, ~30 min at N=200)
-.venv/bin/python experiments/mem0_retrieval_f1_benchmark.py --n-pairs 50 --aged-fraction 0.4
+# Memory Lifecycle: retrieval F1 preservation (~30 min per seed at N=50; methodology requires 3+ seeds)
+for seed in 42 123 456; do
+    .venv/bin/python experiments/mem0_retrieval_f1_benchmark.py \
+        --n-pairs 50 --aged-fraction 0.4 --seed $seed \
+        --qdrant-path /tmp/qdrant_seed_$seed --history-db /tmp/mem0_seed_$seed.db \
+        --out runs/mem0_retrieval_f1/seed_$seed.json
+done
 
 # Entity-norm: substantial-N case study (125 entities, 416 aliases, 836 tweets)
 .venv/bin/python experiments/case_study_expanded.py --per-entity 1000
@@ -254,7 +283,7 @@ pip install -e .[ann]                # ANN scaling variant (hnswlib + numpy)
 .venv/bin/python experiments/cross_dim_full_matrix.py
 ```
 
-Outputs land in `runs/` as immutable JSON artifacts.
+Outputs land in `runs/` as immutable JSON artifacts conforming to the standardized v1 schema (`opportunity, dimension, stage, variants, metrics, gates, decision, environment`).
 
 ## License
 

@@ -7,23 +7,25 @@ supersedes: positioning portions of strategic-framing-decision-tool.md
 
 # Synthesis: from "Graph GC" to "Agent Memory Lifecycle Management"
 
-## Execution status (2026-06-08)
+## Execution status (2026-06-09)
 
 | Phase | Status | Evidence |
 |---|---|---|
 | Phase 1: Real integrations | **SHIPPED** | Mem0 + Graphiti + Cognee adapters in `runner/dimensions/memory/lifecycle/integrations/`; cross-adapter consistency test in `tests/test_cross_adapter_consistency.py`; smoke test scripts in `experiments/{mem0,graphiti}_smoke_test_real_llm.py`; finding doc `docs/finding-graphiti-adapter-phase2.md` |
-| Phase 1.5: 2000-memory Mem0 smoke | **IN-FLIGHT** | `experiments/mem0_smoke_test_real_llm.py --n-memories 2000` running locally; partial artifact at `runs/mem0_smoke_real_llm/*.partial.json` |
-| Phase 2: Long-running benchmarks | **SCAFFOLDED** | `experiments/gc_long_running_simulation.py` compresses 30/60/90-day churn; first result: 30-day baseline=3020 -> v0.1.8=20 (99.3% reduction) |
-| Phase 3: Retrieval-quality F1 | **SHIPPED + TUNED** | `experiments/gc_retrieval_f1_benchmark.py` (synthetic + SQuAD); per-adapter variants in `experiments/{mem0,graphiti,cognee}_retrieval_f1_benchmark.py`; `compute_retrieval_gate()` in `runner/gc_runner.py` emits UC-GC-RETRIEVAL verdict; tuned trade-off table in `docs/finding-retrieval-f1-scaffold-tuned.md` |
+| Phase 1.5: 2000-memory Mem0 smoke | **SHIPPED (single-seed, PARTIAL per methodology)** | `runs/mem0_smoke_real_llm/20260608T110926.final.json`; 98.4% reduction over 2-hour run; multi-seed re-run is a queued follow-up |
+| Phase 2: Long-running benchmarks | **SCAFFOLDED** | `experiments/gc_long_running_simulation.py` compresses 30/60/90-day churn; first result: 30-day baseline=3020 -> v0.1.8=20 (99.3% reduction). Real-calendar-time data still needs a customer pilot. |
+| Phase 3: Retrieval-quality F1 | **SHIPPED (multi-seed, COMPLIANT)** | `experiments/gc_retrieval_f1_benchmark.py` + per-adapter variants. Mem0 multi-seed at n=50: mean 83.8%, 95% CI [74.5%, 88.8%], pass 2-of-3 seeds; see `docs/finding-mem0-f1-stage5.md`. Single archetype only; full compliance pending workload-archetype library. |
 | Phase 3.5: CI regression gate | **SHIPPED** | `.github/workflows/ci.yml` runs F1 benchmark on every PR; `experiments/ci_check_f1_regression.py` fails CI if any variant drops below 75% F1 preservation |
-| Phase 4: Customer pilot | **NOT STARTED** | Partnership work, blocked on engineering completion |
-| Phase 5: v0.2.x graph-topology variants | **NEEDED** | End-to-end Graphiti F1 surfaced that v0.1.x's `in_degree == 0` orphan-node check never triggers on edge-rich graphs (see `docs/finding-graphiti-f1-stage5.md`). 0% reduction across three test scenarios on Graphiti. Mem0 numbers unaffected (flat-memory). Graphiti and Cognee paths await a v0.2.x family operating on graph topology rather than orphan assumption. Estimated 2-3 weeks Stage 1-2. |
+| Phase 4: Customer pilot | **NOT STARTED** | Partnership work, the gating constraint between "research asset" and "product." Mem0 path is engineering-complete and ready for a pilot. |
+| Phase 5: v0.2.x graph-topology variants | **DESIGN COMPLETE, BUILD PENDING** | End-to-end Graphiti F1 surfaced that v0.1.x's `in_degree == 0` orphan-node check never triggers on edge-rich graphs (see `docs/finding-graphiti-f1-stage5.md`). Seven-layer design with configurability per domain/model/setup documented in `docs/opportunity-v0.2.x-graph-topology-gc.md`. Estimated 5-6 calendar weeks Stage 1 -> Stage 4 with methodology compliance. |
 
 ### What's still measurably missing
 
-1. **Run the per-adapter F1 benchmarks against real downstreams.** Scripts exist but require `pip install graphiti-core` + Neo4j and `pip install cognee` respectively. The Mem0-backed one runs once the 2000-memory smoke finishes (frees up Ollama).
-2. **Real 60-day and 90-day deployments.** The compressed simulation answers "does GC keep up?" but not "does memory quality decay differently after week 8?" That needs a real deployment.
-3. **The customer pilot.** Still the bottleneck the analyst named.
+1. **Multi-seed CI on the 2000-input reduction smoke.** The 98.4% headline is currently single-seed PARTIAL; an additional seed run (~2 hours Ollama) puts it at COMPLIANT.
+2. **v0.2.x variant family for Graphiti / Cognee.** Design complete; build is 5-6 weeks.
+3. **Workload archetype library.** Methodology requires >= 3 archetypes per Stage 3+ run; current Mem0 / Graphiti runs use one (SQuAD-shape). Concrete fixtures need to be built for steady-state, bursty, large-fact, high-mutation, cluster-rich, adversarial.
+4. **Real 60-day and 90-day deployments.** Compressed simulation does not equal real calendar time. Needs a customer pilot.
+5. **The customer pilot itself.** Still the bottleneck the analyst named. Mem0 path is ready.
 
 ---
 
@@ -215,7 +217,7 @@ The analyst named what they would want to see to call this a product:
 | Real Mem0 / Graphiti integrations | DONE: Mem0 + Graphiti + Cognee adapters with cross-adapter consistency tests | Run all three F1 benchmarks against real downstreams |
 | Retrieval-quality benchmarks | DONE: F1 scaffold + per-adapter benchmarks + UC-GC-RETRIEVAL gate + CI regression guard | Land first real-downstream F1 numbers (Mem0 first) |
 | 30-90 day accumulation studies | SCAFFOLDED: Compressed-time simulator, first 30-day result (99.3% reduction) | Run on real Mem0/Graphiti deployment over real calendar time |
-| Clear evidence: lower cost, better retrieval, better agent outcomes | Synthetic cost reduction + measured F1 preservation trade-off | Real $$ savings from a real deployment |
+| Clear evidence: lower cost, better retrieval, better agent outcomes | Synthetic cost reduction + multi-seed measured F1 preservation trade-off (mean 84%, CI [75%, 89%]) | Real $$ savings from a real deployment |
 | One customer using it in production | None | The pilot |
 
 Five items. Three engineering items are DONE or in-flight. Two partnership items (real-deployment data + customer pilot) remain. The technical baseline is fully in place.

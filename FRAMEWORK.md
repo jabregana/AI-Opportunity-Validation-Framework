@@ -164,7 +164,7 @@ Honest read on where this framework sits today against the six-dimension claim:
 | **1. Model** | **Strong.** | `experiments/ladder_sweep_real_data.py` auto-routes Anthropic / OpenAI / Google / Ollama by prefix. 14 models from 5 providers exercised in the proxy case study. |
 | **2. Prompt** | **Stage 2 baseline PASS.** | Pilot variants `prompt-v0.1.0-cot`, `prompt-v0.1.2-few-shot-1`, and `prompt-v0.1.4-cot-plus-structured` pass all 4 UC-PROMPT gates against `b-default-prompt` baseline. Best: cot-plus-structured (+10.50pp completion at 1.32x cost). `prompt-v0.1.3-few-shot-3` fails UC-PROMPT-2 (2.09x cost) and `prompt-v0.1.1-direct-structured` fails UC-PROMPT-1 (+2.5pp insufficient). See `docs/finding-prompt-stage2-baseline.md`. |
 | **3. Tools** | **Stage 2 v0.1.2 revision (still PARTIAL-PASS).** | `tool-v0.1.2-intent-plus-helper` improves recall (83.92% to 89.82%) but still 0.18pp short of UC-TOOL-3, and trades precision down to 16% (UC-TOOL-2 now also fails). Cross-dim still negative (joint config 31% < baseline 37%). See `docs/finding-tools-v0.1.2-revision.md`. v0.1.3 should attempt embedding-based classifier; keyword mechanism appears to have a ~90% recall ceiling on this workload. |
-| **4. Memory** | **Strong.** | The schema-alignment proxy ran all four stages. The graph-GC opportunity has Stages 1, 2 (PASS), 3 (PASS), 4 (ARCHITECTURAL-PASS), and 5 (VALIDATED ON REAL ADAPTER) complete. Stage 5 shipped Mem0, Graphiti, and Cognee adapters as real code (not just shims), plus measured retrieval-F1 preservation on the Mem0 adapter at n=50 and n=200 (both PASS the UC-GC-RETRIEVAL gate). The 2000-input smoke shows 98.4% steady-state reduction; F1 preservation is 81.6%-81.8% at 44%-52% reduction. The path between "stage 5 validated" and "customer-validated in production" is exactly one pilot deployment (see `docs/synthesis-memory-lifecycle-management.md`). |
+| **4. Memory** | **Strong on flat-memory frameworks; v0.2.x design pending for graph-native.** | The schema-alignment proxy ran all four stages. The graph-GC opportunity has Stages 1, 2 (PASS), 3 (PASS), 4 (ARCHITECTURAL-PASS), and 5 complete on Mem0 (flat memory): 2000-input smoke shows 98.4% steady-state reduction; multi-seed (n=3) F1 preservation at n=50 is mean 83.8%, 95% CI [74.5%, 88.8%], passing the >= 80% UC-GC-RETRIEVAL gate in 2 of 3 seeds. End-to-end Graphiti testing surfaced that v0.1.x's `in_degree == 0` orphan-node check never triggers on edge-rich graphs (see `docs/finding-graphiti-f1-stage5.md`); the v0.2.x family with graph-topology rules is designed at `docs/opportunity-v0.2.x-graph-topology-gc.md` but unbuilt. The path between "Mem0 stage 5 validated" and "customer-validated in production" is one pilot deployment. |
 | **5. Execution policy** | **Stage 2 baseline PARTIAL-PASS.** | `policy-v0.1.3-handoff` passes all 4 UC-POLICY gates (+19.25pp completion at 1.32x cost). The richer multi-step variants (react, plan-execute, reflect-loop) lift completion by +20-29pp but fail UC-POLICY-2 (cost) and UC-POLICY-4 (latency). `plan-execute` is conditional second pick for cost-tolerant deployments. See `docs/finding-policy-stage2-baseline.md`. Stage 3 should run across the multi-model ladder to produce the model x policy interaction table. |
 | **6. Recovery behavior** | **Stage 3 ROBUST-PASS (sensitivity).** | Stages 1, 2, and 3-sensitivity all complete. Both pilot variants pass all four UC-REC gates across five probability tables (optimistic, pessimistic, small-model, large-model, hostile); the variant ranking `fallback-chain > retry > baseline` is stable across all tables. See `docs/finding-recovery-stage3-sensitivity.md`. Real-LLM-trace Stage 3 (replace simulation table with measured probabilities) is the next iteration. |
 
@@ -289,14 +289,32 @@ That is what the framework is worth. The schema-alignment proxy was the first op
               (real code, not just shims). Cross-adapter
               consistency test, integration-shim ABC.
               Real-Mem0 smoke: 2000 inputs, 98.4% reduction.
-              Real-Mem0 F1: 81.6% (n=50) + 81.8% (n=200), both PASS.
+              Real-Mem0 F1 single-seed: 81.6% (n=50) + 81.8% (n=200).
               UC-GC-RETRIEVAL gate added.
               Production runbook (docs/runbook-mem0-v0.1.8-deploy.md).
               CI regression gate (.github/workflows/ci.yml).
               README reframed around two opportunities (entity-norm
               + memory lifecycle) + their commercialization status.
+            |
+2026-06-09  Two more framework self-corrections + methodology codified:
+              Graphiti F1 across 3 scenarios all returned 0% reduction;
+              cornered the architectural finding that v0.1.x's
+              in_degree==0 orphan rule never triggers on edge-rich
+              graphs. v0.2.x design (7 layers, configurable per
+              domain/model/setup) documented in
+              docs/opportunity-v0.2.x-graph-topology-gc.md.
+              Multi-seed re-run of Mem0 F1 (n=3 seeds) revealed
+              14pp variance hidden by single-seed reporting; revised
+              headline to mean 84%, 95% CI [75%, 89%], pass-2-of-3.
+              docs/benchmark-methodology.md codified the standard
+              that caught this on first application. The artifact
+              schema standardized (runner/artifacts.py::
+              emit_dimension_artifact). docs/RUNNER-RECIPE.md
+              documents the per-dim runner pattern with a worked
+              example. canonicalization_runner.py renamed (was
+              runner.py, misleadingly generic).
 ```
 
-The dates are real. The framework took about 72 hours of focused work to apply end-to-end across two opportunities. Each stage produced concrete artifacts. The negative-result discipline plus the self-correction (Stage 3 -> Stage 4 ranking flip on the entity-norm proxy) plus the productization at Stage 5 of the lifecycle opportunity is what makes the project credible.
+The dates are real. The framework took about 96 hours of focused work to apply end-to-end across two opportunities. Each stage produced concrete artifacts. The negative-result discipline plus three documented self-corrections (Stage 3 -> Stage 4 ranking flip on entity-norm; Graphiti architectural assumption; Mem0 F1 single-seed variance) plus the productization at Stage 5 of the lifecycle opportunity is what makes the project credible.
 
-That is the work. The proxy is the first case study. The memory lifecycle is the second, currently the more-commercializable. The framework is the asset.
+That is the work. The proxy is the first case study. The memory lifecycle is the second, currently the more-commercializable on its Mem0 path. The framework is the asset.

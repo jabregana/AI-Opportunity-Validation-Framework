@@ -112,7 +112,7 @@ The framework's UC gates encode the rollback rule. If any of these fire in produ
 | Gate | Threshold | Means |
 |---|---|---|
 | UC-GC-2 (entity survival) | < 90% | The entity rule is collecting entities it shouldn't; bump `min_query_count` |
-| UC-GC-RETRIEVAL (F1 preservation) | < 80% | Retrieval quality regressed; check whether `min_age_seconds` is too low |
+| UC-GC-RETRIEVAL (F1 preservation) | sustained < 80% over multiple cycles | Retrieval quality regressed; check whether `min_age_seconds` is too low. Single cycles below 80% are expected (multi-seed benchmarking showed 1-in-3 sweeps can dip below the threshold even on a well-behaved variant); only rollback if multiple consecutive cycles fall below |
 | UC-GC-5 (tenant isolation) | any leak | A swept memory was returned to the wrong tenant; this is a bug, file an issue |
 | Store size growing despite sweeps | sustained > 1 week | Sweep is not keeping up with add rate; increase cadence |
 | Agent recall@10 drop > 10% from baseline | over a 24-hour window | The customer-visible signal; same fix as UC-GC-RETRIEVAL |
