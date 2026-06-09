@@ -9,6 +9,7 @@ from typing import Callable
 
 from .base import GCVariant, GraphState
 from .b_raw import BRawNoGC
+from .component_isolation import ComponentIsolationGC
 from .comprehensive import ComprehensiveGC
 from .comprehensive_tuned import ComprehensiveTunedGC
 from .conservative_entity import ConservativeEntityPlusFactGC
@@ -29,6 +30,9 @@ FACTORIES: dict[str, Callable[[], GCVariant]] = {
     "gc-v0.1.6-comprehensive": ComprehensiveGC,
     "gc-v0.1.7-conservative-entity-tuned": ConservativeEntityTunedGC,
     "gc-v0.1.8-comprehensive-tuned": ComprehensiveTunedGC,
+    # v0.2.x family: graph-topology-aware variants for edge-rich frameworks
+    # (Graphiti, Cognee). See docs/opportunity-v0.2.x-graph-topology-gc.md.
+    "gc-v0.2.0-component-isolation": ComponentIsolationGC,
 }
 
 
