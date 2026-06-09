@@ -45,11 +45,11 @@ These three need answering before committing to v0.2.x designs. Each is roughly 
 
 What is known: the fields exist on `EntityEdge`. What is not known: under what conditions Graphiti's extraction layer populates them. The benchmark workloads run this week (SQuAD, single-context-per-add) never trigger supersession because each SQuAD context is a standalone fact.
 
-**Verification approach**: build a 2-step workload where the second add explicitly contradicts the first (e.g., "User likes coffee" then "User now drinks only tea"). Run through Mem0GCMiddleware-equivalent wrapper for Graphiti, query Neo4j directly, check whether the original "likes coffee" edge has `invalid_at` set. If yes, v0.2.0-temporal-validity is cheap. If no, the variant has to instrument supersession detection itself.
+**Verification approach**: build a 2-step workload where the second add explicitly contradicts the first (e.g., "User likes coffee" then "User now drinks only tea"). Run through Mem0GCMiddleware-equivalent wrapper for Graphiti, query Neo4j directly, check whether the original "likes coffee" edge has `invalid_at` set. If yes, v0.2.1-temporal-validity is cheap. If no, the variant has to instrument supersession detection itself.
 
 ### Q2: What's the per-node traversal-tracking overhead in Graphiti?
 
-The activation-decay rule (v0.2.1) requires hooking into Graphiti's search path to update `last_traversed` on every returned node. Need to measure: how invasive is the hook, what's the latency cost per search.
+The activation-decay rule (v0.2.2) requires hooking into Graphiti's search path to update `last_traversed` on every returned node. Need to measure: how invasive is the hook, what's the latency cost per search.
 
 **Verification approach**: patch the GraphitiGCMiddleware's `search()` method to bump a counter on every returned node. Re-run the Graphiti F1 benchmark with the hook enabled. Compare wall time vs without hook. If sub-1% overhead, ship the rule. If 5%+, redesign to amortize.
 
@@ -128,29 +128,44 @@ A starter profile set so customers don't have to start from scratch:
 
 Each profile lives at `runner/dimensions/memory/lifecycle/profiles/<name>.yaml` and is loaded by a new helper `runner/dimensions/memory/lifecycle/profile_loader.py`. This is a small addition (~150 lines) and follows the framework's existing pattern of factory-registered variants.
 
-## The four candidate variants in v0.2.x
+## The seven-layer candidate design for v0.2.x
 
-Each variant exists as its own class so they can be combined or composed via the profile. Same shape as v0.1.x but with graph-topology-aware rules instead of orphan-detection rules.
+Subsequent design discussion expanded the initial four-variant sketch into a seven-layer design space. Five layers are in scope for v0.2.x (cheap-to-moderate cost, clear signal); two are deferred to v0.3.x (more expensive, more research-shaped).
 
-| Variant | Rule | Equivalent of |
-|---|---|---|
-| `gc-v0.2.0-temporal-validity` | Collect facts where `now - invalid_at > config.ttl_days` (or `expired_at` if Graphiti uses that field) | v0.1.2 fact-only (single-axis sweep) |
-| `gc-v0.2.1-activation-decay` | Collect nodes where `now - last_traversed > window_days AND query_count < min_query_count AND invalid_at is null` | v0.1.7 tuned-entity (multi-condition collection) |
-| `gc-v0.2.2-component-isolation` | Detect connected components not reachable from top-N most-recently-queried nodes; collect the whole component | New pattern (no v0.1.x equivalent) |
-| `gc-v0.2.3-comprehensive-tuned` | Composes v0.2.0 + v0.2.1 + v0.2.2 + v0.1.5 tenant pinning + v0.1.3 tombstone log, configurable per profile | v0.1.8 comprehensive-tuned |
+Each layer exists as its own variant class so it can be enabled / disabled / composed independently via the deployment profile. Same compositional pattern as v0.1.x but with graph-topology-aware rules.
 
-`v0.3.x-personalized-pagerank` is reserved as a research variant for after v0.2.x has measured numbers. PPR is too expensive to ship as the first cut.
+### v0.2.x: five production-shape layers
+
+| Layer | Variant | Rule | Equivalent of / source |
+|---|---|---|---|
+| 1. Subgraph inactivity | `gc-v0.2.0-component-isolation` | Detect connected components not reachable from top-N most-recently-queried nodes; collect the whole component | New pattern; subgraph-orphan rule for graph-native |
+| 2. Validity-window | `gc-v0.2.1-temporal-validity` | Collect facts where `now - invalid_at > config.ttl_days` (or `expired_at` if Graphiti uses that field) | v0.1.2 fact-only adapted; uses Graphiti's native temporal fields |
+| 3. Edge-decay / activation | `gc-v0.2.2-activation-decay` | Collect nodes where `now - last_traversed > window_days AND query_count < min_query_count AND invalid_at is null` | v0.1.7 tuned-entity adapted; covers edge-weight decay as a special case |
+| 4. Evidence-count | `gc-v0.2.3-evidence-count` | Keep entities always; collect "evidence" nodes (episodes, mentions, source documents) that have been superseded by newer evidence supporting the same entity | New pattern; preserves the entity layer while pruning the source-document churn |
+| 5. Supersession with explicit tombstone | `gc-v0.2.4-supersession-tombstone` | When a fact is replaced by a newer fact (LLM extracts a contradiction), tombstone the old fact instead of immediately deleting. Tombstone retains the fact's id + summary for over-collection recovery (analog of v0.1.3 for graph-native) | v0.1.3 tombstone log adapted; pairs with Layer 2 |
+| Bundle | `gc-v0.2.5-comprehensive-tuned` | Composes all five layers above + v0.1.5 tenant pinning, configurable per profile | v0.1.8 comprehensive-tuned analog |
+
+### v0.3.x: deferred research layers
+
+| Layer | Variant | Rule | Why deferred |
+|---|---|---|---|
+| 6. Retrieval-impact guardrail | `gc-v0.3.0-retrieval-impact-guardrail` | Meta-rule: before any layer fires, simulate the F1 impact of the proposed collection on a held-out query workload. Abort the collection if F1 drop exceeds threshold | Requires a "shadow" F1 measurement at sweep time, which means running real queries on the proposed-deleted set. Adds non-trivial wall time per sweep. Genuine value when collection is risky. |
+| 7. Compression / summarization | `gc-v0.3.1-cluster-summarization` | Instead of binary keep/delete, summarize large clusters of stale facts into a single derived "summary node" that preserves the gist. Original facts collected, summary retained | Different data-model abstraction (introduces derived nodes). Requires LLM in the GC loop (cost change). Different evaluation harness (need to measure "summary fidelity" not just F1). |
+
+The v0.3.x layers are documented here so the design space is clear, but engineering them is reserved for after v0.2.x has measured numbers. Personalized PageRank (mentioned earlier as one option) folds into Layer 1 (component isolation) as a more principled scoring approach; it remains a research-tier alternative within Layer 1's design space.
+
+The seven-layer framing comes from a separate design discussion that synthesized incumbent patterns (Anki/SuperMemo forgetting curves, HippoRAG-style PPR, Graphiti's bi-temporal model) into a single ladder ordered by implementation cost. The layers above are roughly cost-ordered: Layer 1 is the cheapest, Layer 7 is the most expensive.
 
 ## What the workload needs to look like to actually exercise v0.2.x
 
-Critical realization from the Graphiti F1 benchmark experience: **SQuAD is the wrong workload for this variant family.** Every SQuAD context is a standalone fact with no supersession, no domain-specific staleness, and no natural graph clustering. v0.2.0 (temporal validity) literally cannot fire because nothing ever gets superseded.
+Critical realization from the Graphiti F1 benchmark experience: **SQuAD is the wrong workload for this variant family.** Every SQuAD context is a standalone fact with no supersession, no domain-specific staleness, and no natural graph clustering. v0.2.1 (temporal validity) literally cannot fire because nothing ever gets superseded.
 
 The right workload shape for v0.2.x stage 2 testing:
 
 ```
 fixtures/workloads/w_graph_lifecycle.py
   Generates synthetic episodes with:
-    - 40% standalone facts (no supersession; never trigger v0.2.0)
+    - 40% standalone facts (no supersession; never trigger v0.2.1)
     - 30% supersession sequences (A states X, B states "not X anymore")
     - 20% multi-fact episodes that form natural subgraph clusters
     - 10% queries against subsets to exercise activation patterns
@@ -163,6 +178,18 @@ fixtures/workloads/w_graph_lifecycle.py
 
 This is roughly 1 day to build. Existing `w_graph_churn.py` is the wrong shape (it includes edge-removal events that don't happen in real Graphiti).
 
+### Synthetic data generation: the five-step approach
+
+Building `w_graph_lifecycle.py` follows the standard synthetic-data generation discipline from [`docs/benchmark-methodology.md`](benchmark-methodology.md). Concrete steps for this opportunity:
+
+1. **Domain analysis**: Study real-world memory graphs in the target deployment domain. For initial Stage 2 testing without customer data, study published agent-memory traces (e.g., LongMemEval, MemGPT-bench) and the schemas exposed by Graphiti and Cognee (their data-model docs describe expected node/edge cardinalities).
+2. **Realistic patterns**: Use parametric generators that mirror real distributions. For graph-native memory the relevant distributions are: scale-free node degree (Barabasi-Albert), heavy-tail fact-lifetime (Weibull with shape < 1), Zipfian query frequency over entities, log-normal entity-evidence count. Implement via `networkx` for graph generation + `numpy` for the per-axis distributions.
+3. **Scaling**: Parameterize the generator so the same call produces 100 facts or 100,000 facts with the same shape. Workload tests run at multiple scales per the volume-sufficiency requirement (1x, 4x, 10x converged-live-set).
+4. **Sanity checks**: After generation, validate aggregate statistics match expected shapes: node-degree histogram (should be heavy-tailed), supersession-rate (should match the requested fraction), subgraph-component count (should match `n_topics` parameter). The methodology standard requires a validation block in the finding doc.
+5. **Iterate**: Start at n=100 (smoke test), validate the variant's behavior is sensible, then scale to n=1000 and n=10000. Per the methodology, don't ship a Stage 3 finding from an unvalidated workload.
+
+This approach gives the framework a defensible answer to "did you tune the workload to flatter your variant?" because each generation parameter is sourced from a documented distribution rather than picked to produce a desired result.
+
 ## Benchmark methodology (compliance with the framework standard)
 
 v0.2.x is a Stage 3+ opportunity, so it must comply with [`docs/benchmark-methodology.md`](benchmark-methodology.md). The key methodology requirements applied to this opportunity:
@@ -172,8 +199,8 @@ v0.2.x is a Stage 3+ opportunity, so it must comply with [`docs/benchmark-method
 | Archetype | Fixture | v0.2.x specifics |
 |---|---|---|
 | **Steady-state** | `w_graph_lifecycle.py` with `supersession_rate=0.0, n_topics=1` | Baseline behavior; should match Mem0+v0.1.x reduction shape |
-| **High-mutation / supersession-heavy** | `w_graph_lifecycle.py` with `supersession_rate=0.5` | Required to exercise v0.2.0-temporal-validity; the rule cannot fire without supersession events |
-| **Cluster-rich** | `w_graph_lifecycle.py` with `n_topics=10, query_distribution=zipfian` | Exercises v0.2.2-component-isolation; without distinct subgraphs the rule has nothing to isolate |
+| **High-mutation / supersession-heavy** | `w_graph_lifecycle.py` with `supersession_rate=0.5` | Required to exercise v0.2.1-temporal-validity AND v0.2.4-supersession-tombstone; the rules cannot fire without supersession events |
+| **Cluster-rich** | `w_graph_lifecycle.py` with `n_topics=10, query_distribution=zipfian` | Exercises v0.2.0-component-isolation; without distinct subgraphs the rule has nothing to isolate |
 | **Adversarial (variant-specific)** | NEW: `w_graph_no_supersession_no_isolation.py` | Designed to defeat v0.2.x: rich connectivity, no supersession events, no isolated subgraphs. If v0.2.x cannot handle this case, the finding doc documents it as out-of-scope rather than hiding it. |
 | Real-data sanity | Graphiti + SQuAD subset (existing benchmark) | Confirms the variant does NOT regress on the workload that the Mem0 path already runs |
 
@@ -187,7 +214,7 @@ Each variant gets benchmarked across this grid:
 
 Total: 3 N values × 3 seeds × 3 store sizes × 4 archetypes = **108 runs per variant**. At ~5 min average per run that is roughly 9 hours of Ollama time per variant. Acceptable.
 
-For the comprehensive bundle (v0.2.3) and the headline cross-framework comparison, the full matrix runs. For exploratory v0.2.0 / v0.2.1 / v0.2.2 individual-rule iterations, a reduced grid (1 N × 3 seeds × 1 store size × 2 archetypes) is acceptable during dev, with the full matrix run before any finding doc ships.
+For the comprehensive bundle (v0.2.5) and the headline cross-framework comparison, the full matrix runs. For exploratory v0.2.0 / v0.2.1 / v0.2.2 / v0.2.3 / v0.2.4 individual-rule iterations, a reduced grid (1 N × 3 seeds × 1 store size × 2 archetypes) is acceptable during dev, with the full matrix run before any finding doc ships.
 
 ### Variance + significance reporting
 
@@ -205,7 +232,7 @@ pre_registered_gates:
   uc_gc_min_reduction_when_workload_aged: 30.0  # at least 30% reduction on supersession-heavy archetype
   uc_gc_max_false_collection_pct: 1.0         # same as Mem0 v0.1.8
   uc_gc_max_sweep_p99_seconds: 5.0            # 10x the Mem0 v0.1.8 limit (graph algorithms are more expensive)
-  uc_gc_max_search_overhead_pct: 5.0          # v0.2.1 traversal-tracking hook overhead ceiling
+  uc_gc_max_search_overhead_pct: 5.0          # v0.2.2 traversal-tracking hook overhead ceiling
 ```
 
 If v0.2.x fails any pre-registered gate on the adversarial archetype, the variant ships as DEFER or DO-NOT-BUILD rather than rebuilding the gate.
@@ -221,30 +248,36 @@ If v0.2.x fails any pre-registered gate on the adversarial archetype, the varian
 
 ### Updated cost estimate
 
-The benchmark-methodology compliance adds roughly 3-4 engineer-days to the original v0.2.x scope:
+The benchmark-methodology compliance plus the expansion from four variants to five layers (plus the v0.3.x research layers documented above) updates the original scope:
 
-| Phase (updated) | Effort |
+| Phase (updated 2026-06-09) | Effort |
 |---|---|
-| Stage 1 verification (Q1, Q2, Q3) + landscape deeper scan | 2-3 eng-days (unchanged) |
-| v0.2.0-temporal-validity variant + tests | 2 eng-days (unchanged) |
-| Workload archetype library: lifecycle + adversarial + supersession-validation | 2 eng-days (was 1; bumped for archetype library) |
-| v0.2.0 Stage 2 benchmark with multi-seed + multi-archetype matrix | 2 eng-days (was 1; bumped for compliance) |
-| v0.2.1-activation-decay variant | 2 eng-days (unchanged) |
-| v0.2.2-component-isolation variant | 3 eng-days (unchanged) |
-| v0.2.3-comprehensive-tuned bundle + profile loader | 3 eng-days (unchanged) |
-| Stage 3 real-Graphiti F1 with full compliance matrix | 2 eng-days (was 1; bumped for 108-run matrix execution + analysis) |
-| Stage 4 multi-vertical scale-up | 2-3 eng-days (unchanged) |
-| Retroactive: add CIs to existing Mem0 + Graphiti finding docs | 1 eng-day (new) |
+| Stage 1 verification (Q1, Q2, Q3) + landscape deeper scan | 2-3 eng-days |
+| Workload archetype library: lifecycle + adversarial + supersession-validation | 2 eng-days |
+| v0.2.0-component-isolation variant + tests | 3 eng-days |
+| v0.2.1-temporal-validity variant + tests | 2 eng-days |
+| v0.2.2-activation-decay variant + tests | 2 eng-days |
+| v0.2.3-evidence-count variant + tests (new layer) | 2 eng-days |
+| v0.2.4-supersession-tombstone variant + tests (new layer) | 2 eng-days |
+| v0.2.5-comprehensive-tuned bundle + profile loader (5 starter profiles) | 3 eng-days |
+| Stage 2 benchmark with multi-seed + multi-archetype matrix (all 5 variants) | 3 eng-days |
+| Stage 3 real-Graphiti F1 with full compliance matrix | 2 eng-days |
+| Stage 4 multi-vertical scale-up | 2-3 eng-days |
+| Retroactive: add CIs to existing Mem0 + Graphiti finding docs | 1 eng-day |
 
-**Updated total: 22-23 engineer-days (was 18-19), roughly 4-5 calendar weeks of focused work.**
+**Updated total: 26-29 engineer-days (was 22-23), roughly 5-6 calendar weeks of focused work.**
 
-The bump justifies itself: half the value of v0.2.x is that the numbers survive hostile review. The retroactive Mem0 CI addition (1 day) is mandatory regardless of v0.2.x funding because the existing 81.6% headline is currently a single-seed point estimate.
+The bump from 22-23 to 26-29 reflects the two added layers (evidence-count + supersession-tombstone). Layer 4 + Layer 5 are the most analogous to Mem0+v0.1.x's tombstone-and-tenant features, which means the v0.2.5 bundle would be a closer apples-to-apples comparison with the Mem0 + v0.1.8 deployment recipe.
+
+v0.3.x layers (retrieval-impact-guardrail + cluster-summarization) are explicitly out of this scope. Engineering them is a separate ~3-4 week effort that would happen after v0.2.x has measured numbers.
+
+Half the value of v0.2.x is that the numbers survive hostile review. The retroactive Mem0 CI addition (1 day) is mandatory regardless of v0.2.x funding because the existing 81.6% headline is currently a single-seed point estimate.
 
 ## Why this could fail (risk register)
 
 Honest list of ways v0.2.x might not produce defensible numbers:
 
-1. **Graphiti's `invalid_at` is never set in practice.** If the extraction layer doesn't reliably detect supersession, v0.2.0 has no signal to act on. Verification Q1 answers this. If the answer is "no," the variant has to do its own supersession detection, which is a research project.
+1. **Graphiti's `invalid_at` is never set in practice.** If the extraction layer doesn't reliably detect supersession, v0.2.1 and v0.2.4 have no signal to act on. Verification Q1 answers this. If the answer is "no," the variants have to do their own supersession detection, which is a research project.
 2. **Activation tracking adds significant search overhead.** Hooking into every search to update `last_traversed` may be too invasive on hot paths. Verification Q2 answers this. Mitigation: amortize by sampling (only update on 1 in K searches).
 3. **Component-isolation cost scales poorly.** Detecting connected components on a million-node graph requires either incremental algorithms (Tarjan's SCC adapted for streaming) or expensive periodic recomputation. Performance budget needs careful design.
 4. **PPR temptation creeps in.** If v0.2.x's simple rules underperform, the obvious "fix" is to add PPR. PPR over a real graph is expensive and the right Stage 3 question is "is PPR worth its compute cost vs cheaper rules?" Discipline: do NOT add PPR until v0.2.x has measured numbers without it.
@@ -264,22 +297,9 @@ Kill v0.2.x when:
 - An incumbent ships graph-native GC during Q1/Q2 verification (the wedge closes)
 - Mem0 customer pilot fails (signal that the framework's positioning is wrong; v0.2.x doesn't fix that)
 
-## Cost estimate
+## Cost estimate (original 4-variant scope, superseded by the updated 5-layer scope above)
 
-| Phase | Effort | Output |
-|---|---|---|
-| Stage 1 verification (Q1, Q2, Q3) | 2 engineer-days | `docs/opportunity-v0.2.x-stage1-verification.md` with go/no-go on each question |
-| Stage 1 deeper landscape (verify Cognee, recheck HippoRAG releases) | 1 engineer-day | Updates to this doc |
-| v0.2.0-temporal-validity (variant + tests) | 2 engineer-days | First variant + unit tests |
-| `w_graph_lifecycle` synthetic workload | 1 engineer-day | Workload generator + UC gates |
-| v0.2.0 Stage 2 benchmark on synthetic workload | 1 engineer-day | `docs/finding-gc-v020-stage2.md` |
-| v0.2.1-activation-decay variant | 2 engineer-days | Variant + traversal-tracking hook |
-| v0.2.2-component-isolation variant | 3 engineer-days | Variant + incremental component detection |
-| v0.2.3-comprehensive-tuned bundle + profile loader | 3 engineer-days | Bundle + 5 default profiles + YAML loader |
-| Stage 3 real-Graphiti F1 benchmark (the headline number) | 1 engineer-day | `docs/finding-gc-v020-stage3-real-graphiti.md` |
-| Stage 4 multi-vertical scale-up | 2-3 engineer-days | Confirms or corrects Stage 3 |
-
-**Total: 18-19 engineer-days, roughly 3-4 calendar weeks for focused work.**
+This block preserved for traceability. The current 5-layer + methodology-compliance scope (`Updated total: 26-29 engineer-days`) is in the "Benchmark methodology" section above.
 
 ## What this changes operationally
 
