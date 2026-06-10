@@ -106,9 +106,13 @@ A 72-config matrix joint experiment across all six dimensions found **75% of "ob
 |---|---|---|---|
 | Entity-norm proxy | 4 (substantial real data) | `embed-proxy-v0.5.7-mt-ann` (multi-tenant, ANN-backed) + drop-in middleware for Mem0/Graphiti/Cognee | Vertical alias maps as a paid subscription (pharma, finance, legal). Without those, the proxy itself is ~50 lines of regex anyone can rewrite |
 | Memory lifecycle (Mem0 path) | 5 (real LLM + real adapter; multi-seed F1 on single SQuAD archetype; PARTIAL pending archetype expansion) | `gc-v0.1.8-comprehensive-tuned` + Mem0 adapter + production runbook + CI regression gate | One customer running the Mem0 bundle in production for 30 days |
-| Memory lifecycle (Graphiti / Cognee path) | 1-2 (architectural design after v0.1.x assumption surfaced) | Adapters exist as real code; v0.1.x rules don't fit graph-native; v0.2.x design ready for build | Build the v0.2.x family (5 layers in scope, 2 deferred to v0.3.x), per [`docs/opportunity-v0.2.x-graph-topology-gc.md`](docs/opportunity-v0.2.x-graph-topology-gc.md). Estimated 5-6 calendar weeks |
+| Memory lifecycle (Graphiti / Cognee path) | 1-2 (architectural design after v0.1.x assumption surfaced) | Adapters exist as real code; v0.1.x rules don't fit graph-native; v0.2.x code-complete but never benchmarked end-to-end | Build the v0.2.x family (5 layers in scope, 2 deferred to v0.3.x), per [`docs/opportunity-v0.2.x-graph-topology-gc.md`](docs/opportunity-v0.2.x-graph-topology-gc.md). Estimated 5-6 calendar weeks once customer signal arrives |
 
-Both opportunities are within one focused engagement of being commercial on their best path. The Mem0 lifecycle work is closest because the deployable bundle has measured numbers from this week's runs and a documented runbook. The entity-norm work needs vertical content (alias maps) to become defensible beyond the harness itself.
+**Entity-normalization proxy**: plausibly a $1M to $10M ARR business, not a $1B startup. The proxy code is ~50 lines anyone can rewrite. The moat is curated vertical alias maps (pharma, finance, legal) sold as a subscription, plus integration-shim maintenance as upstream APIs evolve. The benchmark methodology and the harness itself are the brand asset, not the code.
+
+**Memory lifecycle (Mem0 path)**: the more-commercializable of the two paths today. Deployable bundle, runbook, and CI regression gate exist; F1 numbers come from real LLM extraction at three seeds on a single SQuAD archetype. Remaining engineering gaps: additional workload archetypes for full methodology compliance, multi-seed CI on the n=2000 reduction smoke, archetype-specific variance characterization. Remaining commercial gap: one customer running the bundle in production for 30 days.
+
+**Memory lifecycle (Graphiti / Cognee path)**: one v0.2.x build cycle away from a parallel commercializable offering when customer signal arrives. The seven-layer design ([`docs/opportunity-v0.2.x-graph-topology-gc.md`](docs/opportunity-v0.2.x-graph-topology-gc.md)) is documented and the variants are code-complete with passing unit tests; the end-to-end benchmark against real Graphiti has not been run. Estimated 5-6 calendar weeks once a Graphiti or Cognee prospect is on the table.
 
 What does NOT get added next: more dimensions, more six-dimension variants, more statistical machinery. The framework has enough. What gets added next: **one customer who runs a recommendation in production and reports their actual business outcome.**
 
@@ -154,10 +158,6 @@ Same shape for `GraphitiPreNormalized` and `CogneePreNormalized`. All three shar
 | Per-tenant memory on Mem0 / Graphiti / Cognee | Open-ended entity discovery beyond surface-form variation |
 | CRM auto-tagging | Workloads already running Senzing / Tilores |
 
-### Commercial position
-
-Plausibly a $1M to $10M ARR business. Not a $1B startup. The proxy code is ~50 lines anyone can rewrite. **The moat is curated vertical alias maps (pharma, finance, legal) sold as a subscription**, plus integration-shim maintenance as the upstream APIs evolve. The benchmark methodology and the harness itself are the brand asset, not the code.
-
 ## Opportunity 2 deep dive: Agent Memory Lifecycle Management
 
 ### The wedge
@@ -166,7 +166,7 @@ Same 90-day landscape scan. Real-time graph GC was the second wedge considered. 
 
 The architectural finding from end-to-end Graphiti testing (see "Cross-framework finding" above) refined the wedge: v0.1.x is the right family for **flat-memory frameworks** (Mem0); the v0.2.x design ([`docs/opportunity-v0.2.x-graph-topology-gc.md`](docs/opportunity-v0.2.x-graph-topology-gc.md)) is the right family for **graph-native frameworks** (Graphiti, Cognee). Both families share the same product story (Agent Memory Lifecycle Management) and the same configurable-policy approach.
 
-### The mechanism (Mem0 path, production-shape today)
+### The mechanism (Mem0 path)
 
 ```python
 from mem0 import Memory
@@ -216,12 +216,6 @@ Full operational guide: [`docs/runbook-mem0-v0.1.8-deploy.md`](docs/runbook-mem0
 | Sweep cost | 0.067-0.245 s per call | sub-linear in store size; measured |
 
 The numbers above are estimates derived from the measured benchmarks. Cost ranges reflect the variance the multi-seed methodology exposed. The gap between estimate and verified outcome closes when a customer pilot reports their actual savings.
-
-### Commercial position
-
-The Mem0 path is the more-commercializable of the two paths today. The deployable bundle exists, the runbook exists, the regression gate runs on every PR, the F1 numbers come from real LLM extraction at multiple seeds. The remaining gap is partnership, not engineering.
-
-The Graphiti/Cognee path is one v0.2.x build cycle (~5-6 calendar weeks) away from a parallel commercializable offering. See [`docs/opportunity-v0.2.x-graph-topology-gc.md`](docs/opportunity-v0.2.x-graph-topology-gc.md) for the seven-layer design space, configurability per domain/model/setup, and the cost estimate.
 
 ---
 
