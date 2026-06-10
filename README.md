@@ -1,6 +1,6 @@
 # AI-Opportunity-Validation-Framework
 
-**A repeatable framework for deciding whether an AI/ML/LLM opportunity is worth building, with measured evidence at every stage.**
+**A framework for deciding whether an AI opportunity should be built, scaled, or killed using staged evidence and deployment gates.**
 
 Most AI teams operate as: idea -> prototype -> launch. By the time the prototype is in front of a customer, the team has already spent months on the wrong shape, the wrong claim, or the wrong wedge. The customer reaction is the first real test.
 
