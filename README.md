@@ -239,7 +239,7 @@ Full methodology and component inventory: [`FRAMEWORK.md`](FRAMEWORK.md).
 What this repo does NOT have, in priority order:
 
 1. **A customer pilot for either opportunity.** Until a real team runs a recommended bundle in production for 30 days and reports actual storage savings, latency change, and any incidents, the business-outcome claims are estimates. This is the gating constraint between "research asset" and "product."
-2. **v0.2.x variants built for graph-native frameworks.** The design is documented (seven layers, configurable per domain/model/setup) but no code exists yet. Mem0 has the production-shape bundle today; Graphiti and Cognee customers wait until v0.2.x ships.
+2. **End-to-end benchmark for v0.2.x against real Graphiti.** The seven-layer design is documented (configurable per domain/model/setup) and the variants are code-complete with passing unit tests, but the variants have never produced a non-zero reduction number against real Graphiti. The Mem0 path has a deployable bundle today (multi-seed F1 on single SQuAD archetype, awaiting pilot); Graphiti and Cognee customers wait until v0.2.x has measured numbers.
 3. **Multi-seed CI on the n=2000 reduction smoke.** The 98.4% reduction headline is still single-seed (PARTIAL per [`docs/benchmark-methodology.md`](docs/benchmark-methodology.md)). Wide-CI re-run is a queued follow-up, ~4 hours of Ollama time.
 4. **More workload archetypes.** The methodology standard requires at least 3 archetypes per Stage 3+ run. Current Mem0 + Graphiti runs use one (SQuAD-shape). The archetype library (steady-state, bursty, large-fact, high-mutation, cluster-rich, adversarial) needs concrete fixture builds.
 5. **Real-calendar-time long-running data.** The 30/60/90-day projections come from a compressed-time simulator. Not the same as 8 weeks of real production traffic.
@@ -249,7 +249,7 @@ What this repo does NOT have, in priority order:
 
 ## Status
 
-Active. **30+ documented findings.** Three self-corrections this week alone (entity-norm Stage 3 -> 4, Graphiti `in_degree == 0` architectural assumption, Mem0 F1 single-seed variance). 6 dimensions evaluated (3 strong, 3 at Stage 2 baseline). 3 memory-framework adapters (Mem0, Graphiti, Cognee) with cross-adapter consistency tests. CI regression gate on every PR. Methodology standard codified ([`docs/benchmark-methodology.md`](docs/benchmark-methodology.md)) and immediately validated on first application.
+Active. See [Snapshot](#snapshot) above for headline metrics. Additional structural facts: 6 dimensions evaluated (3 strong, 3 at Stage 2 baseline); 3 memory-framework adapters (Mem0, Graphiti, Cognee) with cross-adapter consistency tests; CI regression gate on every PR.
 
 ## Install
 
