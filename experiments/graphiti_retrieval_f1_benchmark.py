@@ -163,6 +163,10 @@ def main():
     p.add_argument("--ollama-embed-model", default="all-minilm:latest")
     p.add_argument("--ollama-embed-dim", type=int, default=384)
     p.add_argument("--out", type=str, default=None)
+    p.add_argument("--profile", default=None,
+                   help="v0.2.x profile name (e.g. 'finance-aggressive'). "
+                        "Overrides --variant and builds the v0.2.5 bundle "
+                        "from runner/dimensions/memory/lifecycle/profiles/<name>.yaml")
     args = p.parse_args()
 
     print("=" * 78)
@@ -194,11 +198,21 @@ def main():
     from runner.dimensions.memory.lifecycle.integrations import (
         GraphitiGCMiddleware,
     )
-    variant_cls = FACTORIES[args.variant]
-    try:
-        variant = variant_cls(min_age_seconds=args.min_age_seconds)
-    except TypeError:
-        variant = variant_cls()
+    if args.profile:
+        from runner.dimensions.memory.lifecycle.profile_loader import (
+            build_from_profile,
+        )
+        variant = build_from_profile(args.profile)
+        # When using a profile, args.variant is overridden to the bundle id
+        # for artifact-emission consistency
+        args.variant = "gc-v0.2.5-comprehensive-graph-tuned"
+        print(f"  Using profile: {args.profile} -> {variant.__class__.__name__}")
+    else:
+        variant_cls = FACTORIES[args.variant]
+        try:
+            variant = variant_cls(min_age_seconds=args.min_age_seconds)
+        except TypeError:
+            variant = variant_cls()
     mw = GraphitiGCMiddleware(graphiti)
 
     if args.rebuild_indices:
@@ -319,7 +333,10 @@ def main():
         dimension="memory.lifecycle",
         stage=5,
         experiment_name="Real-Graphiti retrieval F1 benchmark",
-        variants=[{"id": args.variant, "role": "candidate"}],
+        variants=[{
+            "id": args.variant, "role": "candidate",
+            "profile": args.profile,
+        }],
         workload={
             "archetype": "real-data-squad",
             "n": args.n_pairs,

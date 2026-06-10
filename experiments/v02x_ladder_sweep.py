@@ -55,26 +55,35 @@ def _run_one_cell(
     out_dir: Path,
     neo4j_uri: str,
     neo4j_password: str,
+    profile: str | None = None,
+    backdate_days: float = 10.0,
+    aged_fraction: float = 0.4,
 ) -> dict:
-    """Run one (variant, model, seed) cell of the matrix.
+    """Run one (variant, model, seed [, profile]) cell of the matrix.
 
     Calls experiments/graphiti_retrieval_f1_benchmark.py as a subprocess
-    so each run gets its own clean state. Returns the parsed artifact
-    or an error dict.
+    so each run gets its own clean state. When `profile` is provided,
+    the benchmark builds the v0.2.5 bundle from the named profile
+    (overrides `variant`). Returns the parsed artifact or an error dict.
     """
-    cell_out = out_dir / f"{variant}_{model.replace(':', '-')}_seed{seed}.json"
+    cell_label = profile if profile else variant
+    cell_out = out_dir / f"{cell_label}_{model.replace(':', '-')}_seed{seed}.json"
     cmd = [
         sys.executable,
         str(ROOT / "experiments" / "graphiti_retrieval_f1_benchmark.py"),
         "--n-pairs", str(n_pairs),
-        "--aged-fraction", "0.4",
-        "--variant", variant,
+        "--aged-fraction", str(aged_fraction),
+        "--backdate-days", str(backdate_days),
         "--llm-provider", "ollama",
         "--ollama-llm-model", model,
         "--neo4j-uri", neo4j_uri,
         "--neo4j-password", neo4j_password,
         "--out", str(cell_out),
     ]
+    if profile:
+        cmd.extend(["--profile", profile])
+    else:
+        cmd.extend(["--variant", variant])
     t0 = time.time()
     try:
         result = subprocess.run(
@@ -116,14 +125,25 @@ def _run_one_cell(
 
 def main():
     p = argparse.ArgumentParser(prog="v02x-ladder-sweep")
-    p.add_argument("--variants", required=True,
-                   help="Comma-separated variant ids")
+    p.add_argument("--variants", default="",
+                   help="Comma-separated variant ids. Use this OR --profiles.")
+    p.add_argument("--profiles", default="",
+                   help="Comma-separated v0.2.x profile names (e.g. "
+                        "'finance-aggressive,clinical-conservative'). When set, "
+                        "each profile builds the v0.2.5 bundle from "
+                        "runner/dimensions/memory/lifecycle/profiles/<name>.yaml. "
+                        "Use this OR --variants.")
     p.add_argument("--models", required=True,
                    help="Comma-separated Ollama model names")
     p.add_argument("--n-seeds", type=int, default=1,
-                   help="Number of seeded runs per (variant, model) cell")
+                   help="Number of seeded runs per cell")
     p.add_argument("--n-pairs", type=int, default=20,
                    help="SQuAD pairs per benchmark run")
+    p.add_argument("--backdate-days", type=float, default=10.0,
+                   help="Days to backdate the aged subset (must exceed the "
+                        "variant's idle thresholds for collection to trigger)")
+    p.add_argument("--aged-fraction", type=float, default=0.4,
+                   help="Fraction of memories backdated as 'old'")
     p.add_argument("--seeds", default="42,123,456",
                    help="Comma-separated seed values (uses first --n-seeds)")
     p.add_argument("--neo4j-uri", default="bolt://localhost:7687")
@@ -133,21 +153,34 @@ def main():
                    help="Print the matrix without executing")
     args = p.parse_args()
 
-    variants = [v.strip() for v in args.variants.split(",")]
+    if not args.variants and not args.profiles:
+        p.error("Must supply --variants or --profiles (or both)")
+
+    variants = [v.strip() for v in args.variants.split(",") if v.strip()]
+    profiles = [p.strip() for p in args.profiles.split(",") if p.strip()]
     models = [m.strip() for m in args.models.split(",")]
     seeds = [int(s.strip()) for s in args.seeds.split(",")][:args.n_seeds]
     out_dir = Path(args.out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    total_cells = len(variants) * len(models) * len(seeds)
-    estimated_minutes = total_cells * 20  # rough estimate; depends on model + Graphiti
+    # Build the cell list: each cell is (label, variant_or_None, profile_or_None)
+    cells_spec: list[tuple[str, str | None, str | None]] = []
+    for v in variants:
+        cells_spec.append((v, v, None))
+    for pr in profiles:
+        cells_spec.append((f"profile:{pr}", None, pr))
+
+    total_cells = len(cells_spec) * len(models) * len(seeds)
+    estimated_minutes = total_cells * 20
 
     print("=" * 78)
     print(f"v0.2.x LLM ladder sweep")
     print("=" * 78)
     print(f"Variants ({len(variants)}): {variants}")
+    print(f"Profiles ({len(profiles)}): {profiles}")
     print(f"Models   ({len(models)}): {models}")
     print(f"Seeds    ({len(seeds)}): {seeds}")
+    print(f"Backdate: {args.backdate_days} days, aged_fraction={args.aged_fraction}")
     print(f"Total cells: {total_cells}")
     print(f"Est. wall time: ~{estimated_minutes // 60}h {estimated_minutes % 60}m")
     print(f"Output dir: {out_dir}")
@@ -155,24 +188,30 @@ def main():
 
     if args.dry_run:
         print("--- DRY RUN: cells that would execute ---")
-        for variant in variants:
+        for label, _, _ in cells_spec:
             for model in models:
                 for seed in seeds:
-                    print(f"  {variant} x {model} x seed={seed}")
+                    print(f"  {label} x {model} x seed={seed}")
         return 0
 
     results: list[dict] = []
-    for i, variant in enumerate(variants):
-        for j, model in enumerate(models):
-            for k, seed in enumerate(seeds):
-                cell_num = i * len(models) * len(seeds) + j * len(seeds) + k + 1
-                print(f"[{cell_num}/{total_cells}] {variant} x {model} x seed={seed}")
+    cell_num = 0
+    for label, variant, profile in cells_spec:
+        for model in models:
+            for seed in seeds:
+                cell_num += 1
+                print(f"[{cell_num}/{total_cells}] {label} x {model} x seed={seed}")
                 cell = _run_one_cell(
-                    variant=variant, model=model, seed=seed,
+                    variant=variant or "gc-v0.2.5-comprehensive-graph-tuned",
+                    model=model, seed=seed,
                     n_pairs=args.n_pairs, out_dir=out_dir,
                     neo4j_uri=args.neo4j_uri,
                     neo4j_password=args.neo4j_password,
+                    profile=profile,
+                    backdate_days=args.backdate_days,
+                    aged_fraction=args.aged_fraction,
                 )
+                cell["cell_label"] = label
                 results.append(cell)
                 if cell["status"] == "OK":
                     print(f"    OK: reduction={cell['reduction_pct']:.1f}%, "
@@ -184,9 +223,12 @@ def main():
     summary_path = out_dir / "ladder_summary.json"
     summary_path.write_text(json.dumps({
         "variants": variants,
+        "profiles": profiles,
         "models": models,
         "seeds": seeds,
         "n_pairs": args.n_pairs,
+        "backdate_days": args.backdate_days,
+        "aged_fraction": args.aged_fraction,
         "results": results,
     }, indent=2))
 
@@ -194,14 +236,15 @@ def main():
     print("=" * 78)
     print(f"Ladder summary: {summary_path}")
     print("=" * 78)
-    print(f"{'variant':40s} {'model':18s} {'seed':>5s} {'reduction':>10s} {'F1 pres':>10s} {'gate':>6s}")
+    print(f"{'cell':45s} {'model':18s} {'seed':>5s} {'reduction':>10s} {'F1 pres':>10s} {'gate':>6s}")
     for r in results:
+        label = r.get("cell_label", r["variant"])
         if r["status"] == "OK":
-            print(f"{r['variant']:40s} {r['model']:18s} {r['seed']:>5d} "
+            print(f"{label:45s} {r['model']:18s} {r['seed']:>5d} "
                   f"{r['reduction_pct']:>9.1f}% {r['f1_preservation_pct']:>9.1f}% "
                   f"{r['gate_status']:>6s}")
         else:
-            print(f"{r['variant']:40s} {r['model']:18s} {r['seed']:>5d} "
+            print(f"{label:45s} {r['model']:18s} {r['seed']:>5d} "
                   f"{r['status']}")
 
     return 0
