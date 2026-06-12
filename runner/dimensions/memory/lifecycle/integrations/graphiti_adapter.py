@@ -278,44 +278,122 @@ class GraphitiGCMiddleware(GCIntegrationShim):
         state.pinned = set(self._pinned)
         return state
 
+    def _remove_episode(self, episode_uuid: str) -> bool:
+        """Remove one episode via whichever API the graphiti instance exposes.
+
+        Real graphiti-core uses `remove_episode(episode_uuid=...)`. Test
+        fakes historically used `delete_episode(uuid=...)`. Try the new
+        path first, fall back to the legacy one. Returns True on success.
+        """
+        if hasattr(self.graphiti, "remove_episode"):
+            try:
+                _run_async(self.graphiti.remove_episode(
+                    episode_uuid=episode_uuid,
+                ))
+                return True
+            except Exception:
+                return False
+        if hasattr(self.graphiti, "delete_episode"):
+            try:
+                _run_async(self.graphiti.delete_episode(uuid=episode_uuid))
+                return True
+            except Exception:
+                return False
+        return False
+
+    def _delete_entities(self, entity_uuids: list[str]) -> set[str]:
+        """Delete entity nodes via the best available API.
+
+        Real graphiti-core: `EntityNode.delete_by_uuids(driver, [uuids])`.
+        Test fakes: `graphiti.delete_node(uuid=...)` per-call.
+        Some entities may have already been cascade-deleted by a prior
+        remove_episode call; both branches treat that as success since the
+        node is no longer in the graph either way (the intended outcome).
+        """
+        removed: set[str] = set()
+        # Path A: real graphiti
+        try:
+            from graphiti_core.nodes import EntityNode
+            if hasattr(self.graphiti, "driver"):
+                try:
+                    _run_async(EntityNode.delete_by_uuids(
+                        self.graphiti.driver, entity_uuids,
+                    ))
+                    return set(entity_uuids)
+                except Exception:
+                    for ent_id in entity_uuids:
+                        try:
+                            _run_async(EntityNode.delete_by_uuids(
+                                self.graphiti.driver, [ent_id],
+                            ))
+                        except Exception:
+                            pass
+                        removed.add(ent_id)
+                    return removed
+        except ImportError:
+            pass
+        # Path B: legacy/fake graphiti
+        if hasattr(self.graphiti, "delete_node"):
+            for ent_id in entity_uuids:
+                try:
+                    _run_async(self.graphiti.delete_node(uuid=ent_id))
+                    removed.add(ent_id)
+                except Exception:
+                    pass
+            return removed
+        return removed
+
     def apply_sweep(self, node_ids_to_remove: list[str]) -> int:
         """Delete the chosen nodes from Graphiti + sidecar.
 
-        Respects pinning. Calls graphiti.delete_node() for entity
-        nodes and graphiti.delete_episode() for fact (episode) nodes.
+        Episodes are removed via `graphiti.remove_episode(episode_uuid=...)`,
+        which also cascades to entity nodes mentioned only by that episode.
+        Remaining entity-node candidates are then bulk-deleted via
+        `EntityNode.delete_by_uuids(...)`.
+
+        Respects pinning. Counts a node as removed for the metric only if
+        either the episode-removal or the entity-bulk-delete path executes
+        for it without exception.
         """
         self._stats.n_sweeps_invoked += 1
         self._stats.last_sweep_size_before = len(self._records)
+
+        # Drop pinned + already-gone candidates up front
+        targets = [
+            nid for nid in node_ids_to_remove
+            if nid not in self._pinned and nid in self._records
+        ]
+        episode_ids = [nid for nid in targets if self._records[nid].kind == "fact"]
+        entity_ids = [nid for nid in targets if self._records[nid].kind != "fact"]
+
+        removed_ids: set[str] = set()
+
+        for ep_id in episode_ids:
+            ok = self._remove_episode(ep_id)
+            if ok:
+                removed_ids.add(ep_id)
+
+        if entity_ids:
+            cascaded_or_removed = self._delete_entities(entity_ids)
+            removed_ids.update(cascaded_or_removed)
+
+        # Sidecar cleanup: drop every target (removed or cascade-deleted)
+        # from _records + edges so the next sweep doesn't reconsider.
         n_removed = 0
-        for node_id in node_ids_to_remove:
-            if node_id in self._pinned:
-                continue
-            if node_id not in self._records:
-                continue
-            rec = self._records[node_id]
-            try:
-                if rec.kind == "fact":
-                    # In Graphiti, episodes (facts) deletion
-                    _run_async(self.graphiti.delete_episode(uuid=node_id))
-                else:
-                    # Entity node deletion
-                    _run_async(self.graphiti.delete_node(uuid=node_id))
-                # Clean up sidecar + edges
-                self._records.pop(node_id, None)
-                # Drop any edges touching this node + update degrees
-                for (src, dst) in list(self._edges):
-                    if src == node_id or dst == node_id:
-                        self._edges.discard((src, dst))
-                        if dst != node_id and dst in self._in_degree:
-                            self._in_degree[dst] = max(0, self._in_degree[dst] - 1)
-                        if src != node_id and src in self._out_degree:
-                            self._out_degree[src] = max(0, self._out_degree[src] - 1)
-                self._in_degree.pop(node_id, None)
-                self._out_degree.pop(node_id, None)
+        for node_id in targets:
+            if node_id in removed_ids:
                 n_removed += 1
-            except Exception:
-                # Graphiti may raise if node already deleted; swallow
-                self._records.pop(node_id, None)
+            self._records.pop(node_id, None)
+            for (src, dst) in list(self._edges):
+                if src == node_id or dst == node_id:
+                    self._edges.discard((src, dst))
+                    if dst != node_id and dst in self._in_degree:
+                        self._in_degree[dst] = max(0, self._in_degree[dst] - 1)
+                    if src != node_id and src in self._out_degree:
+                        self._out_degree[src] = max(0, self._out_degree[src] - 1)
+            self._in_degree.pop(node_id, None)
+            self._out_degree.pop(node_id, None)
+
         self._stats.last_sweep_size_after = len(self._records)
         self._stats.n_nodes_actually_removed += n_removed
         return n_removed

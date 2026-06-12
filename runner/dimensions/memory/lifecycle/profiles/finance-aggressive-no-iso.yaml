@@ -1,0 +1,26 @@
+# finance-aggressive-no-iso profile for gc-v0.2.5-comprehensive-graph-tuned
+# Same thresholds as finance-aggressive but with component_isolation disabled.
+# Use on F1-benchmark workloads where the BEFORE pass deliberately queries
+# the full graph, which makes component_isolation over-preserve. In
+# production deployments where users query only a small fraction of the
+# graph, prefer the standard finance-aggressive profile.
+
+component_isolation_enabled: false
+min_component_idle_seconds: 86400
+min_component_age_seconds: 3600
+
+temporal_validity_enabled: true
+temporal_validity_ttl_seconds: 3600
+
+activation_decay_enabled: true
+activation_window_seconds: 86400
+min_query_count: 2
+
+evidence_count_enabled: true
+evidence_min_age_seconds: 86400
+
+supersession_tombstone_enabled: true
+tombstone_ttl_seconds: 3600
+supersession_min_age_seconds: 600
+
+tenant_pinning_enabled: true

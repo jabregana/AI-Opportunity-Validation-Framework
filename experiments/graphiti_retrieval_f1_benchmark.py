@@ -294,6 +294,73 @@ def main():
           f"F1={before.avg_f1:.3f}")
     print()
 
+    # Re-stamp aged subset: the BEFORE pass updated last_access +
+    # query_count via record_query for retrieved nodes, which would
+    # otherwise make the variant see aged nodes as "recently queried"
+    # and "well used." The variant should operate on the backdated
+    # view, not the BEFORE-pass-refreshed view.
+    n_restamped = 0
+    for sq_id in aged_squad_ids:
+        for gid in squad_to_graphiti.get(sq_id, []):
+            if gid in mw._records:
+                mw._records[gid].last_access = backdate
+                mw._records[gid].query_count = 0
+                n_restamped += 1
+    print(f"  re-stamped {n_restamped} aged nodes after BEFORE pass")
+    now_t = time.time()
+    ages_d = [(now_t - r.last_access) / 86400 for r in mw._records.values()]
+    print(f"  pre-sweep age buckets: "
+          f"<1d={sum(1 for a in ages_d if a < 1)} | "
+          f"1-5d={sum(1 for a in ages_d if 1 <= a < 5)} | "
+          f">=5d={sum(1 for a in ages_d if a >= 5)}")
+
+    # Instrument: for the first 3 aged nodes still in _records, dump
+    # state + per-layer opinions to surface why the bundle rejects them.
+    aged_sample = []
+    for sq_id in aged_squad_ids:
+        for gid in squad_to_graphiti.get(sq_id, []):
+            if gid in mw._records and len(aged_sample) < 3:
+                aged_sample.append(gid)
+        if len(aged_sample) >= 3:
+            break
+    if aged_sample:
+        state_dbg = mw.get_state()
+        print(f"  variant: name={variant.name!r} type={type(variant).__name__}")
+        print(f"  state.nodes count: {len(state_dbg.nodes)}, state.pinned: {len(state_dbg.pinned)}, "
+              f"_tenant_pins: {sum(len(s) for s in variant._tenant_pins.values())}")
+        # Direct bundle-level verdict
+        full_candidates = variant.collect_candidates(state_dbg, now_t)
+        print(f"  bundle.collect_candidates returned {len(full_candidates)} candidates")
+        print(f"  per-layer opinions on aged sample:")
+        for nid in aged_sample:
+            rec = mw._records[nid]
+            la = state_dbg.last_access.get(nid, 0.0)
+            qc = state_dbg.query_count.get(nid, 0)
+            ind = state_dbg.in_degree.get(nid, 0)
+            outd = state_dbg.out_degree.get(nid, 0)
+            print(f"    {nid[:8]}... kind={rec.kind!r} added={now_t-rec.added_at:.1f}s "
+                  f"last_access={now_t-la:.1f}s qc={qc} in/out_deg={ind}/{outd}")
+            opinions = {}
+            for name, layer in [
+                ("temporal_validity", variant.temporal_validity),
+                ("activation_decay", variant.activation_decay),
+                ("evidence_count", variant.evidence_count),
+                ("supersession_tombstone", variant.supersession_tombstone),
+            ]:
+                if layer is None:
+                    opinions[name] = "disabled"
+                else:
+                    try:
+                        opinions[name] = layer.should_collect(nid, state_dbg, now_t)
+                    except Exception as e:
+                        opinions[name] = f"error: {e}"
+            bundle_verdict = variant.should_collect(nid, state_dbg, now_t)
+            print(f"      opinions: {opinions} bundle.should_collect={bundle_verdict}")
+            if variant.component_isolation is not None:
+                iso = set(variant.component_isolation.collect_candidates(state_dbg, now_t))
+                print(f"      in_iso_candidates={nid in iso}")
+    print()
+
     print(f"Running sweep with {variant.name}...")
     t0 = time.time()
     n_before_sweep = len(mw._records)
