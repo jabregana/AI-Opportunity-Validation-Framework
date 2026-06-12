@@ -51,6 +51,33 @@ def _import_cognee():
         ) from e
 
 
+def _extract_node_ids(result) -> set[str]:
+    """Pull node ids out of a Cognee search result.
+
+    Cognee's search() shape varies by query_type and version. Tries
+    common containers (list of dicts, {results: [...]}, {matches: [...]})
+    and common id keys (id, uuid, node_id, _id). Returns an empty set
+    if nothing parses.
+    """
+    if isinstance(result, list):
+        items = result
+    elif isinstance(result, dict):
+        items = result.get("results") or result.get("matches") or []
+    else:
+        return set()
+    out: set[str] = set()
+    for item in items:
+        if isinstance(item, str):
+            out.add(item)
+        elif isinstance(item, dict):
+            for key in ("id", "uuid", "node_id", "_id"):
+                v = item.get(key)
+                if v:
+                    out.add(str(v))
+                    break
+    return out
+
+
 def _run_eval_via_cognee(
     mw,
     qa_items: list[QAItem],
@@ -72,13 +99,7 @@ def _run_eval_via_cognee(
             # Use "similarity" as the default query type; real benchmarks
             # may use other types (e.g., "graph_completion")
             result = mw.search("similarity", qa.query)
-            predicted = set()
-            if isinstance(result, list):
-                for item in result:
-                    if isinstance(item, dict):
-                        node_id = str(item.get("id") or item.get("uuid") or "")
-                        if node_id:
-                            predicted.add(node_id)
+            predicted = _extract_node_ids(result)
         except Exception:
             predicted = set()
         p, r, f = _compute_f1(predicted, qa.ground_truth_ids)
@@ -112,6 +133,10 @@ def main():
     p.add_argument("--cognify-batch-size", type=int, default=10,
                    help="Run cognee.cognify() every N adds (cognify is heavy)")
     p.add_argument("--out", type=str, default=None)
+    p.add_argument("--profile", default=None,
+                   help="v0.2.x profile name (e.g. 'finance-aggressive'). "
+                        "Overrides --variant and builds the v0.2.5 bundle "
+                        "from runner/dimensions/memory/lifecycle/profiles/<name>.yaml")
     args = p.parse_args()
 
     print("=" * 78)
@@ -134,11 +159,19 @@ def main():
     from runner.dimensions.memory.lifecycle.integrations import (
         CogneeGCMiddleware,
     )
-    variant_cls = FACTORIES[args.variant]
-    try:
-        variant = variant_cls(min_age_seconds=args.min_age_seconds)
-    except TypeError:
-        variant = variant_cls()
+    if args.profile:
+        from runner.dimensions.memory.lifecycle.profile_loader import (
+            build_from_profile,
+        )
+        variant = build_from_profile(args.profile)
+        args.variant = "gc-v0.2.5-comprehensive-graph-tuned"
+        print(f"  Using profile: {args.profile} -> {variant.__class__.__name__}")
+    else:
+        variant_cls = FACTORIES[args.variant]
+        try:
+            variant = variant_cls(min_age_seconds=args.min_age_seconds)
+        except TypeError:
+            variant = variant_cls()
     mw = CogneeGCMiddleware(cognee)
     print()
 
@@ -150,6 +183,7 @@ def main():
 
     print("Adding contexts to Cognee + periodic cognify...")
     squad_to_cognee: dict[str, list[str]] = {}
+    batch_squad_ids: list[str] = []
     add_start = time.time()
     batch_count = 0
     for i, (squad_id, text, is_aged) in enumerate(memories):
@@ -161,20 +195,37 @@ def main():
             doc_id = result.get("doc_id") if isinstance(result, dict) else None
             if doc_id:
                 squad_to_cognee[squad_id] = [doc_id]
+                batch_squad_ids.append(squad_id)
             batch_count += 1
             if batch_count >= args.cognify_batch_size:
                 print(f"  cognifying batch (size {batch_count})...")
                 try:
+                    ids_before = set(mw._records.keys())
                     mw.cognify(datasets=[args.dataset_name])
+                    new_ids = set(mw._records.keys()) - ids_before
+                    # Heuristic association: any context in this batch may
+                    # have contributed any entity. Joining the union into
+                    # every squad_id in the batch gives the backdate loop
+                    # and ground-truth coverage what they need, even though
+                    # per-context attribution is approximate.
+                    for sq in batch_squad_ids:
+                        squad_to_cognee.setdefault(sq, []).extend(new_ids)
+                    print(f"    cognify added {len(new_ids)} entity nodes")
                 except Exception as e:
                     print(f"    cognify error: {e}")
                 batch_count = 0
+                batch_squad_ids = []
         except Exception as e:
             print(f"  add error at i={i}: {e}")
     # Final cognify
     if batch_count > 0:
         try:
+            ids_before = set(mw._records.keys())
             mw.cognify(datasets=[args.dataset_name])
+            new_ids = set(mw._records.keys()) - ids_before
+            for sq in batch_squad_ids:
+                squad_to_cognee.setdefault(sq, []).extend(new_ids)
+            print(f"  final cognify added {len(new_ids)} entity nodes")
         except Exception as e:
             print(f"  final cognify error: {e}")
     add_seconds = time.time() - add_start
@@ -202,7 +253,7 @@ def main():
                 mw._records[cid].added_at = backdate
                 mw._records[cid].last_access = backdate
                 n_backdated += 1
-    print(f"  backdated {n_backdated} docs by {args.backdate_days} days")
+    print(f"  backdated {n_backdated} nodes (docs + entities) by {args.backdate_days} days")
     print()
 
     print("Running queries BEFORE sweep...")
@@ -211,6 +262,27 @@ def main():
     print(f"  {len(qa_items)} queries in {time.time()-t0:.1f}s")
     print(f"  precision={before.avg_precision:.3f}, recall={before.avg_recall:.3f}, "
           f"F1={before.avg_f1:.3f}")
+    print()
+
+    # Re-stamp aged subset: the BEFORE pass updated last_access +
+    # query_count via record_query for retrieved nodes. The variant
+    # should operate on the backdated view, not the BEFORE-pass-
+    # refreshed view. Mirrors the equivalent fix in
+    # graphiti_retrieval_f1_benchmark.py.
+    n_restamped = 0
+    for sq_id in aged_squad_ids:
+        for cid in squad_to_cognee.get(sq_id, []):
+            if cid in mw._records:
+                mw._records[cid].last_access = backdate
+                mw._records[cid].query_count = 0
+                n_restamped += 1
+    print(f"  re-stamped {n_restamped} aged nodes after BEFORE pass")
+    now_t = time.time()
+    ages_d = [(now_t - r.last_access) / 86400 for r in mw._records.values()]
+    print(f"  pre-sweep age buckets: "
+          f"<1d={sum(1 for a in ages_d if a < 1)} | "
+          f"1-5d={sum(1 for a in ages_d if 1 <= a < 5)} | "
+          f">=5d={sum(1 for a in ages_d if a >= 5)}")
     print()
 
     print(f"Running sweep with {variant.name}...")
@@ -252,7 +324,10 @@ def main():
         dimension="memory.lifecycle",
         stage=5,
         experiment_name="Real-Cognee retrieval F1 benchmark",
-        variants=[{"id": args.variant, "role": "candidate"}],
+        variants=[{
+            "id": args.variant, "role": "candidate",
+            "profile": args.profile,
+        }],
         workload={
             "archetype": "real-data-squad",
             "n": args.n_pairs,
